@@ -27,7 +27,8 @@ app = FastAPI()
 #         "alive": bool,
 #         "score": int,
 #         "ko": int,
-#         "grid": list
+#         "grid": list,
+#         "last_attacker_id": str | None
 #       }
 #     }
 #   }
@@ -222,7 +223,6 @@ async def perform_attack(room_code: str, attacker_id: str, lines: int):
         "lines": garbage_count
     })
 
-    # Jika target adalah bot, tambahkan baris sampah ke grid bot
     target_player = room["players"].get(target_id)
     if target_player and target_player.get("is_bot") and target_player["alive"]:
         hole = random.randint(0, COLS - 1)
@@ -290,7 +290,6 @@ async def eliminate_player(room_code: str, victim_id: str, killer_id: Optional[s
 
 
 async def bot_loop():
-    """Loop simulasi pergerakan, poin, serangan, dan eliminasi bot di semua room aktif."""
     while True:
         await asyncio.sleep(1.1)
         for room_code, room in list(rooms.items()):
@@ -306,14 +305,12 @@ async def bot_loop():
                     g = empty_grid()
                     p["grid"] = g
 
-                # Cek apakah tumpukan bot sudah menyentuh baris paling atas (row 0)
                 if any(cell != 0 for cell in g[0]):
                     await eliminate_player(room_code, pid, p.get("last_attacker_id"))
                     continue
 
                 action = random.random()
                 if action < 0.55:
-                    # Tambahkan potongan balok acak di baris terbawah yang masih ada ruang
                     color_id = random.randint(1, 7)
                     block_len = random.randint(2, 4)
                     start_col = random.randint(0, COLS - block_len)
@@ -325,18 +322,15 @@ async def bot_loop():
                             placed = True
                             break
                     if not placed:
-                        # Dorong baris ke atas jika bagian bawah penuh
                         g.pop(0)
                         new_row = [0] * COLS
                         for c in range(start_col, start_col + block_len):
                             new_row[c] = color_id
                         g.append(new_row)
 
-                # Simulasi hapus baris & serangan random
                 if random.random() < 0.28:
                     lines_cleared = random.choice([1, 1, 2, 3, 4])
                     p["score"] += lines_cleared * 100
-                    # Bersihkan 1 baris terbawah agar papan bot tetap dinamis
                     g.pop()
                     g.insert(0, [0] * COLS)
                     await perform_attack(room_code, pid, lines_cleared)
@@ -390,22 +384,39 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                 custom_code = str(data.get("room_code", "")).strip().upper()[:8]
                 room_code = custom_code if custom_code else generate_room_code()
 
-                if room_code not in rooms:
-                    rooms[room_code] = {
-                        "active": False,
-                        "admins": {},
-                        "players": {}
-                    }
+                # Jika room dengan nama/kode sama sudah ada, reset bersih room sebelumnya
+                if room_code in rooms:
+                    old_room = rooms[room_code]
+                    old_payload = json.dumps({
+                        "type": "room_closed",
+                        "msg": f"Room '{room_code}' di-reset oleh Admin baru."
+                    })
+                    for _, p in list(old_room.get("players", {}).items()):
+                        if not p.get("is_bot") and p.get("ws"):
+                            try:
+                                await p["ws"].send_text(old_payload)
+                            except Exception:
+                                pass
+                    for old_aid, old_ws in list(old_room.get("admins", {}).items()):
+                        if old_aid != client_id:
+                            try:
+                                await old_ws.send_text(old_payload)
+                            except Exception:
+                                pass
 
-                rooms[room_code]["admins"][client_id] = websocket
+                rooms[room_code] = {
+                    "active": False,
+                    "admins": {client_id: websocket},
+                    "players": {}
+                }
                 current_room = room_code
                 role = "admin"
 
                 await websocket.send_text(json.dumps({
                     "type": "room_created",
                     "room_code": room_code,
-                    "active": rooms[room_code]["active"],
-                    "players": get_room_players_summary(room_code, include_grid=True)
+                    "active": False,
+                    "players": {}
                 }))
 
             elif event == "admin_add_bot":
@@ -436,6 +447,34 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                     "type": "admin_players_sync",
                     "players": get_room_players_summary(current_room, include_grid=True)
                 })
+
+            elif event == "admin_remove_bot":
+                if role != "admin" or not current_room or current_room not in rooms:
+                    continue
+                room = rooms[current_room]
+                target_bot_id = data.get("bot_id")
+
+                if not target_bot_id:
+                    bot_ids = [pid for pid, p in room["players"].items() if p.get("is_bot")]
+                    target_bot_id = bot_ids[-1] if bot_ids else None
+
+                if target_bot_id and target_bot_id in room["players"] and room["players"][target_bot_id].get("is_bot"):
+                    removed_name = room["players"][target_bot_id]["name"]
+                    del room["players"][target_bot_id]
+
+                    await send_to_admins(current_room, {
+                        "type": "attack_log",
+                        "msg": f"🤖 {removed_name} dihapus dari room."
+                    })
+                    await broadcast_to_room(current_room, {
+                        "type": "lobby_update",
+                        "players": get_room_players_summary(current_room, include_grid=False)
+                    }, include_admins=False)
+                    await send_to_admins(current_room, {
+                        "type": "admin_players_sync",
+                        "players": get_room_players_summary(current_room, include_grid=True)
+                    })
+                    await check_winner(current_room)
 
             elif event == "admin_start_match":
                 if role != "admin" or not current_room or current_room not in rooms:
