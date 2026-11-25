@@ -118,6 +118,16 @@
             font-weight: bold;
             font-size: 13px;
         }
+        button.remove-bot-btn {
+            background: #9f1239;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 13px;
+        }
         button.danger {
             background: #dc2626;
             color: white;
@@ -127,6 +137,16 @@
             cursor: pointer;
             font-weight: bold;
             font-size: 13px;
+        }
+        .mini-del-btn {
+            background: #7f1d1d;
+            color: #fecaca;
+            border: 1px solid #ef4444;
+            border-radius: 5px;
+            padding: 2px 6px;
+            font-size: 10px;
+            cursor: pointer;
+            margin-top: 4px;
         }
 
         /* PLAYER ARENA LAYOUT */
@@ -319,7 +339,7 @@
         </div>
 
         <div id="form-admin" style="display:none;">
-            <input type="text" id="custom-room-code" placeholder="Kode Kustom (Opsional)" maxlength="8" style="text-transform:uppercase;">
+            <input type="text" id="custom-room-code" placeholder="Kode Room (Jika sama, room lama kereset)" maxlength="8" style="text-transform:uppercase;">
             <button class="primary" onclick="createAdminRoom()">Buat Room Admin</button>
         </div>
     </div>
@@ -377,6 +397,7 @@
             </div>
             <div style="display:flex; flex-wrap:wrap; gap:6px;">
                 <button class="bot-btn" onclick="adminAddBot()">🤖 +Bot</button>
+                <button class="remove-bot-btn" onclick="adminRemoveBot()">🤖 -Bot</button>
                 <button class="success" onclick="adminStartMatch()">▶ Mulai</button>
                 <button class="danger" onclick="adminResetRoom()">↻ Reset</button>
             </div>
@@ -479,9 +500,7 @@ function connectWS(onOpen) {
     socket.onclose = () => {
         clearInterval(pingInterval);
         setTimeout(() => connectWS(() => {
-            if (currentRole === 'admin' && activeRoomCode) {
-                sendWS({ type: 'create_room', room_code: activeRoomCode });
-            } else if (currentRole === 'player' && activeRoomCode && myUsername) {
+            if (currentRole === 'player' && activeRoomCode && myUsername) {
                 sendWS({ type: 'join_game', room_code: activeRoomCode, username: myUsername });
             }
         }), 2000);
@@ -525,6 +544,11 @@ function joinAsPlayer() {
 function adminAddBot() {
     ensureAudio();
     sendWS({ type: 'admin_add_bot' });
+}
+
+function adminRemoveBot(botId = null) {
+    ensureAudio();
+    sendWS({ type: 'admin_remove_bot', bot_id: botId });
 }
 
 function adminStartMatch() {
@@ -884,9 +908,13 @@ function renderMonitor(ps) {
     es.forEach(([pid, p]) => {
         const d = document.createElement('div');
         d.className = `screen-card ${p.alive ? 'alive' : 'dead'}`;
+        const delBtn = p.is_bot
+            ? `<button class="mini-del-btn" onclick="adminRemoveBot('${pid}')">🗑 Hapus Bot</button>`
+            : '';
         d.innerHTML = `<div style="font-size:11px; font-weight:bold;">${p.is_bot ? '🤖 ' : ''}${p.name}</div>
             <canvas id="mc-${pid}" width="80" height="160"></canvas>
-            <div class="screen-meta"><span>S:${p.score}</span><span>K:${p.ko}</span></div>`;
+            <div class="screen-meta"><span>S:${p.score}</span><span>K:${p.ko}</span></div>
+            ${delBtn}`;
         c.appendChild(d);
         drawGrid(document.getElementById(`mc-${pid}`), p.grid, 8);
     });
@@ -895,6 +923,13 @@ function renderMonitor(ps) {
 function handleServerEvent(d) {
     if (d.type === 'join_error') {
         alert(d.msg);
+    } else if (d.type === 'room_closed') {
+        isPlaying = false;
+        dangerLevel = 0;
+        dangerFlashOn = false;
+        hidePodiums();
+        alert(d.msg || 'Room telah di-reset oleh Admin.');
+        location.reload();
     } else if (d.type === 'joined_success') {
         document.getElementById('lobby-card').style.display = 'none';
         document.getElementById('player-view').style.display = 'flex';
@@ -904,9 +939,13 @@ function handleServerEvent(d) {
         }
     } else if (d.type === 'room_created') {
         activeRoomCode = d.room_code;
+        hidePodiums();
         document.getElementById('lobby-card').style.display = 'none';
         document.getElementById('admin-view').style.display = 'block';
         document.getElementById('admin-room-display').innerText = d.room_code;
+        document.getElementById('admin-match-status').innerText = 'Menunggu';
+        document.getElementById('admin-match-status').style.color = '#fbbf24';
+        document.getElementById('admin-log').innerHTML = '';
         renderMonitor(d.players);
     } else if (d.type === 'match_started') {
         hidePodiums();
