@@ -363,7 +363,7 @@
         .screen-card canvas { background: #020617; border: 1px solid #475569; border-radius: 3px; margin: 4px 0; }
         .screen-meta { width: 100%; display: flex; justify-content: space-between; font-size: 11px; color: #cbd5e1; }
 
-        /* TOMBOL KONTROL PONSEL (ERGONOMIS) */
+        /* TOMBOL KONTROL PONSEL (ERGONOMIS + MULTI-TOUCH) */
         .mobile-controls {
             display: flex;
             justify-content: space-between;
@@ -376,6 +376,8 @@
             border: 1px solid #334155;
             border-radius: 16px;
             user-select: none;
+            -webkit-user-select: none;
+            touch-action: none;
         }
         .left-cluster {
             display: flex;
@@ -401,6 +403,9 @@
             justify-content: center;
             align-items: center;
             cursor: pointer;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: none;
             box-shadow: 0 3px 0 #020617;
         }
         .ctrl-btn:active {
@@ -520,18 +525,18 @@
             </div>
         </div>
 
-        <!-- TOMBOL KONTROL PONSEL ERGONOMIS -->
+        <!-- TOMBOL KONTROL PONSEL ERGONOMIS + MULTI-TOUCH -->
         <div class="mobile-controls">
             <div class="left-cluster">
-                <div class="ctrl-btn btn-drop" onclick="vibrate(25); hardDrop()">⤓ DROP</div>
+                <div class="ctrl-btn btn-drop" onpointerdown="event.preventDefault(); vibrate(25); hardDrop()">⤓ DROP</div>
                 <div class="dpad-row">
-                    <div class="ctrl-btn" onclick="vibrate(); moveLeft()">◀</div>
-                    <div class="ctrl-btn" onclick="vibrate(); moveDown()">▼</div>
-                    <div class="ctrl-btn" onclick="vibrate(); moveRight()">▶</div>
+                    <div class="ctrl-btn" onpointerdown="event.preventDefault(); vibrate(); moveLeft()">◀</div>
+                    <div class="ctrl-btn" onpointerdown="event.preventDefault(); vibrate(); moveDown()">▼</div>
+                    <div class="ctrl-btn" onpointerdown="event.preventDefault(); vibrate(); moveRight()">▶</div>
                 </div>
             </div>
             <div class="right-cluster">
-                <div class="ctrl-btn btn-rotate-main" onclick="vibrate(); rotatePiece()">
+                <div class="ctrl-btn btn-rotate-main" onpointerdown="event.preventDefault(); vibrate(); rotatePiece()">
                     <span class="rot-icon">↻</span>
                     <span>PUTAR</span>
                 </div>
