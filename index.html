@@ -405,7 +405,7 @@
         </div>
 
         <div id="form-player">
-            <input type="text" id="player-name" placeholder="Nama Anda..." maxlength="15">
+            <input type="text" id="player-name" placeholder="Nama Anda (Wajib diisi)..." maxlength="15" required>
             <input type="text" id="join-room-code" placeholder="Kode Room (misal: AB12C)" maxlength="8" style="text-transform:uppercase;">
             <button class="primary" onclick="joinAsPlayer()">Masuk Arena</button>
 
@@ -597,7 +597,8 @@ function escapeHtml(str) {
 
 function selectRoomFromLobby(code) {
     document.getElementById('join-room-code').value = code;
-    document.getElementById('player-name').focus();
+    const nameInput = document.getElementById('player-name');
+    if (!nameInput.value.trim()) nameInput.focus();
 }
 
 function quickJoinRoom(code) {
@@ -680,12 +681,23 @@ function createAdminRoom() {
 
 function joinAsPlayer() {
     ensureAudio();
-    const name = document.getElementById('player-name').value.trim() || 'Player';
-    const roomCode = document.getElementById('join-room-code').value.trim().toUpperCase();
-    if (!roomCode) {
-        alert('Pilih room dari daftar lobby atau masukkan Kode Room terlebih dahulu!');
+    const nameInput = document.getElementById('player-name');
+    const roomInput = document.getElementById('join-room-code');
+    const name = nameInput.value.trim();
+    const roomCode = roomInput.value.trim().toUpperCase();
+
+    if (!name) {
+        alert('Nama wajib diisi sebelum masuk room!');
+        nameInput.focus();
         return;
     }
+
+    if (!roomCode) {
+        alert('Pilih room dari daftar lobby atau masukkan Kode Room terlebih dahulu!');
+        roomInput.focus();
+        return;
+    }
+
     myUsername = name;
     activeRoomCode = roomCode;
     connectWS(() => {
