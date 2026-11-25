@@ -18,6 +18,7 @@ app = FastAPI()
 # {
 #   room_code: {
 #     "active": bool,
+#     "last_winner": str | None,
 #     "admins": { admin_id: WebSocket },
 #     "players": {
 #       player_id: {
@@ -95,6 +96,40 @@ def get_room_players_summary(room_code: str, include_grid: bool = False):
             item["grid"] = p["grid"]
         result[pid] = item
     return result
+
+
+def get_lobby_list():
+    lobby = []
+    for code, room in rooms.items():
+        has_admin = len(room.get("admins", {})) > 0
+        has_players = len(room.get("players", {})) > 0
+        if not has_admin and not has_players:
+            continue
+
+        if room.get("active"):
+            state = "playing"
+            status_label = "🔥 Sedang Main"
+        elif room.get("last_winner"):
+            state = "finished"
+            status_label = "🏆 Selesai (Bisa Gabung)"
+        else:
+            state = "waiting"
+            status_label = "⏳ Menunggu Pemain"
+
+        total_participants = len(room.get("players", {}))
+        alive_count = sum(1 for p in room.get("players", {}).values() if p.get("alive"))
+        bot_count = sum(1 for p in room.get("players", {}).values() if p.get("is_bot"))
+
+        lobby.append({
+            "room_code": code,
+            "state": state,
+            "status_label": status_label,
+            "players_count": total_participants,
+            "alive_count": alive_count,
+            "bot_count": bot_count,
+            "last_winner": room.get("last_winner")
+        })
+    return lobby
 
 
 def compute_podium(room: dict, winner_id: Optional[str]):
@@ -362,6 +397,11 @@ async def serve_index():
     return FileResponse(os.path.join(BASE_DIR, "index.html"))
 
 
+@app.get("/api/rooms")
+async def api_get_rooms():
+    return {"rooms": get_lobby_list()}
+
+
 @app.websocket("/ws/{client_id}")
 async def websocket_endpoint(websocket: WebSocket, client_id: str):
     global bot_counter
@@ -384,7 +424,6 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                 custom_code = str(data.get("room_code", "")).strip().upper()[:8]
                 room_code = custom_code if custom_code else generate_room_code()
 
-                # Jika room dengan nama/kode sama sudah ada, reset bersih room sebelumnya
                 if room_code in rooms:
                     old_room = rooms[room_code]
                     old_payload = json.dumps({
@@ -406,6 +445,7 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
 
                 rooms[room_code] = {
                     "active": False,
+                    "last_winner": None,
                     "admins": {client_id: websocket},
                     "players": {}
                 }
@@ -488,6 +528,7 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                     continue
 
                 room["active"] = True
+                room["last_winner"] = None
                 for pid in room["players"]:
                     room["players"][pid]["alive"] = True
                     room["players"][pid]["score"] = 0
@@ -505,6 +546,7 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                     continue
                 room = rooms[current_room]
                 room["active"] = False
+                room["last_winner"] = None
                 for pid in room["players"]:
                     room["players"][pid]["alive"] = True
                     room["players"][pid]["score"] = 0
@@ -525,7 +567,7 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                 if room_code not in rooms:
                     await websocket.send_text(json.dumps({
                         "type": "join_error",
-                        "msg": f"Room '{room_code}' tidak ditemukan! Minta kode room ke Admin."
+                        "msg": f"Room '{room_code}' tidak ditemukan! Pilih room yang tersedia atau minta kode ke Admin."
                     }))
                     continue
 
@@ -627,6 +669,7 @@ async def check_winner(room_code: str):
         winner_id = survivors[0]
         winner = room["players"][winner_id]
         room["active"] = False
+        room["last_winner"] = winner["name"]
         record_stat(winner["name"], win=1, ko=winner["ko"], score=winner["score"])
         podium = compute_podium(room, winner_id)
 
@@ -641,9 +684,11 @@ async def check_winner(room_code: str):
     elif len(survivors) == 0:
         room["active"] = False
         podium = compute_podium(room, None)
+        winner_name = podium[0]["name"] if podium else None
+        room["last_winner"] = winner_name
         await broadcast_to_room(room_code, {
             "type": "match_over",
-            "winner": podium[0]["name"] if podium else "Tidak Ada",
+            "winner": winner_name or "Tidak Ada",
             "ko": podium[0]["ko"] if podium else 0,
             "score": podium[0]["score"] if podium else 0,
             "podium": podium,
