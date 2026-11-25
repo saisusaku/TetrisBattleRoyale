@@ -225,7 +225,7 @@
         .warning {
             color: #f87171;
             font-weight: bold;
-            animation: blink 0.5s infinite;
+            animation: blink 0.4s infinite;
             font-size: 12px;
         }
         @keyframes blink { 50% { opacity: 0.25; } }
@@ -463,8 +463,8 @@ const SFX = {
     win: () => { playTone(523, 0.12, 'triangle', 0.15); playTone(659, 0.12, 'triangle', 0.15, 0.11); playTone(783, 0.22, 'triangle', 0.16, 0.22); }
 };
 
-function vibrate() {
-    if (navigator.vibrate) navigator.vibrate(15);
+function vibrate(ms = 15) {
+    if (navigator.vibrate) navigator.vibrate(ms);
 }
 
 // --- WEBSOCKET & ROOM STATE ---
@@ -541,27 +541,12 @@ function joinAsPlayer() {
     });
 }
 
-function adminAddBot() {
-    ensureAudio();
-    sendWS({ type: 'admin_add_bot' });
-}
+function adminAddBot() { ensureAudio(); sendWS({ type: 'admin_add_bot' }); }
+function adminRemoveBot(botId = null) { ensureAudio(); sendWS({ type: 'admin_remove_bot', bot_id: botId }); }
+function adminStartMatch() { ensureAudio(); sendWS({ type: 'admin_start_match' }); }
+function adminResetRoom() { ensureAudio(); sendWS({ type: 'admin_reset_room' }); }
 
-function adminRemoveBot(botId = null) {
-    ensureAudio();
-    sendWS({ type: 'admin_remove_bot', bot_id: botId });
-}
-
-function adminStartMatch() {
-    ensureAudio();
-    sendWS({ type: 'admin_start_match' });
-}
-
-function adminResetRoom() {
-    ensureAudio();
-    sendWS({ type: 'admin_reset_room' });
-}
-
-// --- TETRIS ENGINE ---
+// --- TETRIS ENGINE & ANIMATION STATE ---
 const canvas = document.getElementById('board');
 const ctx = canvas.getContext('2d');
 const COLS = 10, ROWS = 20;
@@ -583,6 +568,98 @@ const SHAPES = [
 let grid = Array.from({length: ROWS}, () => Array(COLS).fill(0));
 let piece = null, score = 0, isPlaying = false, lastAttackerId = null, pendingGarbage = 0;
 let dangerLevel = 0, dangerBlinkTimer = 0, dangerFlashOn = false;
+
+// State Animasi Line Clear & Serangan
+let particles = [];       // { x, y, vx, vy, size, color, life, maxLife }
+let floatingTexts = [];   // { text, x, y, vy, color, life, maxLife }
+let lineFlashRows = [];   // { row, life, maxLife }
+let shakeTimer = 0;       // durasi getar canvas saat kena serangan
+let attackFlashTimer = 0; // kilatan merah saat kena serangan
+
+function spawnClearAnimation(clearedRows, rowColorsList) {
+    const attackPreview = { 1: 1, 2: 2, 3: 3, 4: 5 }[clearedRows.length] || 1;
+    const labelMap = {
+        1: `CLEAR +${attackPreview}`,
+        2: `DOUBLE +${attackPreview}`,
+        3: `TRIPLE +${attackPreview}`,
+        4: `⚡ TETRIS +${attackPreview}`
+    };
+    const label = pendingGarbage > 0
+        ? `🛡️ BLOCK -${Math.min(pendingGarbage, clearedRows.length)}`
+        : (labelMap[clearedRows.length] || `CLEAR +${attackPreview}`);
+
+    const textColor = pendingGarbage > 0 ? '#38bdf8' : (clearedRows.length >= 4 ? '#facc15' : '#4ade80');
+    const centerRow = clearedRows[0] ?? 10;
+
+    floatingTexts.push({
+        text: label,
+        x: canvas.width / 2,
+        y: centerRow * BLOCK_SIZE,
+        vy: -38,
+        color: textColor,
+        life: 0.85,
+        maxLife: 0.85
+    });
+
+    clearedRows.forEach((r, idx) => {
+        lineFlashRows.push({ row: r, life: 0.24, maxLife: 0.24 });
+        const colors = rowColorsList[idx] || [];
+        for (let c = 0; c < COLS; c++) {
+            const col = COLORS[colors[c]] || '#facc15';
+            for (let p = 0; p < 3; p++) {
+                particles.push({
+                    x: (c + 0.5) * BLOCK_SIZE,
+                    y: (r + 0.5) * BLOCK_SIZE,
+                    vx: (Math.random() - 0.5) * 140,
+                    vy: (Math.random() - 0.75) * 130,
+                    size: 3 + Math.random() * 3,
+                    color: col,
+                    life: 0.45 + Math.random() * 0.2,
+                    maxLife: 0.65
+                });
+            }
+        }
+    });
+}
+
+function triggerAttackAnimation(lines, fromName) {
+    shakeTimer = 0.28;
+    attackFlashTimer = 0.35;
+    vibrate(35);
+    floatingTexts.push({
+        text: `🚨 +${lines} DARI ${fromName.toUpperCase()}`,
+        x: canvas.width / 2,
+        y: canvas.height * 0.42,
+        vy: -24,
+        color: '#f87171',
+        life: 0.95,
+        maxLife: 0.95
+    });
+}
+
+function updateAnimations(dtSec) {
+    particles = particles.filter(pt => {
+        pt.life -= dtSec;
+        pt.x += pt.vx * dtSec;
+        pt.y += pt.vy * dtSec;
+        pt.vy += 260 * dtSec;
+        return pt.life > 0;
+    });
+
+    floatingTexts = floatingTexts.filter(ft => {
+        ft.life -= dtSec;
+        ft.y += ft.vy * dtSec;
+        return ft.life > 0;
+    });
+
+    lineFlashRows = lineFlashRows.filter(lf => {
+        lf.life -= dtSec;
+        return lf.life > 0;
+    });
+
+    if (shakeTimer > 0) shakeTimer = Math.max(0, shakeTimer - dtSec);
+    if (attackFlashTimer > 0) attackFlashTimer = Math.max(0, attackFlashTimer - dtSec);
+}
 
 function computeDangerLevel(g) {
     let rH = ROWS;
@@ -657,15 +734,22 @@ function rotateMatrix(m) {
 
 function sweepLines() {
     let cl = 0;
+    const clearedRowIndices = [];
+    const clearedRowColors = [];
+
     for (let r = ROWS - 1; r >= 0; r--) {
         if (grid[r].every(c => c !== 0)) {
+            clearedRowIndices.push(r);
+            clearedRowColors.push([...grid[r]]);
             grid.splice(r, 1);
             grid.unshift(Array(COLS).fill(0));
             cl++;
             r++;
         }
     }
+
     if (cl > 0) {
+        spawnClearAnimation(clearedRowIndices, clearedRowColors);
         if (pendingGarbage > 0) {
             const bl = Math.min(pendingGarbage, cl);
             pendingGarbage -= bl;
@@ -796,12 +880,27 @@ function drawGrid(cv, gd, bs) {
 }
 
 function draw() {
+    ctx.save();
+    if (shakeTimer > 0) {
+        const mag = Math.ceil(shakeTimer * 24);
+        const sx = (Math.random() - 0.5) * 2 * mag;
+        const sy = (Math.random() - 0.5) * 2 * mag;
+        ctx.translate(sx, sy);
+    }
+
     ctx.fillStyle = '#020617';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
+
     if (isPlaying && dangerLevel > 0 && dangerFlashOn) {
         ctx.fillStyle = `rgba(239, 68, 68, ${0.15 + dangerLevel * 0.05})`;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
     }
+
+    if (attackFlashTimer > 0) {
+        ctx.fillStyle = `rgba(239, 68, 68, ${Math.min(0.45, attackFlashTimer * 1.2)})`;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+
     const dLY = (DANGER_ROW_THRESHOLD + 1) * BLOCK_SIZE;
     ctx.strokeStyle = dangerLevel > 0 ? 'rgba(248,113,113,0.9)' : 'rgba(239,68,68,0.2)';
     ctx.setLineDash([4, 4]);
@@ -817,16 +916,51 @@ function draw() {
             if (v) drawBlock(ctx, piece.x + x, piece.y + y, COLORS[v], BLOCK_SIZE);
         }));
     }
-    canvas.style.borderColor = (isPlaying && dangerLevel > 0 && dangerFlashOn) ? '#ef4444' : '#475569';
-    canvas.style.boxShadow = (isPlaying && dangerLevel > 0 && dangerFlashOn)
-        ? `0 0 ${8 + dangerLevel * 4}px rgba(239,68,68,0.8)`
-        : '0 0 12px rgba(0,0,0,0.5)';
+
+    lineFlashRows.forEach(lf => {
+        const alpha = Math.max(0, lf.life / lf.maxLife);
+        ctx.fillStyle = `rgba(255, 255, 255, ${alpha * 0.85})`;
+        ctx.fillRect(0, lf.row * BLOCK_SIZE, canvas.width, BLOCK_SIZE);
+    });
+
+    particles.forEach(pt => {
+        ctx.globalAlpha = Math.max(0, pt.life / pt.maxLife);
+        ctx.fillStyle = pt.color;
+        ctx.fillRect(pt.x - pt.size / 2, pt.y - pt.size / 2, pt.size, pt.size);
+    });
+    ctx.globalAlpha = 1;
+
+    floatingTexts.forEach(ft => {
+        ctx.globalAlpha = Math.max(0, ft.life / ft.maxLife);
+        ctx.font = 'bold 13px system-ui, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#020617';
+        ctx.fillText(ft.text, ft.x + 1, ft.y + 1);
+        ctx.fillStyle = ft.color;
+        ctx.fillText(ft.text, ft.x, ft.y);
+    });
+    ctx.globalAlpha = 1;
+
+    ctx.restore();
+
+    if (attackFlashTimer > 0) {
+        canvas.style.borderColor = '#f87171';
+        canvas.style.boxShadow = '0 0 18px rgba(248,113,113,0.9)';
+    } else if (isPlaying && dangerLevel > 0 && dangerFlashOn) {
+        canvas.style.borderColor = '#ef4444';
+        canvas.style.boxShadow = `0 0 ${8 + dangerLevel * 4}px rgba(239,68,68,0.8)`;
+    } else {
+        canvas.style.borderColor = '#475569';
+        canvas.style.boxShadow = '0 0 12px rgba(0,0,0,0.5)';
+    }
 }
 
 let dropC = 0, syncC = 0, lT = 0;
 function loop(t = 0) {
-    const dt = t - lT;
+    const dt = Math.min(100, t - lT || 16);
     lT = t;
+    updateAnimations(dt / 1000);
+
     if (isPlaying) {
         dropC += dt;
         syncC += dt;
@@ -953,6 +1087,7 @@ function handleServerEvent(d) {
         if (currentRole === 'player') {
             grid = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
             score = 0; pendingGarbage = 0; lastAttackerId = null; dangerLevel = 0; dangerFlashOn = false;
+            particles = []; floatingTexts = []; lineFlashRows = []; shakeTimer = 0; attackFlashTimer = 0;
             isPlaying = true;
             document.getElementById('score').innerText = '0';
             document.getElementById('ko').innerText = '0';
@@ -989,6 +1124,7 @@ function handleServerEvent(d) {
             pendingGarbage += d.lines;
             lastAttackerId = d.from_id;
             SFX.attack();
+            triggerAttackAnimation(d.lines, d.from_name);
             updateAlert();
             addLog('player-log', `🚨 Diserang ${d.from_name}!`);
         }
