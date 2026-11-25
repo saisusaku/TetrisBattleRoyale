@@ -10,6 +10,7 @@ from fastapi.responses import FileResponse
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(BASE_DIR, "tetris_br.db")
+BARCODE_PATH = os.path.join(BASE_DIR, "KepoTetris.jpeg")
 ROWS, COLS = 20, 10
 
 app = FastAPI()
@@ -394,6 +395,13 @@ async def on_startup():
 
 @app.get("/")
 async def serve_index():
+    return FileResponse(os.path.join(BASE_DIR, "index.html"))
+
+
+@app.get("/KepoTetris.jpeg")
+async def serve_barcode():
+    if os.path.exists(BARCODE_PATH):
+        return FileResponse(BARCODE_PATH, media_type="image/jpeg")
     return FileResponse(os.path.join(BASE_DIR, "index.html"))
 
 
