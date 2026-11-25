@@ -51,7 +51,7 @@
             padding: 16px;
             border-radius: 12px;
             width: 100%;
-            max-width: 380px;
+            max-width: 420px;
             border: 1px solid #334155;
             box-shadow: 0 8px 24px rgba(0,0,0,0.4);
         }
@@ -148,6 +148,78 @@
             cursor: pointer;
             margin-top: 4px;
         }
+
+        /* LOBBY LIST */
+        .lobby-list-box {
+            margin-top: 14px;
+            padding-top: 12px;
+            border-top: 1px solid #334155;
+        }
+        .lobby-list-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 12px;
+            font-weight: bold;
+            color: #cbd5e1;
+        }
+        .refresh-btn {
+            background: #0f172a;
+            color: #93c5fd;
+            border: 1px solid #334155;
+            border-radius: 6px;
+            padding: 3px 8px;
+            font-size: 11px;
+            cursor: pointer;
+        }
+        .refresh-btn:hover { background: #1e293b; }
+        .lobby-rooms {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            max-height: 210px;
+            overflow-y: auto;
+        }
+        .lobby-room-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 8px 10px;
+            cursor: pointer;
+            transition: border-color 0.15s;
+        }
+        .lobby-room-item:hover { border-color: #38bdf8; }
+        .lobby-room-code {
+            font-weight: 800;
+            color: #38bdf8;
+            font-size: 13px;
+            letter-spacing: 1px;
+        }
+        .lobby-room-meta {
+            font-size: 11px;
+            color: #94a3b8;
+            margin-top: 2px;
+        }
+        .badge-waiting { color: #fbbf24; font-weight: bold; }
+        .badge-playing { color: #4ade80; font-weight: bold; }
+        .badge-finished { color: #facc15; font-weight: bold; }
+        .join-mini-btn {
+            background: #16a34a;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 6px 10px;
+            font-size: 11px;
+            font-weight: bold;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .join-mini-btn:hover { background: #15803d; }
 
         /* PLAYER ARENA LAYOUT */
         .player-layout {
@@ -336,6 +408,16 @@
             <input type="text" id="player-name" placeholder="Nama Anda..." maxlength="15">
             <input type="text" id="join-room-code" placeholder="Kode Room (misal: AB12C)" maxlength="8" style="text-transform:uppercase;">
             <button class="primary" onclick="joinAsPlayer()">Masuk Arena</button>
+
+            <div class="lobby-list-box">
+                <div class="lobby-list-header">
+                    <span>📋 Daftar Lobby / Room</span>
+                    <button type="button" class="refresh-btn" onclick="fetchLobbyRooms()">🔄 Refresh</button>
+                </div>
+                <div id="lobby-rooms-list" class="lobby-rooms">
+                    <div style="font-size:11px; color:#94a3b8;">Memuat daftar room...</div>
+                </div>
+            </div>
         </div>
 
         <div id="form-admin" style="display:none;">
@@ -467,6 +549,75 @@ function vibrate(ms = 15) {
     if (navigator.vibrate) navigator.vibrate(ms);
 }
 
+// --- LOBBY LIST FETCHER ---
+let lobbyPollInterval = null;
+
+async function fetchLobbyRooms() {
+    const container = document.getElementById('lobby-rooms-list');
+    if (!container) return;
+    try {
+        const res = await fetch('/api/rooms', { cache: 'no-store' });
+        const data = await res.json();
+        const list = data.rooms || [];
+
+        if (list.length === 0) {
+            container.innerHTML = `<div style="font-size:11px; color:#94a3b8; padding:6px 2px;">Belum ada room aktif. Minta Admin membuat room atau pindah ke tab Admin.</div>`;
+            return;
+        }
+
+        container.innerHTML = list.map(r => {
+            const badgeClass = r.state === 'playing'
+                ? 'badge-playing'
+                : (r.state === 'finished' ? 'badge-finished' : 'badge-waiting');
+            const winnerInfo = r.last_winner ? ` • Juara: ${escapeHtml(r.last_winner)}` : '';
+            const botInfo = r.bot_count > 0 ? ` (${r.bot_count} bot)` : '';
+            return `
+                <div class="lobby-room-item" onclick="selectRoomFromLobby('${escapeHtml(r.room_code)}')">
+                    <div>
+                        <div class="lobby-room-code">${escapeHtml(r.room_code)} <span class="${badgeClass}">• ${escapeHtml(r.status_label)}</span></div>
+                        <div class="lobby-room-meta">Peserta: <b>${r.players_count}</b>${botInfo}${winnerInfo}</div>
+                    </div>
+                    <button type="button" class="join-mini-btn" onclick="event.stopPropagation(); quickJoinRoom('${escapeHtml(r.room_code)}')">Gabung</button>
+                </div>
+            `;
+        }).join('');
+    } catch (_) {
+        container.innerHTML = `<div style="font-size:11px; color:#f87171;">Gagal memuat daftar room.</div>`;
+    }
+}
+
+function escapeHtml(str) {
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function selectRoomFromLobby(code) {
+    document.getElementById('join-room-code').value = code;
+    document.getElementById('player-name').focus();
+}
+
+function quickJoinRoom(code) {
+    document.getElementById('join-room-code').value = code;
+    joinAsPlayer();
+}
+
+function startLobbyPolling() {
+    fetchLobbyRooms();
+    clearInterval(lobbyPollInterval);
+    lobbyPollInterval = setInterval(() => {
+        const lobbyVisible = document.getElementById('lobby-card').style.display !== 'none';
+        if (lobbyVisible) fetchLobbyRooms();
+    }, 3000);
+}
+
+function stopLobbyPolling() {
+    clearInterval(lobbyPollInterval);
+}
+
 // --- WEBSOCKET & ROOM STATE ---
 const clientId = Math.random().toString(36).substring(2, 10);
 let socket = null;
@@ -481,6 +632,7 @@ function switchTab(tab) {
     document.getElementById('tab-admin').classList.toggle('active', tab === 'admin');
     document.getElementById('form-player').style.display = tab === 'player' ? 'block' : 'none';
     document.getElementById('form-admin').style.display = tab === 'admin' ? 'block' : 'none';
+    if (tab === 'player') fetchLobbyRooms();
 }
 
 function connectWS(onOpen) {
@@ -521,6 +673,7 @@ function createAdminRoom() {
     const customCode = document.getElementById('custom-room-code').value.trim().toUpperCase();
     connectWS(() => {
         currentRole = 'admin';
+        stopLobbyPolling();
         sendWS({ type: 'create_room', room_code: customCode });
     });
 }
@@ -530,7 +683,7 @@ function joinAsPlayer() {
     const name = document.getElementById('player-name').value.trim() || 'Player';
     const roomCode = document.getElementById('join-room-code').value.trim().toUpperCase();
     if (!roomCode) {
-        alert('Masukkan Kode Room dari Admin terlebih dahulu!');
+        alert('Pilih room dari daftar lobby atau masukkan Kode Room terlebih dahulu!');
         return;
     }
     myUsername = name;
@@ -569,12 +722,11 @@ let grid = Array.from({length: ROWS}, () => Array(COLS).fill(0));
 let piece = null, score = 0, isPlaying = false, lastAttackerId = null, pendingGarbage = 0;
 let dangerLevel = 0, dangerBlinkTimer = 0, dangerFlashOn = false;
 
-// State Animasi Line Clear & Serangan
-let particles = [];       // { x, y, vx, vy, size, color, life, maxLife }
-let floatingTexts = [];   // { text, x, y, vy, color, life, maxLife }
-let lineFlashRows = [];   // { row, life, maxLife }
-let shakeTimer = 0;       // durasi getar canvas saat kena serangan
-let attackFlashTimer = 0; // kilatan merah saat kena serangan
+let particles = [];
+let floatingTexts = [];
+let lineFlashRows = [];
+let shakeTimer = 0;
+let attackFlashTimer = 0;
 
 function spawnClearAnimation(clearedRows, rowColorsList) {
     const attackPreview = { 1: 1, 2: 2, 3: 3, 4: 5 }[clearedRows.length] || 1;
@@ -1057,6 +1209,7 @@ function renderMonitor(ps) {
 function handleServerEvent(d) {
     if (d.type === 'join_error') {
         alert(d.msg);
+        fetchLobbyRooms();
     } else if (d.type === 'room_closed') {
         isPlaying = false;
         dangerLevel = 0;
@@ -1065,6 +1218,7 @@ function handleServerEvent(d) {
         alert(d.msg || 'Room telah di-reset oleh Admin.');
         location.reload();
     } else if (d.type === 'joined_success') {
+        stopLobbyPolling();
         document.getElementById('lobby-card').style.display = 'none';
         document.getElementById('player-view').style.display = 'flex';
         document.getElementById('p-room-code').innerText = d.room_code;
@@ -1174,6 +1328,7 @@ function handleServerEvent(d) {
     }
 }
 
+startLobbyPolling();
 loop();
 </script>
 </body>
