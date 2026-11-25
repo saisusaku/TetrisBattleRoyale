@@ -409,7 +409,6 @@
             transform: translateY(2px);
             box-shadow: 0 1px 0 #020617;
         }
-        /* Drop ditaruh di tengah-atas D-pad kiri agar aman dari tepi & jempol kanan */
         .btn-drop {
             background: #7f1d1d;
             border-color: #ef4444;
@@ -428,7 +427,6 @@
             justify-content: center;
             padding-right: 6px;
         }
-        /* Tombol Putar utama besar, dekat jempol kanan */
         .btn-rotate-main {
             background: #065f46;
             border: 2px solid #10b981;
@@ -1020,9 +1018,15 @@ function sweepLines() {
     }
 }
 
+// Lubang sampah diacak di setiap baris agar tidak seragam / tidak mudah ditebak
 function applyGarbage(l) {
-    const h = Math.floor(Math.random() * COLS);
+    let lastHole = -1;
     for (let i = 0; i < l; i++) {
+        let h = Math.floor(Math.random() * COLS);
+        if (COLS > 1 && h === lastHole) {
+            h = (h + 1 + Math.floor(Math.random() * (COLS - 1))) % COLS;
+        }
+        lastHole = h;
         grid.shift();
         const r = Array(COLS).fill(8);
         r[h] = 0;
