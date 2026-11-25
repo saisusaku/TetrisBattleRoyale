@@ -1,0 +1,1174 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Tetris Battle Royale</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+        body {
+            background: #0f172a;
+            color: #f8fafc;
+            font-family: system-ui, -apple-system, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 0;
+            padding: 12px;
+            min-height: 100vh;
+            touch-action: manipulation;
+        }
+        .header-bar {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin: 6px 0 12px 0;
+            width: 100%;
+            max-width: 900px;
+        }
+        h2 {
+            margin: 0;
+            font-size: 20px;
+            text-align: center;
+        }
+        .mute-btn {
+            background: #1e293b;
+            color: #f8fafc;
+            border: 1px solid #475569;
+            border-radius: 8px;
+            padding: 6px 10px;
+            font-size: 13px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .mute-btn:hover { background: #334155; }
+        .card {
+            background: #1e293b;
+            padding: 16px;
+            border-radius: 12px;
+            width: 100%;
+            max-width: 380px;
+            border: 1px solid #334155;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+        }
+        .tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 14px;
+        }
+        .tab-btn {
+            flex: 1;
+            background: #0f172a;
+            color: #94a3b8;
+            border: 1px solid #334155;
+            padding: 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .tab-btn.active {
+            background: #2563eb;
+            color: white;
+            border-color: #3b82f6;
+        }
+        input {
+            width: 100%;
+            padding: 11px 12px;
+            border-radius: 8px;
+            border: 1px solid #475569;
+            background: #0f172a;
+            color: white;
+            font-size: 15px;
+            margin-bottom: 10px;
+        }
+        button.primary {
+            background: #2563eb;
+            color: white;
+            border: none;
+            padding: 12px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 15px;
+            width: 100%;
+        }
+        button.primary:hover { background: #1d4ed8; }
+        button.success {
+            background: #16a34a;
+            color: white;
+            border: none;
+            padding: 10px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        button.bot-btn {
+            background: #7c3aed;
+            color: white;
+            border: none;
+            padding: 10px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        button.danger {
+            background: #dc2626;
+            color: white;
+            border: none;
+            padding: 10px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        /* PLAYER ARENA */
+        .player-layout {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            max-width: 900px;
+            gap: 10px;
+        }
+        .top-hud {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            max-width: 480px;
+            background: #1e293b;
+            padding: 10px 14px;
+            border-radius: 10px;
+            font-size: 14px;
+            border: 1px solid #334155;
+        }
+        .main-stage {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: flex-start;
+            gap: 16px;
+            width: 100%;
+        }
+        canvas#board {
+            background: #020617;
+            border: 3px solid #475569;
+            border-radius: 6px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.7);
+            max-width: 100%;
+            transition: border-color 0.1s, box-shadow 0.1s;
+        }
+        .side-info {
+            width: 100%;
+            max-width: 240px;
+            background: #1e293b;
+            padding: 12px;
+            border-radius: 10px;
+            border: 1px solid #334155;
+        }
+        .opponents-list {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 6px;
+            margin-top: 6px;
+        }
+        .opp-badge {
+            background: #0f172a;
+            padding: 6px 8px;
+            border-radius: 6px;
+            font-size: 12px;
+            border: 1px solid #334155;
+        }
+        .opp-badge.dead {
+            opacity: 0.45;
+            border-color: #ef4444;
+        }
+        .log-box {
+            height: 110px;
+            overflow-y: auto;
+            font-size: 12px;
+            background: #0f172a;
+            padding: 8px;
+            border-radius: 6px;
+            margin-top: 8px;
+            border: 1px solid #334155;
+        }
+        .warning {
+            color: #f87171;
+            font-weight: bold;
+            animation: blink 0.5s infinite;
+        }
+        @keyframes blink { 50% { opacity: 0.25; } }
+
+        /* TOUCH CONTROLS FOR MOBILE */
+        .touch-controls {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 8px;
+            width: 100%;
+            max-width: 380px;
+            margin-top: 4px;
+            user-select: none;
+        }
+        .ctrl-btn {
+            background: #1e293b;
+            color: #f8fafc;
+            border: 2px solid #475569;
+            border-radius: 12px;
+            padding: 16px 0;
+            font-size: 20px;
+            font-weight: bold;
+            text-align: center;
+            cursor: pointer;
+            user-select: none;
+        }
+        .ctrl-btn:active {
+            background: #2563eb;
+            border-color: #60a5fa;
+            transform: scale(0.96);
+        }
+        .ctrl-btn.drop-btn {
+            background: #7c2d12;
+            border-color: #ea580c;
+        }
+
+        /* PODIUM MODAL / BANNER */
+        .podium-box {
+            background: #1e293b;
+            border: 2px solid #f59e0b;
+            border-radius: 12px;
+            padding: 16px;
+            width: 100%;
+            max-width: 480px;
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.7);
+        }
+        .podium-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #0f172a;
+            padding: 10px 12px;
+            border-radius: 8px;
+            margin-top: 8px;
+            border-left: 4px solid #64748b;
+        }
+        .podium-item.rank-1 { border-left-color: #facc15; background: #1c1917; }
+        .podium-item.rank-2 { border-left-color: #cbd5e1; }
+        .podium-item.rank-3 { border-left-color: #d97706; }
+
+        /* ADMIN MONITOR DASHBOARD */
+        .admin-layout {
+            width: 100%;
+            max-width: 1280px;
+        }
+        .admin-header {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            background: #1e293b;
+            padding: 14px 18px;
+            border-radius: 12px;
+            border: 1px solid #334155;
+            margin-bottom: 16px;
+        }
+        .room-code-badge {
+            background: #0f172a;
+            border: 2px dashed #38bdf8;
+            color: #38bdf8;
+            padding: 6px 14px;
+            border-radius: 8px;
+            font-size: 20px;
+            font-weight: 800;
+            letter-spacing: 2px;
+        }
+        .monitor-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(175px, 1fr));
+            gap: 14px;
+        }
+        .screen-card {
+            background: #1e293b;
+            border: 2px solid #334155;
+            border-radius: 10px;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .screen-card.alive { border-color: #22c55e; }
+        .screen-card.dead { border-color: #ef4444; opacity: 0.55; }
+        .screen-card.under-attack {
+            border-color: #f59e0b;
+            box-shadow: 0 0 15px rgba(245, 158, 11, 0.7);
+        }
+        .screen-card canvas {
+            background: #020617;
+            border: 1px solid #475569;
+            border-radius: 4px;
+            margin: 6px 0;
+        }
+        .screen-meta {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            color: #cbd5e1;
+        }
+    </style>
+</head>
+<body>
+    <div class="header-bar">
+        <h2>🧱 TETRIS BATTLE ROYALE</h2>
+        <button id="mute-btn" class="mute-btn" onclick="toggleMute()">🔊 Suara ON</button>
+    </div>
+
+    <!-- LOBBY / PILIH MODE -->
+    <div id="lobby-card" class="card">
+        <div class="tabs">
+            <button id="tab-player" class="tab-btn active" onclick="switchTab('player')">🎮 Gabung Pemain</button>
+            <button id="tab-admin" class="tab-btn" onclick="switchTab('admin')">👑 Mode Admin</button>
+        </div>
+
+        <div id="form-player">
+            <input type="text" id="player-name" placeholder="Nickname kamu..." maxlength="15">
+            <input type="text" id="join-room-code" placeholder="Kode Room dari Admin (misal: AB12C)" maxlength="8" style="text-transform:uppercase;">
+            <button class="primary" onclick="joinAsPlayer()">Masuk Arena</button>
+        </div>
+
+        <div id="form-admin" style="display:none;">
+            <input type="text" id="custom-room-code" placeholder="Kode Room kustom (opsional, max 8 huruf)" maxlength="8" style="text-transform:uppercase;">
+            <button class="primary" onclick="createAdminRoom()">Buat Room & Buka Monitor</button>
+        </div>
+    </div>
+
+    <!-- TAMPILAN PEMAIN (PC & PONSEL) -->
+    <div id="player-view" class="player-layout" style="display:none;">
+        <div class="top-hud">
+            <div>Room: <b id="p-room-code">-</b></div>
+            <div>Skor: <b id="score">0</b> | KO: <b id="ko">0</b></div>
+            <div id="p-status" style="color:#38bdf8; font-weight:bold;">Menunggu Admin...</div>
+        </div>
+
+        <div id="incoming-alert" style="height:22px; text-align:center;"></div>
+
+        <!-- HASIL JUARA 1, 2, 3 -->
+        <div id="player-podium" class="podium-box" style="display:none;"></div>
+
+        <div class="main-stage">
+            <canvas id="board" width="240" height="480"></canvas>
+
+            <div class="side-info">
+                <div style="font-size:13px; font-weight:bold;">Peserta di Room</div>
+                <div id="opponents" class="opponents-list"></div>
+                <div id="player-log" class="log-box"></div>
+            </div>
+        </div>
+
+        <!-- KONTROL SENTUH PONSEL -->
+        <div class="touch-controls">
+            <div class="ctrl-btn" ontouchstart="handleTouch(event, 'left')" onclick="moveLeft()">◀</div>
+            <div class="ctrl-btn" ontouchstart="handleTouch(event, 'right')" onclick="moveRight()">▶</div>
+            <div class="ctrl-btn" ontouchstart="handleTouch(event, 'rotate')" onclick="rotatePiece()">↻</div>
+            <div class="ctrl-btn" ontouchstart="handleTouch(event, 'down')" onclick="moveDown()">▼</div>
+            <div class="ctrl-btn drop-btn" ontouchstart="handleTouch(event, 'drop')" onclick="hardDrop()">⤓</div>
+        </div>
+    </div>
+
+    <!-- TAMPILAN ADMIN MONITOR -->
+    <div id="admin-view" class="admin-layout" style="display:none;">
+        <div class="admin-header">
+            <div>
+                <div style="font-size:12px; color:#94a3b8;">KODE ROOM ARENA</div>
+                <div class="room-code-badge" id="admin-room-display">-----</div>
+            </div>
+            <div>
+                <div>Status: <b id="admin-match-status" style="color:#fbbf24;">Menunggu Pemain</b></div>
+                <div style="font-size:13px; color:#cbd5e1;">Total Peserta: <b id="admin-player-count">0</b></div>
+            </div>
+            <div style="display:flex; flex-wrap:wrap; gap:8px;">
+                <button class="bot-btn" onclick="adminAddBot()">🤖 + Bot</button>
+                <button class="success" onclick="adminStartMatch()">▶ Mulai Game</button>
+                <button class="danger" onclick="adminResetRoom()">↻ Reset Room</button>
+            </div>
+        </div>
+
+        <div id="admin-podium" class="podium-box" style="display:none; max-width:100%; margin-bottom:16px;"></div>
+
+        <div class="main-stage" style="align-items:flex-start;">
+            <div style="flex:1; min-width:280px;">
+                <h4 style="margin:0 0 10px 0;">📺 Live Monitor Layar Pemain & Bot</h4>
+                <div id="monitor-grid" class="monitor-grid"></div>
+            </div>
+            <div class="side-info" style="max-width:300px;">
+                <div style="font-size:13px; font-weight:bold;">Log Serangan & Eliminasi</div>
+                <div id="admin-log" class="log-box" style="height:360px;"></div>
+            </div>
+        </div>
+    </div>
+
+<script>
+// --- SOUND ENGINE (WEB AUDIO API) ---
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+let audioCtx = null;
+let isMuted = false;
+
+function ensureAudio() {
+    if (isMuted) return null;
+    if (!audioCtx && AudioCtx) {
+        audioCtx = new AudioCtx();
+    }
+    if (audioCtx && audioCtx.state === 'suspended') {
+        audioCtx.resume().catch(() => {});
+    }
+    return audioCtx;
+}
+
+function toggleMute() {
+    isMuted = !isMuted;
+    document.getElementById('mute-btn').innerText = isMuted ? '🔇 Suara OFF' : '🔊 Suara ON';
+    if (!isMuted) ensureAudio();
+}
+
+function playTone(freq, duration = 0.08, type = 'sine', gainVal = 0.12, delay = 0) {
+    const ctxAudio = ensureAudio();
+    if (!ctxAudio) return;
+
+    const now = ctxAudio.currentTime + delay;
+    const osc = ctxAudio.createOscillator();
+    const gain = ctxAudio.createGain();
+
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, now);
+
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(gainVal, now + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+
+    osc.connect(gain);
+    gain.connect(ctxAudio.destination);
+
+    osc.start(now);
+    osc.stop(now + duration + 0.02);
+}
+
+const SFX = {
+    move: () => playTone(240, 0.04, 'triangle', 0.07),
+    rotate: () => playTone(380, 0.06, 'sine', 0.09),
+    drop: () => playTone(150, 0.09, 'sawtooth', 0.1),
+    clear: (lines = 1) => {
+        const base = 440 + (lines * 70);
+        playTone(base, 0.1, 'triangle', 0.14, 0);
+        playTone(base * 1.25, 0.14, 'triangle', 0.14, 0.08);
+    },
+    block: () => {
+        playTone(520, 0.08, 'sine', 0.12, 0);
+        playTone(780, 0.12, 'sine', 0.12, 0.06);
+    },
+    attack: () => {
+        playTone(170, 0.14, 'sawtooth', 0.14, 0);
+        playTone(130, 0.16, 'sawtooth', 0.14, 0.1);
+    },
+    danger: (level = 1) => {
+        playTone(580 + level * 60, 0.05, 'square', 0.05);
+    },
+    ko: () => {
+        playTone(260, 0.14, 'sawtooth', 0.14, 0);
+        playTone(140, 0.25, 'sawtooth', 0.14, 0.12);
+    },
+    win: () => {
+        playTone(523.25, 0.12, 'triangle', 0.15, 0);
+        playTone(659.25, 0.12, 'triangle', 0.15, 0.11);
+        playTone(783.99, 0.22, 'triangle', 0.16, 0.22);
+    }
+};
+
+document.addEventListener('pointerdown', () => ensureAudio(), { once: true });
+
+// --- WEBSOCKET & ROOM STATE ---
+const clientId = Math.random().toString(36).substring(2, 10);
+let socket = null;
+let pingInterval = null;
+let currentRole = null;
+let activeRoomCode = '';
+let myUsername = '';
+
+function switchTab(tab) {
+    ensureAudio();
+    document.getElementById('tab-player').classList.toggle('active', tab === 'player');
+    document.getElementById('tab-admin').classList.toggle('active', tab === 'admin');
+    document.getElementById('form-player').style.display = tab === 'player' ? 'block' : 'none';
+    document.getElementById('form-admin').style.display = tab === 'admin' ? 'block' : 'none';
+}
+
+function connectWS(onOpenCallback) {
+    if (socket && socket.readyState === WebSocket.OPEN) {
+        if (onOpenCallback) onOpenCallback();
+        return;
+    }
+    const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    socket = new WebSocket(`${protocol}//${location.host}/ws/${clientId}`);
+
+    socket.onopen = () => {
+        if (onOpenCallback) onOpenCallback();
+        clearInterval(pingInterval);
+        pingInterval = setInterval(() => {
+            sendWS({ type: 'ping' });
+        }, 15000);
+    };
+
+    socket.onclose = () => {
+        clearInterval(pingInterval);
+        setTimeout(() => {
+            connectWS(() => {
+                if (currentRole === 'admin' && activeRoomCode) {
+                    sendWS({ type: 'create_room', room_code: activeRoomCode });
+                } else if (currentRole === 'player' && activeRoomCode && myUsername) {
+                    sendWS({ type: 'join_game', room_code: activeRoomCode, username: myUsername });
+                }
+            });
+        }, 2000);
+    };
+
+    socket.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        handleServerEvent(data);
+    };
+}
+
+function sendWS(payload) {
+    if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify(payload));
+    }
+}
+
+// --- ADMIN ACTIONS ---
+function createAdminRoom() {
+    ensureAudio();
+    const customCode = document.getElementById('custom-room-code').value.trim().toUpperCase();
+    connectWS(() => {
+        currentRole = 'admin';
+        sendWS({ type: 'create_room', room_code: customCode });
+    });
+}
+
+function adminAddBot() {
+    ensureAudio();
+    sendWS({ type: 'admin_add_bot' });
+}
+
+function adminStartMatch() {
+    ensureAudio();
+    sendWS({ type: 'admin_start_match' });
+}
+
+function adminResetRoom() {
+    ensureAudio();
+    sendWS({ type: 'admin_reset_room' });
+}
+
+// --- PLAYER ACTIONS ---
+function joinAsPlayer() {
+    ensureAudio();
+    const name = document.getElementById('player-name').value.trim() || 'Player';
+    const roomCode = document.getElementById('join-room-code').value.trim().toUpperCase();
+    if (!roomCode) {
+        alert('Masukkan Kode Room dari Admin terlebih dahulu!');
+        return;
+    }
+    myUsername = name;
+    activeRoomCode = roomCode;
+    connectWS(() => {
+        currentRole = 'player';
+        sendWS({ type: 'join_game', room_code: roomCode, username: name });
+    });
+}
+
+// --- TETRIS ENGINE ---
+const canvas = document.getElementById('board');
+const ctx = canvas.getContext('2d');
+const COLS = 10, ROWS = 20, BLOCK = 24;
+const DANGER_ROW_THRESHOLD = 4;
+
+const COLORS = [
+    null,
+    '#06b6d4', '#3b82f6', '#f97316', '#eab308',
+    '#22c55e', '#a855f7', '#ef4444', '#64748b'
+];
+
+const SHAPES = [
+    [],
+    [[1, 1, 1, 1]],
+    [[2, 0, 0], [2, 2, 2]],
+    [[0, 0, 3], [3, 3, 3]],
+    [[4, 4], [4, 4]],
+    [[0, 5, 5], [5, 5, 0]],
+    [[0, 6, 0], [6, 6, 6]],
+    [[7, 7, 0], [0, 7, 7]]
+];
+
+let grid = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
+let piece = null;
+let score = 0;
+let isPlaying = false;
+let lastAttackerId = null;
+let pendingGarbage = 0;
+
+let dangerLevel = 0;
+let dangerBlinkTimer = 0;
+let dangerFlashOn = false;
+
+function computeDangerLevel(targetGrid) {
+    let highestFilledRow = ROWS;
+    for (let r = 0; r < ROWS; r++) {
+        if (targetGrid[r].some(cell => cell !== 0)) {
+            highestFilledRow = r;
+            break;
+        }
+    }
+    if (highestFilledRow <= DANGER_ROW_THRESHOLD) {
+        return Math.min(5, (DANGER_ROW_THRESHOLD - highestFilledRow) + 1);
+    }
+    return 0;
+}
+
+function addLog(elementId, text) {
+    const log = document.getElementById(elementId);
+    if (log) {
+        log.innerHTML = `<div style="margin-bottom:4px;">${text}</div>` + log.innerHTML;
+    }
+}
+
+function getBoardSnapshotWithActivePiece() {
+    const copy = grid.map(row => [...row]);
+    if (piece && isPlaying) {
+        piece.shape.forEach((row, r) => {
+            row.forEach((val, c) => {
+                const nr = piece.y + r;
+                const nc = piece.x + c;
+                if (val !== 0 && nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS) {
+                    copy[nr][nc] = val;
+                }
+            });
+        });
+    }
+    return copy;
+}
+
+function syncBoardToServer() {
+    sendWS({
+        type: 'update_board',
+        score,
+        grid: getBoardSnapshotWithActivePiece()
+    });
+}
+
+function spawnPiece() {
+    const id = Math.floor(Math.random() * 7) + 1;
+    const shape = SHAPES[id];
+    piece = {
+        shape,
+        x: Math.floor(COLS / 2) - Math.floor(shape[0].length / 2),
+        y: 0
+    };
+    if (collide(grid, piece)) {
+        isPlaying = false;
+        dangerLevel = 0;
+        dangerFlashOn = false;
+        canvas.style.borderColor = '#475569';
+        canvas.style.boxShadow = '0 0 20px rgba(0, 0, 0, 0.7)';
+        document.getElementById('p-status').innerText = '💀 Tereliminasi';
+        document.getElementById('p-status').style.color = '#ef4444';
+        SFX.ko();
+        syncBoardToServer();
+        sendWS({ type: 'player_eliminated', last_attacker_id: lastAttackerId });
+        addLog('player-log', '❌ Kamu tereliminasi!');
+    }
+}
+
+function collide(g, p) {
+    for (let r = 0; r < p.shape.length; r++) {
+        for (let c = 0; c < p.shape[r].length; c++) {
+            if (p.shape[r][c] !== 0) {
+                const nr = p.y + r;
+                const nc = p.x + c;
+                if (nr >= ROWS || nc < 0 || nc >= COLS || (nr >= 0 && g[nr][nc] !== 0)) {
+                    return true;
+                }
+            }
+        }
+    }
+    return false;
+}
+
+function merge() {
+    piece.shape.forEach((row, r) => {
+        row.forEach((val, c) => {
+            if (val !== 0 && piece.y + r >= 0) {
+                grid[piece.y + r][piece.x + c] = val;
+            }
+        });
+    });
+}
+
+function rotateMatrix(matrix) {
+    return matrix[0].map((_, i) => matrix.map(row => row[i]).reverse());
+}
+
+function sweepLines() {
+    let cleared = 0;
+    for (let r = ROWS - 1; r >= 0; r--) {
+        if (grid[r].every(cell => cell !== 0)) {
+            grid.splice(r, 1);
+            grid.unshift(Array(COLS).fill(0));
+            cleared++;
+            r++;
+        }
+    }
+
+    if (cleared > 0) {
+        if (pendingGarbage > 0) {
+            const blocked = Math.min(pendingGarbage, cleared);
+            pendingGarbage -= blocked;
+            SFX.block();
+            addLog('player-log', `🛡️ Menangkis ${blocked} baris serangan!`);
+            updateAlert();
+        } else {
+            SFX.clear(cleared);
+        }
+        score += cleared * 100;
+        document.getElementById('score').innerText = score;
+        sendWS({ type: 'line_cleared', lines: cleared });
+    } else if (pendingGarbage > 0) {
+        applyGarbage(pendingGarbage);
+        pendingGarbage = 0;
+        updateAlert();
+    }
+}
+
+function applyGarbage(lines) {
+    const hole = Math.floor(Math.random() * COLS);
+    for (let i = 0; i < lines; i++) {
+        grid.shift();
+        const garbageRow = Array(COLS).fill(8);
+        garbageRow[hole] = 0;
+        grid.push(garbageRow);
+    }
+}
+
+function updateAlert() {
+    const el = document.getElementById('incoming-alert');
+    el.innerHTML = pendingGarbage > 0
+        ? `<span class="warning">⚠️ SERANGAN MASUK: +${pendingGarbage} BARIS!</span>`
+        : '';
+}
+
+function moveLeft() {
+    if (!isPlaying || !piece) return;
+    piece.x--;
+    if (collide(grid, piece)) piece.x++;
+    else SFX.move();
+}
+
+function moveRight() {
+    if (!isPlaying || !piece) return;
+    piece.x++;
+    if (collide(grid, piece)) piece.x--;
+    else SFX.move();
+}
+
+function moveDown() {
+    if (!isPlaying || !piece) return;
+    piece.y++;
+    if (collide(grid, piece)) piece.y--;
+    else SFX.move();
+}
+
+function rotatePiece() {
+    if (!isPlaying || !piece) return;
+    const old = piece.shape;
+    piece.shape = rotateMatrix(piece.shape);
+    if (collide(grid, piece)) piece.shape = old;
+    else SFX.rotate();
+}
+
+function hardDrop() {
+    if (!isPlaying || !piece) return;
+    while (!collide(grid, piece)) piece.y++;
+    piece.y--;
+    SFX.drop();
+    merge();
+    sweepLines();
+    spawnPiece();
+    syncBoardToServer();
+}
+
+function handleTouch(e, action) {
+    e.preventDefault();
+    ensureAudio();
+    if (action === 'left') moveLeft();
+    else if (action === 'right') moveRight();
+    else if (action === 'rotate') rotatePiece();
+    else if (action === 'down') moveDown();
+    else if (action === 'drop') hardDrop();
+}
+
+document.addEventListener('keydown', e => {
+    if (!isPlaying || !piece) return;
+    ensureAudio();
+    if (e.key === 'ArrowLeft') moveLeft();
+    else if (e.key === 'ArrowRight') moveRight();
+    else if (e.key === 'ArrowDown') moveDown();
+    else if (e.key === 'ArrowUp') rotatePiece();
+    else if (e.key === ' ') {
+        e.preventDefault();
+        hardDrop();
+    }
+});
+
+let touchStartX = 0, touchStartY = 0;
+canvas.addEventListener('touchstart', e => {
+    ensureAudio();
+    if (e.touches.length === 1) {
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+    }
+}, { passive: true });
+
+canvas.addEventListener('touchend', e => {
+    if (!isPlaying || !piece || e.changedTouches.length === 0) return;
+    const dx = e.changedTouches[0].clientX - touchStartX;
+    const dy = e.changedTouches[0].clientY - touchStartY;
+    if (Math.abs(dx) < 15 && Math.abs(dy) < 15) {
+        rotatePiece();
+    } else if (Math.abs(dx) > Math.abs(dy)) {
+        if (dx > 20) moveRight();
+        else if (dx < -20) moveLeft();
+    } else {
+        if (dy > 35) hardDrop();
+    }
+});
+
+function drawBlock(context, x, y, color, size) {
+    context.fillStyle = color;
+    context.fillRect(x * size, y * size, size - 1, size - 1);
+}
+
+function drawGridOnCanvas(targetCanvas, targetGrid, blockSize) {
+    const c = targetCanvas.getContext('2d');
+    c.fillStyle = '#020617';
+    c.fillRect(0, 0, targetCanvas.width, targetCanvas.height);
+    if (!targetGrid || targetGrid.length === 0) return;
+
+    targetGrid.forEach((row, r) => {
+        row.forEach((val, col) => {
+            if (val) drawBlock(c, col, r, COLORS[val] || '#64748b', blockSize);
+        });
+    });
+
+    const dangerY = (DANGER_ROW_THRESHOLD + 1) * blockSize;
+    c.strokeStyle = 'rgba(239, 68, 68, 0.45)';
+    c.setLineDash([4, 4]);
+    c.beginPath();
+    c.moveTo(0, dangerY);
+    c.lineTo(targetCanvas.width, dangerY);
+    c.stroke();
+    c.setLineDash([]);
+}
+
+function draw() {
+    ctx.fillStyle = '#020617';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    if (isPlaying && dangerLevel > 0 && dangerFlashOn) {
+        const alpha = 0.14 + (dangerLevel * 0.05);
+        ctx.fillStyle = `rgba(239, 68, 68, ${alpha.toFixed(2)})`;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+
+    const dangerLineY = (DANGER_ROW_THRESHOLD + 1) * BLOCK;
+    ctx.strokeStyle = dangerLevel > 0 ? 'rgba(248, 113, 113, 0.85)' : 'rgba(239, 68, 68, 0.25)';
+    ctx.setLineDash([5, 5]);
+    ctx.beginPath();
+    ctx.moveTo(0, dangerLineY);
+    ctx.lineTo(canvas.width, dangerLineY);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    grid.forEach((row, r) => row.forEach((val, c) => {
+        if (val) drawBlock(ctx, c, r, COLORS[val], BLOCK);
+    }));
+
+    if (piece && isPlaying) {
+        piece.shape.forEach((row, r) => row.forEach((val, c) => {
+            if (val) drawBlock(ctx, piece.x + c, piece.y + r, COLORS[val], BLOCK);
+        }));
+    }
+
+    if (isPlaying && dangerLevel > 0 && dangerFlashOn) {
+        canvas.style.borderColor = '#ef4444';
+        canvas.style.boxShadow = `0 0 ${12 + dangerLevel * 5}px rgba(239, 68, 68, 0.9)`;
+    } else {
+        canvas.style.borderColor = '#475569';
+        canvas.style.boxShadow = '0 0 20px rgba(0, 0, 0, 0.7)';
+    }
+}
+
+let dropCounter = 0;
+let syncCounter = 0;
+let lastTime = 0;
+
+function update(time = 0) {
+    const dt = time - lastTime;
+    lastTime = time;
+
+    if (isPlaying) {
+        dropCounter += dt;
+        syncCounter += dt;
+
+        dangerLevel = computeDangerLevel(grid);
+
+        if (dangerLevel > 0) {
+            const blinkIntervalMs = Math.max(75, 480 - (dangerLevel * 80));
+            dangerBlinkTimer += dt;
+            if (dangerBlinkTimer >= blinkIntervalMs) {
+                dangerFlashOn = !dangerFlashOn;
+                dangerBlinkTimer = 0;
+                if (dangerFlashOn) SFX.danger(dangerLevel);
+            }
+        } else {
+            dangerFlashOn = false;
+            dangerBlinkTimer = 0;
+        }
+
+        if (dropCounter > 600) {
+            piece.y++;
+            if (collide(grid, piece)) {
+                piece.y--;
+                merge();
+                sweepLines();
+                spawnPiece();
+                syncBoardToServer();
+            }
+            dropCounter = 0;
+        }
+
+        if (syncCounter > 350) {
+            syncBoardToServer();
+            syncCounter = 0;
+        }
+    }
+
+    draw();
+    requestAnimationFrame(update);
+}
+
+function renderPodium(containerId, podiumList) {
+    const box = document.getElementById(containerId);
+    if (!box || !podiumList || podiumList.length === 0) return;
+
+    const medals = { 1: '🥇', 2: '🥈', 3: '🥉' };
+    let html = `<div style="font-weight:bold; font-size:16px; color:#facc15;">🏆 HASIL JUARA BATTLE ROYALE</div>`;
+
+    podiumList.forEach(item => {
+        const medal = medals[item.rank] || `#${item.rank}`;
+        const botTag = item.is_bot ? ' 🤖' : '';
+        html += `
+            <div class="podium-item rank-${item.rank}">
+                <div>
+                    <div style="font-weight:bold; font-size:14px;">${medal} Juara ${item.rank}: ${item.name}${botTag}</div>
+                    <div style="font-size:11px; color:#94a3b8;">${item.reason}</div>
+                </div>
+                <div style="text-align:right; font-size:12px;">
+                    <div>Skor: <b>${item.score}</b></div>
+                    <div>KO: <b>${item.ko}</b></div>
+                </div>
+            </div>
+        `;
+    });
+
+    box.innerHTML = html;
+    box.style.display = 'block';
+}
+
+function hidePodiums() {
+    document.getElementById('player-podium').style.display = 'none';
+    document.getElementById('admin-podium').style.display = 'none';
+}
+
+// --- SERVER EVENT HANDLERS ---
+function handleServerEvent(data) {
+    if (data.type === 'join_error') {
+        alert(data.msg);
+    } else if (data.type === 'joined_success') {
+        document.getElementById('lobby-card').style.display = 'none';
+        document.getElementById('player-view').style.display = 'flex';
+        document.getElementById('p-room-code').innerText = data.room_code;
+        if (data.active && !data.alive) {
+            document.getElementById('p-status').innerText = '⏳ Menunggu ronde berikutnya';
+        }
+    } else if (data.type === 'room_created') {
+        activeRoomCode = data.room_code;
+        document.getElementById('lobby-card').style.display = 'none';
+        document.getElementById('admin-view').style.display = 'block';
+        document.getElementById('admin-room-display').innerText = data.room_code;
+        renderAdminMonitor(data.players);
+    } else if (data.type === 'match_started') {
+        hidePodiums();
+        SFX.clear(2);
+        if (currentRole === 'player') {
+            grid = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
+            score = 0;
+            pendingGarbage = 0;
+            lastAttackerId = null;
+            dangerLevel = 0;
+            dangerFlashOn = false;
+            isPlaying = true;
+            document.getElementById('score').innerText = '0';
+            document.getElementById('ko').innerText = '0';
+            document.getElementById('p-status').innerText = '🟢 Bertarung';
+            document.getElementById('p-status').style.color = '#22c55e';
+            updateAlert();
+            spawnPiece();
+            syncBoardToServer();
+            addLog('player-log', '🔥 PERTANDINGAN DIMULAI!');
+            renderOpponents(data.players);
+        } else if (currentRole === 'admin') {
+            document.getElementById('admin-match-status').innerText = '🔥 Sedang Bertarung';
+            document.getElementById('admin-match-status').style.color = '#22c55e';
+            addLog('admin-log', '🔥 Pertandingan dimulai oleh Admin!');
+            renderAdminMonitor(data.players);
+        }
+    } else if (data.type === 'room_reset') {
+        hidePodiums();
+        if (currentRole === 'player') {
+            isPlaying = false;
+            dangerLevel = 0;
+            dangerFlashOn = false;
+            grid = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
+            pendingGarbage = 0;
+            updateAlert();
+            document.getElementById('p-status').innerText = 'Menunggu Admin...';
+            document.getElementById('p-status').style.color = '#38bdf8';
+            addLog('player-log', '↻ Room di-reset oleh Admin.');
+            renderOpponents(data.players);
+        } else if (currentRole === 'admin') {
+            document.getElementById('admin-match-status').innerText = 'Menunggu Pemain';
+            document.getElementById('admin-match-status').style.color = '#fbbf24';
+            addLog('admin-log', '↻ Room berhasil di-reset.');
+            renderAdminMonitor(data.players);
+        }
+    } else if (data.type === 'receive_attack') {
+        if (currentRole !== 'player' || !isPlaying) return;
+        pendingGarbage += data.lines;
+        lastAttackerId = data.from_id;
+        SFX.attack();
+        updateAlert();
+        addLog('player-log', `🚨 Diserang ${data.from_name} (+${data.lines} baris)!`);
+    } else if (data.type === 'attack_log') {
+        if (currentRole === 'player') addLog('player-log', data.msg);
+        if (currentRole === 'admin') {
+            addLog('admin-log', data.msg);
+            if (data.target_id) highlightAdminTarget(data.target_id);
+        }
+    } else if (data.type === 'system_msg') {
+        alert(data.msg);
+    } else if (data.type === 'lobby_update') {
+        if (currentRole === 'player') renderOpponents(data.players);
+    } else if (data.type === 'admin_players_sync') {
+        if (currentRole === 'admin') renderAdminMonitor(data.players);
+    } else if (data.type === 'admin_screen_update') {
+        if (currentRole === 'admin') updateSingleAdminScreen(data);
+    } else if (data.type === 'match_over') {
+        SFX.win();
+        if (currentRole === 'player') {
+            isPlaying = false;
+            dangerLevel = 0;
+            dangerFlashOn = false;
+            document.getElementById('p-status').innerText = '🏆 Selesai';
+            document.getElementById('p-status').style.color = '#facc15';
+            renderPodium('player-podium', data.podium);
+            addLog('player-log', `🏆 JUARA 1: ${data.winner}`);
+        } else if (currentRole === 'admin') {
+            document.getElementById('admin-match-status').innerText = `🏆 Juara 1: ${data.winner}`;
+            document.getElementById('admin-match-status').style.color = '#facc15';
+            renderPodium('admin-podium', data.podium);
+            addLog('admin-log', `🏆 Pertandingan selesai! Juara 1: ${data.winner}`);
+            if (data.players) renderAdminMonitor(data.players);
+        }
+    }
+}
+
+function renderOpponents(players) {
+    const container = document.getElementById('opponents');
+    container.innerHTML = '';
+    Object.entries(players).forEach(([pid, p]) => {
+        if (pid === clientId) {
+            document.getElementById('ko').innerText = p.ko ?? 0;
+            return;
+        }
+        const botIcon = p.is_bot ? '🤖 ' : '';
+        const div = document.createElement('div');
+        div.className = 'opp-badge' + (p.alive ? '' : ' dead');
+        div.innerHTML = `<b>${botIcon}${p.name}</b><br>${p.alive ? '🟢 Hidup' : '💀 KO'} | KO: ${p.ko}`;
+        container.appendChild(div);
+    });
+}
+
+// --- ADMIN MONITOR RENDERING ---
+function renderAdminMonitor(players) {
+    const container = document.getElementById('monitor-grid');
+    const entries = Object.entries(players);
+    document.getElementById('admin-player-count').innerText = entries.length;
+    container.innerHTML = '';
+
+    entries.forEach(([pid, p]) => {
+        const botBadge = p.is_bot ? ' 🤖' : '';
+        const card = document.createElement('div');
+        card.id = `screen-card-${pid}`;
+        card.className = 'screen-card ' + (p.alive ? 'alive' : 'dead');
+        card.innerHTML = `
+            <div style="font-weight:bold; font-size:14px; margin-bottom:2px;">${p.name}${botBadge}</div>
+            <div style="font-size:11px; color:${p.alive ? '#4ade80' : '#f87171'};">
+                ${p.alive ? '● AKTIF' : '✖ ELIMINASI'}
+            </div>
+            <canvas id="mini-canvas-${pid}" width="120" height="240"></canvas>
+            <div class="screen-meta">
+                <span>Skor: <b id="mini-score-${pid}">${p.score}</b></span>
+                <span>KO: <b id="mini-ko-${pid}">${p.ko}</b></span>
+            </div>
+        `;
+        container.appendChild(card);
+
+        const miniCanvas = document.getElementById(`mini-canvas-${pid}`);
+        drawGridOnCanvas(miniCanvas, p.grid, 12);
+    });
+}
+
+function updateSingleAdminScreen(data) {
+    const miniCanvas = document.getElementById(`mini-canvas-${data.pid}`);
+    if (!miniCanvas) return;
+    drawGridOnCanvas(miniCanvas, data.grid, 12);
+    const scoreEl = document.getElementById(`mini-score-${data.pid}`);
+    const koEl = document.getElementById(`mini-ko-${data.pid}`);
+    if (scoreEl) scoreEl.innerText = data.score;
+    if (koEl) koEl.innerText = data.ko;
+}
+
+function highlightAdminTarget(targetPid) {
+    const card = document.getElementById(`screen-card-${targetPid}`);
+    if (!card) return;
+    card.classList.add('under-attack');
+    setTimeout(() => card.classList.remove('under-attack'), 900);
+}
+
+update();
+</script>
+</body>
+</html>
