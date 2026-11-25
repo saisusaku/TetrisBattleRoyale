@@ -30,7 +30,8 @@ app = FastAPI()
 #         "score": int,
 #         "ko": int,
 #         "grid": list,
-#         "last_attacker_id": str | None
+#         "last_attacker_id": str | None,
+#         "last_target_id": str | None
 #       }
 #     }
 #   }
@@ -233,6 +234,19 @@ async def send_to_admins(room_code: str, message: dict):
         room["admins"].pop(aid, None)
 
 
+def append_random_garbage_rows(grid: list, count: int):
+    last_hole = None
+    for _ in range(max(1, count)):
+        hole = random.randint(0, COLS - 1)
+        if COLS > 1 and hole == last_hole:
+            hole = (hole + random.randint(1, COLS - 1)) % COLS
+        last_hole = hole
+        grid.pop(0)
+        row = [8] * COLS
+        row[hole] = 0
+        grid.append(row)
+
+
 async def perform_attack(room_code: str, attacker_id: str, lines: int):
     room = rooms.get(room_code)
     if not room or not room["active"] or attacker_id not in room["players"]:
@@ -248,8 +262,12 @@ async def perform_attack(room_code: str, attacker_id: str, lines: int):
     if not alive_opponents:
         return
 
-    target_id = random.choice(alive_opponents)
-    attacker_name = room["players"][attacker_id]["name"]
+    attacker = room["players"][attacker_id]
+    candidates = [pid for pid in alive_opponents if pid != attacker.get("last_target_id")]
+    target_id = random.choice(candidates if candidates else alive_opponents)
+    attacker["last_target_id"] = target_id
+
+    attacker_name = attacker["name"]
     target_name = room["players"][target_id]["name"]
 
     await send_to_player(room_code, target_id, {
@@ -261,13 +279,7 @@ async def perform_attack(room_code: str, attacker_id: str, lines: int):
 
     target_player = room["players"].get(target_id)
     if target_player and target_player.get("is_bot") and target_player["alive"]:
-        hole = random.randint(0, COLS - 1)
-        g = target_player["grid"]
-        for _ in range(min(garbage_count, 4)):
-            g.pop(0)
-            row = [8] * COLS
-            row[hole] = 0
-            g.append(row)
+        append_random_garbage_rows(target_player["grid"], min(garbage_count, 5))
         target_player["last_attacker_id"] = attacker_id
         await send_to_admins(room_code, {
             "type": "admin_screen_update",
@@ -483,7 +495,8 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                     "score": 0,
                     "ko": 0,
                     "grid": empty_grid(),
-                    "last_attacker_id": None
+                    "last_attacker_id": None,
+                    "last_target_id": None
                 }
 
                 await broadcast_to_room(current_room, {
@@ -543,6 +556,7 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                     room["players"][pid]["ko"] = 0
                     room["players"][pid]["grid"] = empty_grid()
                     room["players"][pid]["last_attacker_id"] = None
+                    room["players"][pid]["last_target_id"] = None
 
                 await broadcast_to_room(current_room, {
                     "type": "match_started",
@@ -561,6 +575,7 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                     room["players"][pid]["ko"] = 0
                     room["players"][pid]["grid"] = empty_grid()
                     room["players"][pid]["last_attacker_id"] = None
+                    room["players"][pid]["last_target_id"] = None
 
                 await broadcast_to_room(current_room, {
                     "type": "room_reset",
@@ -589,7 +604,8 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                     "score": 0,
                     "ko": 0,
                     "grid": empty_grid(),
-                    "last_attacker_id": None
+                    "last_attacker_id": None,
+                    "last_target_id": None
                 }
                 current_room = room_code
                 role = "player"
