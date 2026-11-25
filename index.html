@@ -149,6 +149,32 @@
             margin-top: 4px;
         }
 
+        /* BARCODE / QR BOX */
+        .barcode-box {
+            margin-top: 14px;
+            padding-top: 12px;
+            border-top: 1px solid #334155;
+            text-align: center;
+        }
+        .barcode-img {
+            width: 140px;
+            height: 140px;
+            object-fit: contain;
+            background: #0f172a;
+            padding: 6px;
+            border-radius: 10px;
+            border: 1px solid #475569;
+        }
+        .admin-barcode-img {
+            width: 72px;
+            height: 72px;
+            object-fit: contain;
+            background: #0f172a;
+            padding: 4px;
+            border-radius: 8px;
+            border: 1px solid #475569;
+        }
+
         /* LOBBY LIST */
         .lobby-list-box {
             margin-top: 14px;
@@ -178,7 +204,7 @@
             display: flex;
             flex-direction: column;
             gap: 6px;
-            max-height: 210px;
+            max-height: 200px;
             overflow-y: auto;
         }
         .lobby-room-item {
@@ -424,6 +450,21 @@
             <input type="text" id="custom-room-code" placeholder="Kode Room (Jika sama, room lama kereset)" maxlength="8" style="text-transform:uppercase;">
             <button class="primary" onclick="createAdminRoom()">Buat Room Admin</button>
         </div>
+
+        <div class="barcode-box">
+            <div style="font-size:11px; font-weight:bold; color:#cbd5e1; margin-bottom:6px;">📱 Scan Barcode KepoTetris</div>
+            <img
+                class="barcode-img"
+                src="KepoTetris.jpeg"
+                alt="Barcode KepoTetris"
+                onerror="this.onerror=null; this.src='https://raw.githubusercontent.com/saisusaku/TetrisBattleRoyale/main/KepoTetris.jpeg';"
+            />
+            <div style="font-size:10px; color:#94a3b8; margin-top:6px;">
+                <a href="https://www.kepotekno.com/play.php?id=5" target="_blank" rel="noopener noreferrer" style="color:#38bdf8; text-decoration:none;">kepotekno.com/play.php?id=5</a>
+                •
+                <a href="https://github.com/saisusaku/TetrisBattleRoyale" target="_blank" rel="noopener noreferrer" style="color:#93c5fd; text-decoration:none;">GitHub</a>
+            </div>
+        </div>
     </div>
 
     <!-- TAMPILAN PEMAIN -->
@@ -482,6 +523,18 @@
                 <button class="remove-bot-btn" onclick="adminRemoveBot()">🤖 -Bot</button>
                 <button class="success" onclick="adminStartMatch()">▶ Mulai</button>
                 <button class="danger" onclick="adminResetRoom()">↻ Reset</button>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px;">
+                <img
+                    class="admin-barcode-img"
+                    src="KepoTetris.jpeg"
+                    alt="Barcode KepoTetris"
+                    onerror="this.onerror=null; this.src='https://raw.githubusercontent.com/saisusaku/TetrisBattleRoyale/main/KepoTetris.jpeg';"
+                />
+                <div style="font-size:10px; color:#94a3b8; line-height:1.35;">
+                    <div style="font-weight:bold; color:#cbd5e1;">Scan Masuk</div>
+                    <div>play.php?id=5</div>
+                </div>
             </div>
         </div>
         <div id="admin-podium" class="podium-box" style="display:none; max-width:100%; margin-bottom:12px;"></div>
