@@ -20,14 +20,13 @@
             padding: 12px;
             min-height: 100vh;
             touch-action: manipulation;
-            overflow: hidden; /* Mencegah scroll seluruh halaman saat main di ponsel */
         }
         .header-bar {
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 10px;
-            margin: 6px 0 8px 0;
+            margin: 6px 0 10px 0;
             width: 100%;
             max-width: 900px;
         }
@@ -41,12 +40,12 @@
             color: #f8fafc;
             border: 1px solid #475569;
             border-radius: 8px;
-            padding: 4px 8px;
+            padding: 5px 10px;
             font-size: 12px;
             cursor: pointer;
         }
         .mute-btn:hover { background: #334155; }
-        
+
         .card {
             background: #1e293b;
             padding: 16px;
@@ -91,7 +90,7 @@
             background: #2563eb;
             color: white;
             border: none;
-            padding: 10px;
+            padding: 11px;
             border-radius: 8px;
             cursor: pointer;
             font-weight: bold;
@@ -136,8 +135,8 @@
             flex-direction: column;
             align-items: center;
             width: 100%;
-            max-width: 480px; /* Batasi lebar di mobile */
-            flex: 1;
+            max-width: 520px;
+            gap: 8px;
             position: relative;
         }
         .top-hud {
@@ -150,46 +149,41 @@
             border-radius: 10px;
             font-size: 13px;
             border: 1px solid #334155;
-            margin-bottom: 4px;
         }
-        
         .main-stage {
             display: flex;
             justify-content: center;
+            align-items: flex-start;
             gap: 10px;
             width: 100%;
-            flex: 1;
-            min-height: 0; /* Penting untuk flexbox di mobile */
         }
-
         canvas#board {
             background: #020617;
             border: 2px solid #475569;
             border-radius: 6px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
-            height: 100%; /* Sesuaikan tinggi dengan container */
-            width: auto; /* Pertahankan aspek rasio */
-            max-width: 65%;
+            box-shadow: 0 0 12px rgba(0, 0, 0, 0.5);
             transition: border-color 0.1s, box-shadow 0.1s;
         }
-
         .side-info {
             flex: 1;
             display: flex;
             flex-direction: column;
-            gap: 4px;
-            min-width: 0;
+            gap: 6px;
+            min-width: 130px;
+            max-width: 220px;
         }
         .opponents-list {
             display: flex;
             flex-direction: column;
-            gap: 3px;
+            gap: 4px;
+            max-height: 150px;
+            overflow-y: auto;
         }
         .opp-badge {
             background: #0f172a;
-            padding: 4px 6px;
+            padding: 5px 7px;
             border-radius: 6px;
-            font-size: 10px;
+            font-size: 11px;
             border: 1px solid #334155;
             white-space: nowrap;
             overflow: hidden;
@@ -200,12 +194,11 @@
             border-color: #ef4444;
         }
         .log-box {
-            flex: 1; /* Mengisi ruang tersisa */
-            min-height: 60px;
+            height: 120px;
             overflow-y: auto;
-            font-size: 10px;
+            font-size: 11px;
             background: #0f172a;
-            padding: 4px;
+            padding: 6px;
             border-radius: 6px;
             border: 1px solid #334155;
         }
@@ -213,7 +206,7 @@
             color: #f87171;
             font-weight: bold;
             animation: blink 0.5s infinite;
-            font-size: 11px;
+            font-size: 12px;
         }
         @keyframes blink { 50% { opacity: 0.25; } }
 
@@ -222,90 +215,88 @@
             background: #1e293b;
             border: 2px solid #f59e0b;
             border-radius: 12px;
-            padding: 16px;
+            padding: 14px;
             width: 100%;
             max-width: 480px;
             box-shadow: 0 12px 30px rgba(0, 0, 0, 0.7);
-            position: absolute;
-            top: 60px;
-            z-index: 100;
+            position: relative;
+            z-index: 50;
         }
 
         /* ADMIN MONITOR */
         .admin-layout { width: 100%; max-width: 1280px; }
         .admin-header {
             display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px;
-            background: #1e293b; padding: 10px; border-radius: 10px; border: 1px solid #334155; margin-bottom: 10px;
+            background: #1e293b; padding: 12px; border-radius: 10px; border: 1px solid #334155; margin-bottom: 12px;
         }
         .room-code-badge {
             background: #0f172a; border: 2px dashed #38bdf8; color: #38bdf8;
-            padding: 4px 8px; border-radius: 8px; font-size: 16px; font-weight: 800; letter-spacing: 1px;
+            padding: 4px 10px; border-radius: 8px; font-size: 18px; font-weight: 800; letter-spacing: 2px;
         }
         .monitor-grid {
             display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px;
         }
         .screen-card {
-            background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 6px;
+            background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 8px;
             display: flex; flex-direction: column; align-items: center;
         }
         .screen-card.alive { border-color: #22c55e; }
         .screen-card.dead { border-color: #ef4444; opacity: 0.55; }
         .screen-card canvas { background: #020617; border: 1px solid #475569; border-radius: 3px; margin: 4px 0; }
-        .screen-meta { width: 100%; display: flex; justify-content: space-between; font-size: 10px; }
+        .screen-meta { width: 100%; display: flex; justify-content: space-between; font-size: 11px; color: #cbd5e1; }
 
-        /* --- TOMBOL KONTROL BARU UNTUK MODE PONSEL --- */
-        .mobile-controls-container {
-            display: none; /* Hanya muncul di layar kecil */
-            grid-template-columns: repeat(6, 1fr);
-            gap: 6px;
+        /* TOMBOL KONTROL PONSEL */
+        .mobile-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             width: 100%;
             max-width: 480px;
-            margin-top: 8px;
-            padding: 0 4px;
+            gap: 10px;
+            margin-top: 6px;
             user-select: none;
         }
-
-        /* Deteksi layar ponsel via CSS */
-        @media (max-width: 600px) and (hover: none) {
-            .mobile-controls-container {
-                display: grid;
-            }
-            /* Sembunyikan log dan opp list agar board lebih besar jika perlu */
-            /* .side-info { display: none; } canvas#board { max-width: 90%; } */
+        .dpad {
+            display: grid;
+            grid-template-columns: repeat(3, 52px);
+            grid-template-rows: repeat(2, 48px);
+            gap: 6px;
         }
-
+        .action-pad {
+            display: grid;
+            grid-template-columns: repeat(2, 64px);
+            gap: 8px;
+        }
         .ctrl-btn {
             background: #1e293b;
             color: #f8fafc;
             border: 2px solid #475569;
             border-radius: 10px;
-            padding: 14px 0;
             font-size: 18px;
             font-weight: bold;
-            text-align: center;
-            cursor: pointer;
             display: flex;
             justify-content: center;
             align-items: center;
-            -webkit-touch-callout: none;
+            cursor: pointer;
+            padding: 10px 0;
         }
-
         .ctrl-btn:active {
-            background: #3b82f6;
+            background: #2563eb;
             border-color: #60a5fa;
-            transform: translateY(1px);
+            transform: scale(0.96);
         }
-
-        /* Pengaturan grid span */
-        .span-2 { grid-column: span 2; }
-        
-        /* Warna khusus tombol aksi */
-        .btn-rotate { background: #0f5132; border-color: #198754; } /* Hijau gelap */
-        .btn-rotate:active { background: #198754; }
-        
-        .btn-drop { background: #822020; border-color: #dc3545; } /* Merah gelap */
-        .btn-drop:active { background: #dc3545; }
-
+        .btn-rotate {
+            background: #064e3b;
+            border-color: #10b981;
+            font-size: 14px;
+            padding: 14px 8px;
+        }
+        .btn-drop {
+            background: #7f1d1d;
+            border-color: #ef4444;
+            font-size: 14px;
+            padding: 14px 8px;
+        }
     </style>
 </head>
 <body>
@@ -341,30 +332,35 @@
             <div id="p-status" style="color:#38bdf8; font-weight:bold;">Menunggu...</div>
         </div>
 
-        <div id="incoming-alert" style="height:18px; text-align:center;"></div>
+        <div id="incoming-alert" style="height:20px; text-align:center;"></div>
 
         <div id="player-podium" class="podium-box" style="display:none;"></div>
 
         <div class="main-stage">
-            <canvas id="board" width="240" height="480"></canvas>
+            <canvas id="board" width="200" height="400"></canvas>
 
             <div class="side-info">
-                <div style="font-size:11px; font-weight:bold;">Peserta</div>
+                <div style="font-size:12px; font-weight:bold;">Peserta</div>
                 <div id="opponents" class="opponents-list"></div>
+                <div style="font-size:12px; font-weight:bold; margin-top:4px;">Log Arena</div>
                 <div id="player-log" class="log-box"></div>
             </div>
         </div>
 
-        <!-- --- TOMBOL KONTROL BARU UNTUK MODE PONSEL (HTML) --- -->
-        <div class="mobile-controls-container">
-            <!-- Baris 1: Kiri, Kanan, Putar -->
-            <div class="ctrl-btn" onclick="vibrate(); moveLeft()" ontouchstart="vibrate(); moveLeft()">◀</div>
-            <div class="ctrl-btn" onclick="vibrate(); moveRight()" ontouchstart="vibrate(); moveRight()">▶</div>
-            <div class="ctrl-btn btn-rotate span-2" onclick="vibrate(); rotatePiece()" ontouchstart="vibrate(); rotatePiece()">⟳ Putar</div>
-            
-            <!-- Baris 2: Turun Pelan, Hard Drop -->
-            <div class="ctrl-btn btn-drop span-3" onclick="vibrate(); hardDrop()" ontouchstart="vibrate(); hardDrop()">⤓ HARD DROP</div>
-            <div class="ctrl-btn" onclick="vibrate(); moveDown()" ontouchstart="vibrate(); moveDown()">▼</div>
+        <!-- TOMBOL PANAH & PUTAR UNTUK PONSEL -->
+        <div class="mobile-controls">
+            <div class="dpad">
+                <div></div>
+                <div class="ctrl-btn" onclick="vibrate(); rotatePiece()">↻</div>
+                <div></div>
+                <div class="ctrl-btn" onclick="vibrate(); moveLeft()">◀</div>
+                <div class="ctrl-btn" onclick="vibrate(); moveDown()">▼</div>
+                <div class="ctrl-btn" onclick="vibrate(); moveRight()">▶</div>
+            </div>
+            <div class="action-pad">
+                <div class="ctrl-btn btn-rotate" onclick="vibrate(); rotatePiece()">↻ Putar</div>
+                <div class="ctrl-btn btn-drop" onclick="vibrate(); hardDrop()">⤓ Drop</div>
+            </div>
         </div>
     </div>
 
@@ -372,27 +368,27 @@
     <div id="admin-view" class="admin-layout" style="display:none;">
         <div class="admin-header">
             <div>
-                <div style="font-size:10px; color:#94a3b8;">KODE ROOM</div>
+                <div style="font-size:11px; color:#94a3b8;">KODE ROOM</div>
                 <div class="room-code-badge" id="admin-room-display">-----</div>
             </div>
             <div>
-                Status: <b id="admin-match-status" style="color:#fbbf24;">Menunggu</b>
-                <div style="font-size:11px;">Peserta: <b id="admin-player-count">0</b></div>
+                <div>Status: <b id="admin-match-status" style="color:#fbbf24;">Menunggu</b></div>
+                <div style="font-size:12px;">Peserta: <b id="admin-player-count">0</b></div>
             </div>
-            <div style="display:flex; gap:6px;">
+            <div style="display:flex; flex-wrap:wrap; gap:6px;">
                 <button class="bot-btn" onclick="adminAddBot()">🤖 +Bot</button>
                 <button class="success" onclick="adminStartMatch()">▶ Mulai</button>
                 <button class="danger" onclick="adminResetRoom()">↻ Reset</button>
             </div>
         </div>
-        <div id="admin-podium" class="podium-box" style="display:none; max-width:100%;"></div>
-        <div class="main-stage">
+        <div id="admin-podium" class="podium-box" style="display:none; max-width:100%; margin-bottom:12px;"></div>
+        <div class="main-stage" style="align-items:flex-start;">
             <div style="flex:1;">
-                <h4 style="margin:0 0 5px 0; font-size:14px;">Monitor Peserta</h4>
+                <h4 style="margin:0 0 8px 0; font-size:14px;">Monitor Peserta & Bot</h4>
                 <div id="monitor-grid" class="monitor-grid"></div>
             </div>
-            <div class="side-info" style="max-width:200px;">
-                <div style="font-size:11px; font-weight:bold;">Log</div>
+            <div class="side-info" style="max-width:240px;">
+                <div style="font-size:12px; font-weight:bold;">Log Serangan</div>
                 <div id="admin-log" class="log-box" style="height:300px;"></div>
             </div>
         </div>
@@ -407,7 +403,7 @@ let isMuted = false;
 function ensureAudio() {
     if (isMuted) return null;
     if (!audioCtx && AudioCtx) audioCtx = new AudioCtx();
-    if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+    if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
     return audioCtx;
 }
 
@@ -418,20 +414,20 @@ function toggleMute() {
 }
 
 function playTone(freq, duration = 0.08, type = 'sine', gainVal = 0.12, delay = 0) {
-    const ctx = ensureAudio();
-    if (!ctx) return;
-    const now = ctx.currentTime + delay;
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
+    const ctxAudio = ensureAudio();
+    if (!ctxAudio) return;
+    const now = ctxAudio.currentTime + delay;
+    const osc = ctxAudio.createOscillator();
+    const gain = ctxAudio.createGain();
     osc.type = type;
     osc.frequency.setValueAtTime(freq, now);
-    gain.gain.setValueAtTime(0, now);
-    gain.gain.linearRampToValueAtTime(gainVal, now + 0.01);
-    gain.gain.linearRampToValueAtTime(0, now + duration);
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(gainVal, now + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
     osc.connect(gain);
-    gain.connect(ctx.destination);
+    gain.connect(ctxAudio.destination);
     osc.start(now);
-    osc.stop(now + duration);
+    osc.stop(now + duration + 0.02);
 }
 
 const SFX = {
@@ -439,16 +435,15 @@ const SFX = {
     rotate: () => playTone(380, 0.05, 'sine', 0.08),
     drop: () => playTone(150, 0.08, 'sawtooth', 0.1),
     clear: (l) => { playTone(440+l*70, 0.1, 'triangle', 0.14); playTone(500+l*70, 0.1, 'triangle', 0.14, 0.05); },
-    block: () => { playTone(520, 0.08, 'sine', 0.1); playTone(780, 0.12, 'sine', 0.1); },
+    block: () => { playTone(520, 0.08, 'sine', 0.1); playTone(780, 0.12, 'sine', 0.1, 0.06); },
     attack: () => { playTone(170, 0.14, 'sawtooth', 0.12); playTone(130, 0.16, 'sawtooth', 0.12, 0.1); },
     danger: (lvl) => { if(ensureAudio()&&!isMuted)playTone(580+lvl*60, 0.05, 'square', 0.04); },
     ko: () => { playTone(260, 0.14, 'sawtooth', 0.12); playTone(140, 0.25, 'sawtooth', 0.12, 0.12); },
     win: () => { playTone(523, 0.12, 'triangle', 0.15); playTone(659, 0.12, 'triangle', 0.15, 0.11); playTone(783, 0.22, 'triangle', 0.16, 0.22); }
 };
 
-// --- FUNGSI VIBRATE (OPSIONAL UNTUK HAPTIC FEEDBACK) ---
 function vibrate() {
-    if (navigator.vibrate) navigator.vibrate(20); // Getar 20ms
+    if (navigator.vibrate) navigator.vibrate(15);
 }
 
 // --- WEBSOCKET & ROOM STATE ---
@@ -460,6 +455,7 @@ let activeRoomCode = '';
 let myUsername = '';
 
 function switchTab(tab) {
+    ensureAudio();
     document.getElementById('tab-player').classList.toggle('active', tab === 'player');
     document.getElementById('tab-admin').classList.toggle('active', tab === 'admin');
     document.getElementById('form-player').style.display = tab === 'player' ? 'block' : 'none';
@@ -467,27 +463,98 @@ function switchTab(tab) {
 }
 
 function connectWS(onOpen) {
-    if (socket?.readyState === WebSocket.OPEN) { onOpen(); return; }
+    if (socket && socket.readyState === WebSocket.OPEN) {
+        if (onOpen) onOpen();
+        return;
+    }
     const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
     socket = new WebSocket(`${protocol}//${location.host}/ws/${clientId}`);
-    socket.onopen = () => { onOpen(); clearInterval(pingInterval); pingInterval = setInterval(() => sendWS({type:'ping'}), 15000); };
-    socket.onclose = () => { clearInterval(pingInterval); setTimeout(() => connectWS(() => {
-        if(currentRole==='admin'&&activeRoomCode)sendWS({type:'create_room',room_code:activeRoomCode});
-        else if(currentRole==='player'&&activeRoomCode&&myUsername)sendWS({type:'join_game',room_code:activeRoomCode,username:myUsername});
-    }), 2000); };
+
+    socket.onopen = () => {
+        if (onOpen) onOpen();
+        clearInterval(pingInterval);
+        pingInterval = setInterval(() => sendWS({ type: 'ping' }), 15000);
+    };
+
+    socket.onclose = () => {
+        clearInterval(pingInterval);
+        setTimeout(() => connectWS(() => {
+            if (currentRole === 'admin' && activeRoomCode) {
+                sendWS({ type: 'create_room', room_code: activeRoomCode });
+            } else if (currentRole === 'player' && activeRoomCode && myUsername) {
+                sendWS({ type: 'join_game', room_code: activeRoomCode, username: myUsername });
+            }
+        }), 2000);
+    };
+
     socket.onmessage = (e) => handleServerEvent(JSON.parse(e.data));
 }
-const sendWS = (p) => socket?.readyState === WebSocket.OPEN && socket.send(JSON.stringify(p));
+
+function sendWS(payload) {
+    if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify(payload));
+    }
+}
+
+// --- FUNGSI TOMBOL LOBBY & ADMIN ---
+function createAdminRoom() {
+    ensureAudio();
+    const customCode = document.getElementById('custom-room-code').value.trim().toUpperCase();
+    connectWS(() => {
+        currentRole = 'admin';
+        sendWS({ type: 'create_room', room_code: customCode });
+    });
+}
+
+function joinAsPlayer() {
+    ensureAudio();
+    const name = document.getElementById('player-name').value.trim() || 'Player';
+    const roomCode = document.getElementById('join-room-code').value.trim().toUpperCase();
+    if (!roomCode) {
+        alert('Masukkan Kode Room dari Admin terlebih dahulu!');
+        return;
+    }
+    myUsername = name;
+    activeRoomCode = roomCode;
+    connectWS(() => {
+        currentRole = 'player';
+        sendWS({ type: 'join_game', room_code: roomCode, username: name });
+    });
+}
+
+function adminAddBot() {
+    ensureAudio();
+    sendWS({ type: 'admin_add_bot' });
+}
+
+function adminStartMatch() {
+    ensureAudio();
+    sendWS({ type: 'admin_start_match' });
+}
+
+function adminResetRoom() {
+    ensureAudio();
+    sendWS({ type: 'admin_reset_room' });
+}
 
 // --- TETRIS ENGINE ---
 const canvas = document.getElementById('board');
-const ctx = canvas.getContext('2d', { alpha: false }); // Optimasi performa
+const ctx = canvas.getContext('2d');
 const COLS = 10, ROWS = 20;
-const BLOCK_SIZE = 24; // Ukuran blok dasar
+const BLOCK_SIZE = 20;
 const DANGER_ROW_THRESHOLD = 4;
 
 const COLORS = [null, '#06b6d4', '#3b82f6', '#f97316', '#eab308', '#22c55e', '#a855f7', '#ef4444', '#64748b'];
-const SHAPES = [[],[[1,1,1,1]],[[2,0,0],[2,2,2]],[[0,0,3],[3,3,3]],[[4,4],[4,4]],[[0,5,5],[5,5,0]],[[0,6,0],[6,6,6]],[[7,7,0],[0,7,7]]];
+const SHAPES = [
+    [],
+    [[1,1,1,1]],
+    [[2,0,0],[2,2,2]],
+    [[0,0,3],[3,3,3]],
+    [[4,4],[4,4]],
+    [[0,5,5],[5,5,0]],
+    [[0,6,0],[6,6,6]],
+    [[7,7,0],[0,7,7]]
+];
 
 let grid = Array.from({length: ROWS}, () => Array(COLS).fill(0));
 let piece = null, score = 0, isPlaying = false, lastAttackerId = null, pendingGarbage = 0;
@@ -495,247 +562,444 @@ let dangerLevel = 0, dangerBlinkTimer = 0, dangerFlashOn = false;
 
 function computeDangerLevel(g) {
     let rH = ROWS;
-    for(let r=0; r<ROWS; r++) if(g[r].some(c => c !== 0)) { rH = r; break; }
+    for (let r = 0; r < ROWS; r++) {
+        if (g[r].some(c => c !== 0)) { rH = r; break; }
+    }
     return rH <= DANGER_ROW_THRESHOLD ? Math.min(5, (DANGER_ROW_THRESHOLD - rH) + 1) : 0;
 }
 
 function addLog(id, txt) {
     const log = document.getElementById(id);
-    if(log) { log.innerHTML = `<div style="margin-bottom:2px;">${txt}</div>` + log.innerHTML; }
+    if (log) log.innerHTML = `<div style="margin-bottom:3px;">${txt}</div>` + log.innerHTML;
 }
 
 function getBoardSnap() {
     const c = grid.map(r => [...r]);
-    if(piece && isPlaying) piece.shape.forEach((r,y) => r.forEach((v,x) => {
-        if(v) { const nr = piece.y+y, nc = piece.x+x; if(nr>=0&&nr<ROWS&&nc>=0&&nc<COLS) c[nr][nc] = v; }
-    }));
+    if (piece && isPlaying) {
+        piece.shape.forEach((r, y) => r.forEach((v, x) => {
+            if (v) {
+                const nr = piece.y + y, nc = piece.x + x;
+                if (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS) c[nr][nc] = v;
+            }
+        }));
+    }
     return c;
 }
 
-function syncBoard() { sendWS({type:'update_board', score, grid:getBoardSnap()}); }
+function syncBoard() {
+    sendWS({ type: 'update_board', score, grid: getBoardSnap() });
+}
 
 function spawnPiece() {
     const id = Math.floor(Math.random() * 7) + 1;
     const shape = SHAPES[id];
-    piece = {shape, x:Math.floor(COLS/2)-Math.floor(shape[0].length/2), y:0};
-    if(collide(grid, piece)) {
-        isPlaying = false; dangerLevel = 0; dangerFlashOn = false;
-        canvas.style.borderColor = '#475569'; canvas.style.boxShadow = '0 0 10px rgba(0,0,0,0.5)';
-        document.getElementById('p-status').innerText = '💀 KO'; document.getElementById('p-status').style.color = '#ef4444';
-        SFX.ko(); syncBoard(); sendWS({type:'player_eliminated', last_attacker_id:lastAttackerId});
+    piece = { shape, x: Math.floor(COLS / 2) - Math.floor(shape[0].length / 2), y: 0 };
+    if (collide(grid, piece)) {
+        isPlaying = false;
+        dangerLevel = 0;
+        dangerFlashOn = false;
+        canvas.style.borderColor = '#475569';
+        canvas.style.boxShadow = '0 0 12px rgba(0,0,0,0.5)';
+        document.getElementById('p-status').innerText = '💀 KO';
+        document.getElementById('p-status').style.color = '#ef4444';
+        SFX.ko();
+        syncBoard();
+        sendWS({ type: 'player_eliminated', last_attacker_id: lastAttackerId });
         addLog('player-log', '❌ Anda Tereliminasi!');
     }
 }
 
 function collide(g, p) {
-    for(let y=0; y<p.shape.length; y++) for(let x=0; x<p.shape[y].length; x++)
-        if(p.shape[y][x] && (g[p.y+y] && g[p.y+y][p.x+x]) !== 0) return true;
+    for (let y = 0; y < p.shape.length; y++) {
+        for (let x = 0; x < p.shape[y].length; x++) {
+            if (p.shape[y][x] !== 0) {
+                const nr = p.y + y, nc = p.x + x;
+                if (nr >= ROWS || nc < 0 || nc >= COLS || (nr >= 0 && g[nr][nc] !== 0)) return true;
+            }
+        }
+    }
     return false;
 }
 
-function merge() { piece.shape.forEach((r,y) => r.forEach((v,x) => { if(v) grid[piece.y+y][piece.x+x] = v; })); }
-function rotateMatrix(m) { return m[0].map((_,i) => m.map(r => r[i]).reverse()); }
+function merge() {
+    piece.shape.forEach((r, y) => r.forEach((v, x) => {
+        if (v && piece.y + y >= 0) grid[piece.y + y][piece.x + x] = v;
+    }));
+}
+
+function rotateMatrix(m) {
+    return m[0].map((_, i) => m.map(r => r[i]).reverse());
+}
 
 function sweepLines() {
     let cl = 0;
-    for(let r=ROWS-1; r>=0; r--) if(grid[r].every(c => c !== 0)) { grid.splice(r,1); grid.unshift(Array(COLS).fill(0)); cl++; r++; }
-    if(cl > 0) {
-        if(pendingGarbage > 0) { const bl = Math.min(pendingGarbage, cl); pendingGarbage -= bl; SFX.block(); addLog('player-log', `🛡️ Menangkis ${bl} baris!`); updateAlert(); }
-        else SFX.clear(cl);
-        score += cl * 100; document.getElementById('score').innerText = score; sendWS({type:'line_cleared', lines:cl});
-    } else if(pendingGarbage > 0) { applyGarbage(pendingGarbage); pendingGarbage = 0; updateAlert(); }
+    for (let r = ROWS - 1; r >= 0; r--) {
+        if (grid[r].every(c => c !== 0)) {
+            grid.splice(r, 1);
+            grid.unshift(Array(COLS).fill(0));
+            cl++;
+            r++;
+        }
+    }
+    if (cl > 0) {
+        if (pendingGarbage > 0) {
+            const bl = Math.min(pendingGarbage, cl);
+            pendingGarbage -= bl;
+            SFX.block();
+            addLog('player-log', `🛡️ Menangkis ${bl} baris!`);
+            updateAlert();
+        } else {
+            SFX.clear(cl);
+        }
+        score += cl * 100;
+        document.getElementById('score').innerText = score;
+        sendWS({ type: 'line_cleared', lines: cl });
+    } else if (pendingGarbage > 0) {
+        applyGarbage(pendingGarbage);
+        pendingGarbage = 0;
+        updateAlert();
+    }
 }
 
 function applyGarbage(l) {
     const h = Math.floor(Math.random() * COLS);
-    for(let i=0; i<l; i++) { grid.shift(); const r = Array(COLS).fill(8); r[h] = 0; grid.push(r); }
-    if(collide(grid,piece)){ piece.y--; if(collide(grid,piece)){ /* force merge or gameover handled by spawn */ } }
+    for (let i = 0; i < l; i++) {
+        grid.shift();
+        const r = Array(COLS).fill(8);
+        r[h] = 0;
+        grid.push(r);
+    }
 }
 
 function updateAlert() {
     const el = document.getElementById('incoming-alert');
-    el.innerHTML = pendingGarbage > 0 ? `<span class="warning">⚠️ GARBAGE: +${pendingGarbage}</span>` : '';
+    el.innerHTML = pendingGarbage > 0 ? `<span class="warning">⚠️ GARBAGE: +${pendingGarbage} BARIS</span>` : '';
 }
 
-// --- KONTROL ---
-function moveLeft() { if(isPlaying&&piece) { piece.x--; if(collide(grid,piece)) piece.x++; else SFX.move(); } }
-function moveRight() { if(isPlaying&&piece) { piece.x++; if(collide(grid,piece)) piece.x--; else SFX.move(); } }
-function moveDown() { if(isPlaying&&piece) { piece.y++; if(collide(grid,piece)) { piece.y--; merge(); sweepLines(); spawnPiece(); } else { SFX.move(); dropCounter = 0; } } }
-function rotatePiece() { if(isPlaying&&piece) { const old = piece.shape; piece.shape = rotateMatrix(piece.shape); if(collide(grid,piece)) piece.shape = old; else SFX.rotate(); } }
-function hardDrop() { if(isPlaying&&piece) { SFX.drop(); while(!collide(grid,piece)) piece.y++; piece.y--; merge(); sweepLines(); spawnPiece(); } }
+function moveLeft() {
+    if (!isPlaying || !piece) return;
+    piece.x--;
+    if (collide(grid, piece)) piece.x++;
+    else SFX.move();
+}
 
-// Keyboard
+function moveRight() {
+    if (!isPlaying || !piece) return;
+    piece.x++;
+    if (collide(grid, piece)) piece.x--;
+    else SFX.move();
+}
+
+function moveDown() {
+    if (!isPlaying || !piece) return;
+    piece.y++;
+    if (collide(grid, piece)) {
+        piece.y--;
+        merge();
+        sweepLines();
+        spawnPiece();
+        syncBoard();
+    } else {
+        SFX.move();
+        dropC = 0;
+    }
+}
+
+function rotatePiece() {
+    if (!isPlaying || !piece) return;
+    const old = piece.shape;
+    piece.shape = rotateMatrix(piece.shape);
+    if (collide(grid, piece)) piece.shape = old;
+    else SFX.rotate();
+}
+
+function hardDrop() {
+    if (!isPlaying || !piece) return;
+    SFX.drop();
+    while (!collide(grid, piece)) piece.y++;
+    piece.y--;
+    merge();
+    sweepLines();
+    spawnPiece();
+    syncBoard();
+}
+
 document.addEventListener('keydown', e => {
-    if(!isPlaying||!piece) return;
-    if(e.key==='ArrowLeft') moveLeft();
-    else if(e.key==='ArrowRight') moveRight();
-    else if(e.key==='ArrowDown') moveDown();
-    else if(e.key==='ArrowUp') rotatePiece();
-    else if(e.key===' ') { e.preventDefault(); hardDrop(); }
+    if (!isPlaying || !piece) return;
+    ensureAudio();
+    if (e.key === 'ArrowLeft') moveLeft();
+    else if (e.key === 'ArrowRight') moveRight();
+    else if (e.key === 'ArrowDown') moveDown();
+    else if (e.key === 'ArrowUp') rotatePiece();
+    else if (e.key === ' ') { e.preventDefault(); hardDrop(); }
 });
 
-// Touch Gesture (Swipe)
 let tSX = 0, tSY = 0;
-canvas.addEventListener('touchstart', e => { if(e.touches.length===1){ tSX = e.touches[0].clientX; tSY = e.touches[0].clientY; } });
+canvas.addEventListener('touchstart', e => {
+    ensureAudio();
+    if (e.touches.length === 1) { tSX = e.touches[0].clientX; tSY = e.touches[0].clientY; }
+}, { passive: true });
+
 canvas.addEventListener('touchend', e => {
-    if(!isPlaying||!piece||e.changedTouches.length===0) return;
+    if (!isPlaying || !piece || e.changedTouches.length === 0) return;
     const dX = e.changedTouches[0].clientX - tSX;
     const dY = e.changedTouches[0].clientY - tSY;
-    if(Math.abs(dX)<10 && Math.abs(dY)<10) rotatePiece();
-    else if(Math.abs(dX) > Math.abs(dY)) { dX>0 ? moveRight() : moveLeft(); }
-    else if(dY > 30) hardDrop();
-    else if(dY < -30) { /* opsional: hold */ }
+    if (Math.abs(dX) < 12 && Math.abs(dY) < 12) rotatePiece();
+    else if (Math.abs(dX) > Math.abs(dY)) { dX > 20 ? moveRight() : (dX < -20 && moveLeft()); }
+    else if (dY > 35) hardDrop();
 });
 
-// --- RENDER CANVAS ---
-function drawBlock(c, x, y, color, size) { c.fillStyle = color; c.fillRect(x*size, y*size, size-1, size-1); }
+function drawBlock(c, x, y, color, size) {
+    c.fillStyle = color;
+    c.fillRect(x * size, y * size, size - 1, size - 1);
+}
+
 function drawGrid(cv, gd, bs) {
+    if (!cv) return;
     const c = cv.getContext('2d');
-    c.fillStyle = '#020617'; c.fillRect(0,0, cv.width, cv.height);
-    gd.forEach((r,y) => r.forEach((v,x) => { if(v) drawBlock(c,x,y,COLORS[v],bs); }));
-    const dY = (DANGER_ROW_THRESHOLD+1)*bs;
-    c.strokeStyle = 'rgba(239,68,68,0.5)'; c.setLineDash([3,3]); c.beginPath(); c.moveTo(0,dY); c.lineTo(cv.width,dY); c.stroke(); c.setLineDash([]);
+    c.fillStyle = '#020617';
+    c.fillRect(0, 0, cv.width, cv.height);
+    if (!gd || gd.length === 0) return;
+    gd.forEach((r, y) => r.forEach((v, x) => { if (v) drawBlock(c, x, y, COLORS[v] || '#64748b', bs); }));
+    const dY = (DANGER_ROW_THRESHOLD + 1) * bs;
+    c.strokeStyle = 'rgba(239,68,68,0.5)';
+    c.setLineDash([3, 3]);
+    c.beginPath();
+    c.moveTo(0, dY);
+    c.lineTo(cv.width, dY);
+    c.stroke();
+    c.setLineDash([]);
 }
 
 function draw() {
-    ctx.fillStyle = '#020617'; ctx.fillRect(0,0, canvas.width, canvas.height);
-    if(isPlaying && dangerLevel > 0 && dangerFlashOn) {
-        ctx.fillStyle = `rgba(239, 68, 68, ${0.15 + dangerLevel*0.05})`;
-        ctx.fillRect(0,0, canvas.width, canvas.height);
+    ctx.fillStyle = '#020617';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    if (isPlaying && dangerLevel > 0 && dangerFlashOn) {
+        ctx.fillStyle = `rgba(239, 68, 68, ${0.15 + dangerLevel * 0.05})`;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
     }
-    const dLY = (DANGER_ROW_THRESHOLD+1)*BLOCK_SIZE;
+    const dLY = (DANGER_ROW_THRESHOLD + 1) * BLOCK_SIZE;
     ctx.strokeStyle = dangerLevel > 0 ? 'rgba(248,113,113,0.9)' : 'rgba(239,68,68,0.2)';
-    ctx.setLineDash([4,4]); ctx.beginPath(); ctx.moveTo(0,dLY); ctx.lineTo(canvas.width,dLY); ctx.stroke(); ctx.setLineDash([]);
-    grid.forEach((r,y) => r.forEach((v,x) => { if(v) drawBlock(ctx,x,y,COLORS[v],BLOCK_SIZE); }));
-    if(piece && isPlaying) piece.shape.forEach((r,y) => r.forEach((v,x) => { if(v) drawBlock(ctx, piece.x+x, piece.y+y, COLORS[v], BLOCK_SIZE); }));
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath();
+    ctx.moveTo(0, dLY);
+    ctx.lineTo(canvas.width, dLY);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    grid.forEach((r, y) => r.forEach((v, x) => { if (v) drawBlock(ctx, x, y, COLORS[v], BLOCK_SIZE); }));
+    if (piece && isPlaying) {
+        piece.shape.forEach((r, y) => r.forEach((v, x) => {
+            if (v) drawBlock(ctx, piece.x + x, piece.y + y, COLORS[v], BLOCK_SIZE);
+        }));
+    }
     canvas.style.borderColor = (isPlaying && dangerLevel > 0 && dangerFlashOn) ? '#ef4444' : '#475569';
-    canvas.style.boxShadow = (isPlaying && dangerLevel > 0 && dangerFlashOn) ? `0 0 ${8+dangerLevel*4}px rgba(239,68,68,0.8)` : '0 0 10px rgba(0,0,0,0.5)';
+    canvas.style.boxShadow = (isPlaying && dangerLevel > 0 && dangerFlashOn)
+        ? `0 0 ${8 + dangerLevel * 4}px rgba(239,68,68,0.8)`
+        : '0 0 12px rgba(0,0,0,0.5)';
 }
 
 let dropC = 0, syncC = 0, lT = 0;
-function loop(t=0) {
-    const dt = t - lT; lT = t;
-    if(isPlaying) {
-        dropC += dt; syncC += dt;
+function loop(t = 0) {
+    const dt = t - lT;
+    lT = t;
+    if (isPlaying) {
+        dropC += dt;
+        syncC += dt;
         dangerLevel = computeDangerLevel(grid);
-        if(dangerLevel > 0) {
-            const bIM = Math.max(75, 460 - (dangerLevel*75));
+        if (dangerLevel > 0) {
+            const bIM = Math.max(75, 460 - (dangerLevel * 75));
             dangerBlinkTimer += dt;
-            if(dangerBlinkTimer >= bIM) { dangerFlashOn = !dangerFlashOn; dangerBlinkTimer = 0; SFX.danger(dangerLevel); }
-        } else { dangerFlashOn = false; dangerBlinkTimer = 0; }
-        if(dropC > 600) { piece.y++; if(collide(grid,piece)) { piece.y--; merge(); sweepLines(); spawnPiece(); } else dropC = 0; }
-        if(syncC > 350) { syncBoard(); syncC = 0; }
+            if (dangerBlinkTimer >= bIM) {
+                dangerFlashOn = !dangerFlashOn;
+                dangerBlinkTimer = 0;
+                if (dangerFlashOn) SFX.danger(dangerLevel);
+            }
+        } else {
+            dangerFlashOn = false;
+            dangerBlinkTimer = 0;
+        }
+        if (dropC > 600) {
+            piece.y++;
+            if (collide(grid, piece)) {
+                piece.y--;
+                merge();
+                sweepLines();
+                spawnPiece();
+                syncBoard();
+            }
+            dropC = 0;
+        }
+        if (syncC > 350) {
+            syncBoard();
+            syncC = 0;
+        }
     }
-    draw(); requestAnimationFrame(loop);
+    draw();
+    requestAnimationFrame(loop);
 }
 
-// --- UI HANDLERS ---
 function renderPodium(id, list) {
     const box = document.getElementById(id);
-    if(!box||!list||list.length===0) return;
-    const medals = {1:'🥇', 2:'🥈', 3:'🥉'};
-    let h = `<div style="font-weight:bold; font-size:15px; color:#facc15; margin-bottom:4px;">🏆 HASIL</div>`;
+    if (!box || !list || list.length === 0) return;
+    const medals = { 1: '🥇', 2: '🥈', 3: '🥉' };
+    let h = `<div style="font-weight:bold; font-size:15px; color:#facc15; margin-bottom:6px;">🏆 HASIL JUARA</div>`;
     list.forEach(i => {
-        const m = medals[i.rank]||`#${i.rank}`;
+        const m = medals[i.rank] || `#${i.rank}`;
         const b = i.is_bot ? ' 🤖' : '';
-        h += `<div class="podium-item rank-${i.rank}" style="display:flex; justify-content:space-between; padding:6px; margin-bottom:4px; background:#0f172a; border-radius:6px; border-left:4px solid ${i.rank===1?'#facc15':'#64748b'}">
-            <div style="font-size:13px;">${m} ${i.name}${b}</div>
-            <div style="font-size:11px; text-align:right;">Skor:<b>${i.score}</b></div>
+        h += `<div style="display:flex; justify-content:space-between; padding:6px 8px; margin-bottom:4px; background:#0f172a; border-radius:6px; border-left:4px solid ${i.rank===1?'#facc15':'#64748b'}">
+            <div style="font-size:13px;"><b>${m} ${i.name}${b}</b><div style="font-size:10px; color:#94a3b8;">${i.reason||''}</div></div>
+            <div style="font-size:11px; text-align:right;">Skor: <b>${i.score}</b><br>KO: <b>${i.ko}</b></div>
         </div>`;
     });
-    box.innerHTML = h; box.style.display = 'block';
+    box.innerHTML = h;
+    box.style.display = 'block';
 }
-function hidePodiums() { document.getElementById('player-podium').style.display = 'none'; document.getElementById('admin-podium').style.display = 'none'; }
+
+function hidePodiums() {
+    document.getElementById('player-podium').style.display = 'none';
+    document.getElementById('admin-podium').style.display = 'none';
+}
+
 function renderOpponents(ps) {
-    const c = document.getElementById('opponents'); c.innerHTML = '';
+    const c = document.getElementById('opponents');
+    c.innerHTML = '';
     Object.entries(ps).forEach(([pid, p]) => {
-        if(pid === clientId) { document.getElementById('ko').innerText = p.ko||0; return; }
-        const d = document.createElement('div'); d.className = 'opp-badge' + (p.alive ? '' : ' dead');
-        d.innerHTML = `<b>${p.is_bot?'🤖':''} ${p.name}</b> (${p.alive?'🟢':'💀'}) KO:${p.ko||0}`; c.appendChild(d);
+        if (pid === clientId) {
+            document.getElementById('ko').innerText = p.ko || 0;
+            return;
+        }
+        const d = document.createElement('div');
+        d.className = 'opp-badge' + (p.alive ? '' : ' dead');
+        d.innerHTML = `<b>${p.is_bot ? '🤖 ' : ''}${p.name}</b> (${p.alive ? '🟢' : '💀'}) KO:${p.ko || 0}`;
+        c.appendChild(d);
     });
 }
+
 function renderMonitor(ps) {
-    const c = document.getElementById('monitor-grid'); const es = Object.entries(ps);
-    document.getElementById('admin-player-count').innerText = es.length; c.innerHTML = '';
+    const c = document.getElementById('monitor-grid');
+    const es = Object.entries(ps);
+    document.getElementById('admin-player-count').innerText = es.length;
+    c.innerHTML = '';
     es.forEach(([pid, p]) => {
-        const d = document.createElement('div'); d.className = `screen-card ${p.alive?'alive':'dead'}`;
-        d.innerHTML = `<div style="font-size:11px; font-weight:bold;">${p.is_bot?'🤖':''} ${p.name}</div>
+        const d = document.createElement('div');
+        d.className = `screen-card ${p.alive ? 'alive' : 'dead'}`;
+        d.innerHTML = `<div style="font-size:11px; font-weight:bold;">${p.is_bot ? '🤖 ' : ''}${p.name}</div>
             <canvas id="mc-${pid}" width="80" height="160"></canvas>
             <div class="screen-meta"><span>S:${p.score}</span><span>K:${p.ko}</span></div>`;
         c.appendChild(d);
         drawGrid(document.getElementById(`mc-${pid}`), p.grid, 8);
     });
 }
+
 function handleServerEvent(d) {
-    if(d.type === 'join_error') alert(d.msg);
-    else if(d.type === 'joined_success') {
+    if (d.type === 'join_error') {
+        alert(d.msg);
+    } else if (d.type === 'joined_success') {
         document.getElementById('lobby-card').style.display = 'none';
         document.getElementById('player-view').style.display = 'flex';
         document.getElementById('p-room-code').innerText = d.room_code;
-        if(d.active&&!d.alive) document.getElementById('p-status').innerText = '⏳ Menunggu...';
-        // Inisialisasi ulang canvas agar sesuai ukuran container flex
-        const board = document.getElementById('board');
-        board.width = 240; board.height = 480; 
-    }
-    else if(d.type === 'room_created') {
+        if (d.active && !d.alive) {
+            document.getElementById('p-status').innerText = '⏳ Menunggu...';
+        }
+    } else if (d.type === 'room_created') {
         activeRoomCode = d.room_code;
         document.getElementById('lobby-card').style.display = 'none';
         document.getElementById('admin-view').style.display = 'block';
         document.getElementById('admin-room-display').innerText = d.room_code;
         renderMonitor(d.players);
-    }
-    else if(d.type === 'match_started') {
-        hidePodiums(); SFX.clear(2);
-        if(currentRole === 'player') {
-            grid = Array.from({length: ROWS}, () => Array(COLS).fill(0));
+    } else if (d.type === 'match_started') {
+        hidePodiums();
+        SFX.clear(2);
+        if (currentRole === 'player') {
+            grid = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
             score = 0; pendingGarbage = 0; lastAttackerId = null; dangerLevel = 0; dangerFlashOn = false;
-            isPlaying = true; document.getElementById('score').innerText = '0'; document.getElementById('ko').innerText = '0';
-            document.getElementById('p-status').innerText = '🟢 Main'; document.getElementById('p-status').style.color = '#22c55e';
-            updateAlert(); spawnPiece(); syncBoard(); addLog('player-log', '🔥 MULAI!'); renderOpponents(d.players);
-        } else if(currentRole === 'admin') {
+            isPlaying = true;
+            document.getElementById('score').innerText = '0';
+            document.getElementById('ko').innerText = '0';
+            document.getElementById('p-status').innerText = '🟢 Main';
+            document.getElementById('p-status').style.color = '#22c55e';
+            updateAlert();
+            spawnPiece();
+            syncBoard();
+            addLog('player-log', '🔥 MULAI!');
+            renderOpponents(d.players);
+        } else if (currentRole === 'admin') {
             document.getElementById('admin-match-status').innerText = '🔥 Sedang Berlangsung';
             document.getElementById('admin-match-status').style.color = '#22c55e';
             renderMonitor(d.players);
         }
-    }
-    else if(d.type === 'room_reset') {
+    } else if (d.type === 'room_reset') {
         hidePodiums();
-        if(currentRole === 'player') {
+        if (currentRole === 'player') {
             isPlaying = false; dangerLevel = 0; dangerFlashOn = false;
-            grid = Array.from({length: ROWS}, () => Array(COLS).fill(0));
-            pendingGarbage = 0; updateAlert();
-            document.getElementById('p-status').innerText = 'Menunggu...'; document.getElementById('p-status').style.color = '#38bdf8';
-            addLog('player-log', '↻ Reset oleh Admin.'); renderOpponents(d.players);
-        } else if(currentRole === 'admin') {
+            grid = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
+            pendingGarbage = 0;
+            updateAlert();
+            document.getElementById('p-status').innerText = 'Menunggu...';
+            document.getElementById('p-status').style.color = '#38bdf8';
+            addLog('player-log', '↻ Reset oleh Admin.');
+            renderOpponents(d.players);
+        } else if (currentRole === 'admin') {
             document.getElementById('admin-match-status').innerText = 'Menunggu Pemain';
             document.getElementById('admin-match-status').style.color = '#fbbf24';
             renderMonitor(d.players);
         }
-    }
-    else if(d.type === 'receive_attack') { if(currentRole==='player'&&isPlaying) { pendingGarbage+=d.lines; lastAttackerId=d.from_id; SFX.attack(); updateAlert(); addLog('player-log', `🚨 Diserang ${d.from_name}!`); } }
-    else if(d.type === 'attack_log') { if(currentRole==='player') addLog('player-log', d.msg); else if(currentRole==='admin') { addLog('admin-log', d.msg); if(d.target_id) { const c=document.getElementById(`mc-${d.target_id}`); if(c) {c.style.border='2px solid #f59e0b'; setTimeout(()=>c.style.border='1px solid #475569', 800);} } } }
-    else if(d.type === 'system_msg') alert(d.msg);
-    else if(d.type === 'lobby_update') if(currentRole==='player') renderOpponents(d.players);
-    else if(d.type === 'admin_players_sync') if(currentRole==='admin') renderMonitor(d.players);
-    else if(d.type === 'admin_screen_update') if(currentRole==='admin') {
-        const cv = document.getElementById(`mc-${d.pid}`);
-        if(cv) { drawGrid(cv, d.grid, 8); document.getElementById(`mc-${d.pid}`).parentElement.className = `screen-card ${d.alive?'alive':'dead'}`; }
-    }
-    else if(d.type === 'match_over') {
+    } else if (d.type === 'receive_attack') {
+        if (currentRole === 'player' && isPlaying) {
+            pendingGarbage += d.lines;
+            lastAttackerId = d.from_id;
+            SFX.attack();
+            updateAlert();
+            addLog('player-log', `🚨 Diserang ${d.from_name}!`);
+        }
+    } else if (d.type === 'attack_log') {
+        if (currentRole === 'player') addLog('player-log', d.msg);
+        else if (currentRole === 'admin') {
+            addLog('admin-log', d.msg);
+            if (d.target_id) {
+                const c = document.getElementById(`mc-${d.target_id}`);
+                if (c) {
+                    c.style.border = '2px solid #f59e0b';
+                    setTimeout(() => { c.style.border = '1px solid #475569'; }, 800);
+                }
+            }
+        }
+    } else if (d.type === 'system_msg') {
+        alert(d.msg);
+    } else if (d.type === 'lobby_update') {
+        if (currentRole === 'player') renderOpponents(d.players);
+    } else if (d.type === 'admin_players_sync') {
+        if (currentRole === 'admin') renderMonitor(d.players);
+    } else if (d.type === 'admin_screen_update') {
+        if (currentRole === 'admin') {
+            const cv = document.getElementById(`mc-${d.pid}`);
+            if (cv) {
+                drawGrid(cv, d.grid, 8);
+                cv.parentElement.className = `screen-card ${d.alive ? 'alive' : 'dead'}`;
+                const metas = cv.parentElement.querySelectorAll('.screen-meta span');
+                if (metas[0]) metas[0].innerText = `S:${d.score}`;
+                if (metas[1]) metas[1].innerText = `K:${d.ko}`;
+            }
+        }
+    } else if (d.type === 'match_over') {
         SFX.win();
-        if(currentRole === 'player') {
+        if (currentRole === 'player') {
             isPlaying = false; dangerLevel = 0; dangerFlashOn = false;
-            document.getElementById('p-status').innerText = '🏆 Selesai'; document.getElementById('p-status').style.color = '#facc15';
-            renderPodium('player-podium', d.podium); addLog('player-log', `🏆 Juara 1: ${d.winner}`);
-        } else if(currentRole === 'admin') {
+            document.getElementById('p-status').innerText = '🏆 Selesai';
+            document.getElementById('p-status').style.color = '#facc15';
+            renderPodium('player-podium', d.podium);
+            addLog('player-log', `🏆 Juara 1: ${d.winner}`);
+        } else if (currentRole === 'admin') {
             document.getElementById('admin-match-status').innerText = `🏆 Juara 1: ${d.winner}`;
             document.getElementById('admin-match-status').style.color = '#facc15';
-            renderPodium('admin-podium', d.podium); renderMonitor(d.players);
+            renderPodium('admin-podium', d.podium);
+            renderMonitor(d.players);
         }
     }
 }
 
-loop(); // Start engine
+loop();
 </script>
 </body>
 </html>
