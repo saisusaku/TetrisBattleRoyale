@@ -106,6 +106,58 @@ def compute_bot_view_grid(bot: dict):
     return snap
 
 
+def bot_is_critical(board: List[List[int]]) -> bool:
+    for r in range(min(5, ROWS)):
+        if any(cell != 0 for cell in board[r]):
+            return True
+    return False
+
+
+def add_bot_charge(room_code: str, bot_id: str, bot: dict, amount: float):
+    if amount <= 0:
+        return
+    bot["charge"] = float(bot.get("charge", 0.0)) + amount
+    if bot["charge"] >= 100.0:
+        bot["charge"] = 100.0
+        asyncio.create_task(bot_use_powerup(room_code, bot_id, bot))
+
+
+async def bot_use_powerup(room_code: str, bot_id: str, bot: dict):
+    room = rooms.get(room_code)
+    if not room or not room.get("active") or not bot.get("alive"):
+        return
+    if float(bot.get("charge", 0.0)) < 100.0:
+        return
+
+    bot["charge"] = 0.0
+    board = bot.get("board") or empty_grid()
+
+    if bot_is_critical(board) and bot.get("armor_charges", 0) == 0:
+        choice = "armor"
+    else:
+        choice = random.choice(["double", "armor"])
+
+    if choice == "armor":
+        bot["armor_charges"] = 3
+        await broadcast_to_room(room_code, {
+            "type": "attack_log",
+            "msg": f"🛡️ {bot['name']} mengaktifkan ARMOR (tahan 3 serangan)!",
+            "target_id": bot_id,
+        })
+    else:
+        bot["double_until"] = time.time() + DOUBLE_DURATION_SEC
+        await broadcast_to_room(room_code, {
+            "type": "attack_log",
+            "msg": f"⚡ {bot['name']} mengaktifkan DOUBLE ATTACK selama {int(DOUBLE_DURATION_SEC)} detik!",
+            "target_id": bot_id,
+        })
+
+    await broadcast_to_room(room_code, {
+        "type": "lobby_update",
+        "players": get_room_players_summary(room_code, include_grid=False),
+    })
+
+
 def evaluate_board(board: List[List[int]], lines_cleared: int) -> float:
     agg_height = 0
     holes = 0
@@ -243,6 +295,7 @@ def get_room_players_summary(room_code: str, include_grid: bool = False):
             "score": p["score"],
             "armor_charges": p.get("armor_charges", 0),
             "double_remaining": round(rem_dbl, 1),
+            "charge": round(float(p.get("charge", 0.0)), 1),
         }
         if include_grid:
             item["grid"] = compute_bot_view_grid(p) if p.get("is_bot") else p["grid"]
@@ -539,8 +592,9 @@ async def eliminate_player(room_code: str, victim_id: str, killer_id: Optional[s
 
 
 async def bot_loop():
+    tick_sec = 0.28
     while True:
-        await asyncio.sleep(0.28)
+        await asyncio.sleep(tick_sec)
         for room_code, room in list(rooms.items()):
             if not room.get("active"):
                 continue
@@ -555,6 +609,13 @@ async def bot_loop():
                 if not board or len(board) != ROWS:
                     board = empty_grid()
                     p["board"] = board
+
+                # Charge pasif bot sangat lambat (~1 charge/detik), naik saat kritis
+                crit_bonus = 1.5 if bot_is_critical(board) else 0.0
+                p["charge"] = float(p.get("charge", 0.0)) + ((1.0 + crit_bonus) * tick_sec)
+                if p["charge"] >= 100.0:
+                    p["charge"] = 100.0
+                    await bot_use_powerup(room_code, pid, p)
 
                 if p.get("spawn_cooldown", 0) > 0:
                     p["spawn_cooldown"] -= 1
@@ -605,6 +666,14 @@ async def bot_loop():
 
                         if cleared_lines > 0:
                             p["score"] += cleared_lines * 100
+                            line_charge_map = {1: 10.0, 2: 22.0, 3: 35.0, 4: 50.0}
+                            gain = line_charge_map.get(cleared_lines, cleared_lines * 12.0)
+                            if bot_is_critical(p["board"]):
+                                gain *= 1.4
+                            p["charge"] = float(p.get("charge", 0.0)) + gain
+                            if p["charge"] >= 100.0:
+                                p["charge"] = 100.0
+                                await bot_use_powerup(room_code, pid, p)
                             await perform_attack(room_code, pid, cleared_lines)
 
                         if any(cell != 0 for cell in p["board"][0]):
@@ -733,6 +802,7 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                     "last_target_id": None,
                     "double_until": 0.0,
                     "armor_charges": 0,
+                    "charge": 0.0,
                 }
 
                 await broadcast_to_room(current_room, {
@@ -807,6 +877,7 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                     p["last_target_id"] = None
                     p["double_until"] = 0.0
                     p["armor_charges"] = 0
+                    p["charge"] = 0.0
 
                 await broadcast_to_room(current_room, {
                     "type": "match_started",
@@ -835,6 +906,7 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                     p["last_target_id"] = None
                     p["double_until"] = 0.0
                     p["armor_charges"] = 0
+                    p["charge"] = 0.0
 
                 await broadcast_to_room(current_room, {
                     "type": "room_reset",
@@ -889,6 +961,7 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                         "last_target_id": None,
                         "double_until": 0.0,
                         "armor_charges": 0,
+                        "charge": 0.0,
                     }
                     can_play_now = not is_mid_game
 
@@ -925,6 +998,7 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                 item_type = data.get("item")
                 if item_type == "armor":
                     p["armor_charges"] = 3
+                    p["charge"] = 0.0
                     await broadcast_to_room(current_room, {
                         "type": "attack_log",
                         "msg": f"🛡️ {p['name']} mengaktifkan ARMOR (tahan 3 serangan)!",
@@ -935,6 +1009,7 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                     })
                 elif item_type == "double":
                     p["double_until"] = time.time() + DOUBLE_DURATION_SEC
+                    p["charge"] = 0.0
                     await send_to_player(current_room, client_id, {
                         "type": "item_activated",
                         "item": "double",
@@ -943,6 +1018,12 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                     await broadcast_to_room(current_room, {
                         "type": "attack_log",
                         "msg": f"⚡ {p['name']} mengaktifkan DOUBLE ATTACK selama {int(DOUBLE_DURATION_SEC)} detik!",
+                    })
+                elif item_type == "breaker":
+                    p["charge"] = 0.0
+                    await broadcast_to_room(current_room, {
+                        "type": "attack_log",
+                        "msg": f"💥 {p['name']} mengaktifkan BREAKER (menghapus baris tumpukan)!",
                     })
 
             elif event == "update_board":
