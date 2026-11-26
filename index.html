@@ -364,7 +364,7 @@
         }
 
         /* ADMIN MONITOR */
-        .admin-layout { width: 100%; max-width: 1280px; }
+        .admin-layout { width: 100%; max-width: 1360px; }
         .admin-header {
             display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px;
             background: #1e293b; padding: 12px; border-radius: 10px; border: 1px solid #334155; margin-bottom: 12px;
@@ -373,15 +373,86 @@
             background: #0f172a; border: 2px dashed #38bdf8; color: #38bdf8;
             padding: 4px 10px; border-radius: 8px; font-size: 18px; font-weight: 800; letter-spacing: 2px;
         }
+        .admin-body {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: flex-start;
+            gap: 14px;
+            width: 100%;
+        }
+        .admin-focus-panel {
+            width: 236px;
+            flex-shrink: 0;
+            background: #1e293b;
+            border: 2px solid #38bdf8;
+            border-radius: 12px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45);
+        }
+        .focus-header {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 6px;
+        }
+        .focus-title {
+            font-size: 13px;
+            font-weight: 800;
+            color: #38bdf8;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .close-focus-btn {
+            background: #0f172a;
+            color: #cbd5e1;
+            border: 1px solid #475569;
+            border-radius: 6px;
+            padding: 2px 7px;
+            font-size: 10px;
+            cursor: pointer;
+        }
+        .close-focus-btn:hover { background: #334155; }
+        canvas#admin-focus-canvas {
+            background: #020617;
+            border: 2px solid #475569;
+            border-radius: 6px;
+        }
+        .focus-stats {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            background: #0f172a;
+            padding: 6px 8px;
+            border-radius: 8px;
+            border: 1px solid #334155;
+        }
+        .admin-center-area {
+            flex: 1;
+            min-width: 280px;
+        }
         .monitor-grid {
-            display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px;
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(136px, 1fr)); gap: 10px;
         }
         .screen-card {
             background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 8px;
             display: flex; flex-direction: column; align-items: center;
+            cursor: pointer; transition: border-color 0.15s, transform 0.12s;
         }
+        .screen-card:hover { border-color: #38bdf8; transform: translateY(-1px); }
         .screen-card.alive { border-color: #22c55e; }
-        .screen-card.dead { border-color: #ef4444; opacity: 0.6; }
+        .screen-card.dead { border-color: #ef4444; opacity: 0.65; }
+        .screen-card.focused {
+            border: 2px solid #38bdf8 !important;
+            box-shadow: 0 0 12px rgba(56, 189, 248, 0.35);
+            opacity: 1;
+        }
         .screen-card canvas { background: #020617; border: 1px solid #475569; border-radius: 3px; margin: 4px 0; }
         .screen-meta { width: 100%; display: flex; justify-content: space-between; font-size: 11px; color: #cbd5e1; }
 
@@ -596,15 +667,36 @@
                 </div>
             </div>
         </div>
+
         <div id="admin-podium" class="podium-box" style="display:none; max-width:100%; margin-bottom:12px;"></div>
-        <div class="main-stage" style="align-items:flex-start;">
-            <div style="flex:1;">
-                <h4 style="margin:0 0 8px 0; font-size:14px;">Monitor Peserta & Bot</h4>
-                <div id="monitor-grid" class="monitor-grid"></div>
+
+        <div class="admin-body">
+            <!-- PANEL FOKUS PLAYER DI SISI KIRI -->
+            <div id="admin-focus-panel" class="admin-focus-panel" style="display:none;">
+                <div class="focus-header">
+                    <div id="focus-player-name" class="focus-title">-</div>
+                    <button type="button" class="close-focus-btn" onclick="clearAdminFocus()">✕ Tutup</button>
+                </div>
+                <div id="focus-player-status" style="font-size:11px; font-weight:bold; color:#22c55e;">🟢 Aktif</div>
+                <canvas id="admin-focus-canvas" width="200" height="400"></canvas>
+                <div class="focus-stats">
+                    <span>Skor: <b id="focus-player-score">0</b></span>
+                    <span>KO: <b id="focus-player-ko">0</b></span>
+                </div>
             </div>
-            <div class="side-info" style="max-width:240px;">
-                <div style="font-size:12px; font-weight:bold;">Log Serangan</div>
-                <div id="admin-log" class="log-box" style="height:300px;"></div>
+
+            <!-- AREA GRID MONITOR & LOG -->
+            <div class="admin-center-area">
+                <div class="main-stage" style="align-items:flex-start;">
+                    <div style="flex:1;">
+                        <h4 style="margin:0 0 8px 0; font-size:14px;">Monitor Peserta & Bot <span style="font-size:11px; font-weight:normal; color:#94a3b8;">(Klik kartu untuk perbesar di kiri)</span></h4>
+                        <div id="monitor-grid" class="monitor-grid"></div>
+                    </div>
+                    <div class="side-info" style="max-width:240px;">
+                        <div style="font-size:12px; font-weight:bold;">Log Serangan</div>
+                        <div id="admin-log" class="log-box" style="height:300px;"></div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -838,6 +930,58 @@ function adminRemoveBot(botId = null) { ensureAudio(); sendWS({ type: 'admin_rem
 function adminStartMatch() { ensureAudio(); sendWS({ type: 'admin_start_match' }); }
 function adminResetRoom() { ensureAudio(); sendWS({ type: 'admin_reset_room' }); }
 
+// --- ADMIN FOCUS PANEL (SISI KIRI) ---
+let latestAdminPlayers = {};
+let focusedPlayerId = null;
+
+function selectAdminFocus(pid) {
+    if (!latestAdminPlayers[pid]) return;
+    focusedPlayerId = pid;
+    renderAdminFocusPanel();
+    updateFocusCardHighlight();
+}
+
+function clearAdminFocus() {
+    focusedPlayerId = null;
+    document.getElementById('admin-focus-panel').style.display = 'none';
+    updateFocusCardHighlight();
+}
+
+function updateFocusCardHighlight() {
+    document.querySelectorAll('.screen-card').forEach(card => {
+        card.classList.toggle('focused', card.dataset.pid === focusedPlayerId);
+    });
+}
+
+function renderAdminFocusPanel() {
+    const panel = document.getElementById('admin-focus-panel');
+    if (!focusedPlayerId || !latestAdminPlayers[focusedPlayerId]) {
+        panel.style.display = 'none';
+        return;
+    }
+    const p = latestAdminPlayers[focusedPlayerId];
+    const isLeft = !p.is_bot && p.connected === false;
+
+    panel.style.display = 'flex';
+    document.getElementById('focus-player-name').innerText = `${p.is_bot ? '🤖 ' : ''}${p.name}`;
+    document.getElementById('focus-player-score').innerText = p.score || 0;
+    document.getElementById('focus-player-ko').innerText = p.ko || 0;
+
+    const stEl = document.getElementById('focus-player-status');
+    if (p.alive) {
+        stEl.innerText = '🟢 Sedang Main';
+        stEl.style.color = '#22c55e';
+    } else if (isLeft) {
+        stEl.innerText = '🚪 Keluar Arena';
+        stEl.style.color = '#94a3b8';
+    } else {
+        stEl.innerText = '💀 Tereliminasi / KO';
+        stEl.style.color = '#ef4444';
+    }
+
+    drawGrid(document.getElementById('admin-focus-canvas'), p.grid, 20);
+}
+
 // --- TETRIS ENGINE & ANIMATION STATE ---
 const canvas = document.getElementById('board');
 const ctx = canvas.getContext('2d');
@@ -1061,7 +1205,6 @@ function sweepLines() {
     }
 }
 
-// Lubang sampah diacak di setiap baris agar tidak seragam / tidak mudah ditebak
 function applyGarbage(l) {
     let lastHole = -1;
     for (let i = 0; i < l; i++) {
@@ -1343,15 +1486,25 @@ function renderOpponents(ps) {
 }
 
 function renderMonitor(ps) {
+    latestAdminPlayers = ps || {};
+    if (focusedPlayerId && !latestAdminPlayers[focusedPlayerId]) {
+        focusedPlayerId = null;
+    }
+
     const c = document.getElementById('monitor-grid');
-    const es = Object.entries(ps);
+    const es = Object.entries(latestAdminPlayers);
     document.getElementById('admin-player-count').innerText = es.length;
     c.innerHTML = '';
+
     es.forEach(([pid, p]) => {
         const d = document.createElement('div');
-        d.className = `screen-card ${p.alive ? 'alive' : 'dead'}`;
+        d.dataset.pid = pid;
+        const isFocused = pid === focusedPlayerId;
+        d.className = `screen-card ${p.alive ? 'alive' : 'dead'}${isFocused ? ' focused' : ''}`;
+        d.onclick = () => selectAdminFocus(pid);
+
         const delBtn = p.is_bot
-            ? `<button class="mini-del-btn" onclick="adminRemoveBot('${pid}')">🗑 Hapus Bot</button>`
+            ? `<button class="mini-del-btn" onclick="event.stopPropagation(); adminRemoveBot('${pid}')">🗑 Hapus Bot</button>`
             : '';
         const leftBadge = (!p.is_bot && p.connected === false) ? ' <span style="color:#94a3b8;">(Keluar)</span>' : '';
         d.innerHTML = `<div style="font-size:11px; font-weight:bold;">${p.is_bot ? '🤖 ' : ''}${escapeHtml(p.name)}${leftBadge}</div>
@@ -1361,6 +1514,8 @@ function renderMonitor(ps) {
         c.appendChild(d);
         drawGrid(document.getElementById(`mc-${pid}`), p.grid, 8);
     });
+
+    renderAdminFocusPanel();
 }
 
 function handleServerEvent(d) {
@@ -1384,6 +1539,8 @@ function handleServerEvent(d) {
         }
     } else if (d.type === 'room_created') {
         activeRoomCode = d.room_code;
+        focusedPlayerId = null;
+        latestAdminPlayers = {};
         hidePodiums();
         document.getElementById('lobby-card').style.display = 'none';
         document.getElementById('admin-view').style.display = 'block';
@@ -1468,13 +1625,26 @@ function handleServerEvent(d) {
         if (currentRole === 'admin') renderMonitor(d.players);
     } else if (d.type === 'admin_screen_update') {
         if (currentRole === 'admin') {
+            if (latestAdminPlayers[d.pid]) {
+                latestAdminPlayers[d.pid] = {
+                    ...latestAdminPlayers[d.pid],
+                    name: d.name,
+                    alive: d.alive,
+                    score: d.score,
+                    ko: d.ko,
+                    grid: d.grid
+                };
+            }
             const cv = document.getElementById(`mc-${d.pid}`);
             if (cv) {
                 drawGrid(cv, d.grid, 8);
-                cv.parentElement.className = `screen-card ${d.alive ? 'alive' : 'dead'}`;
+                cv.parentElement.className = `screen-card ${d.alive ? 'alive' : 'dead'}${d.pid === focusedPlayerId ? ' focused' : ''}`;
                 const metas = cv.parentElement.querySelectorAll('.screen-meta span');
                 if (metas[0]) metas[0].innerText = `S:${d.score}`;
                 if (metas[1]) metas[1].innerText = `K:${d.ko}`;
+            }
+            if (d.pid === focusedPlayerId) {
+                renderAdminFocusPanel();
             }
         }
     } else if (d.type === 'match_over') {
