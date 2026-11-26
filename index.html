@@ -902,10 +902,9 @@ function vibrate(ms = 15) {
 }
 
 // --- POWER-UP CHARGE SYSTEM ---
-// Otomatis sangat lambat (1 charge/detik), naik cepat saat hancurkan line (1 line = +10, tetris = +50)
 const DOUBLE_DURATION_MS = 5000;
-let itemTokens = 0;     // jumlah power-up siap pakai (maks 1 saat charge penuh, reset ke 0 setelah dipilih)
-let itemCharge = 0;     // 0 .. 100
+let itemTokens = 0;
+let itemCharge = 0;
 let armorCharges = 0;
 let doubleExpiresAt = 0;
 
@@ -997,7 +996,6 @@ function activateItem(itemType) {
     ensureAudio();
     if (itemType === 'double' && isDoubleActive()) return;
 
-    // Setelah dipilih, kosong lagi (0) dan terisi ulang dari awal
     itemTokens = 0;
     itemCharge = 0;
 
@@ -1149,13 +1147,45 @@ function stopLobbyPolling() {
     clearInterval(lobbyPollInterval);
 }
 
-// --- WEBSOCKET ---
+// --- WEBSOCKET & QUIT LIFECYCLE ---
 const clientId = Math.random().toString(36).substring(2, 10);
 let socket = null;
 let pingInterval = null;
 let currentRole = null;
 let activeRoomCode = '';
 let myUsername = '';
+let hasLeftArena = false;
+
+function notifyPlayerQuit() {
+    if (currentRole !== 'player' || !activeRoomCode || hasLeftArena) return;
+    hasLeftArena = true;
+    isPlaying = false;
+    dangerLevel = 0;
+    dangerFlashOn = false;
+    refreshItemUI();
+
+    const payload = JSON.stringify({ type: 'player_quit' });
+    try {
+        if (socket && socket.readyState === WebSocket.OPEN) {
+            socket.send(payload);
+        }
+    } catch (_) {}
+
+    try {
+        if (navigator.sendBeacon) {
+            const blob = new Blob([payload], { type: 'application/json' });
+            navigator.sendBeacon(`/api/quit/${encodeURIComponent(activeRoomCode)}/${encodeURIComponent(clientId)}`, blob);
+        }
+    } catch (_) {}
+}
+
+window.addEventListener('pagehide', notifyPlayerQuit);
+window.addEventListener('beforeunload', notifyPlayerQuit);
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden' && currentRole === 'player' && isPlaying) {
+        notifyPlayerQuit();
+    }
+});
 
 function switchTab(tab) {
     ensureAudio();
@@ -1182,11 +1212,15 @@ function connectWS(onOpen) {
 
     socket.onclose = () => {
         clearInterval(pingInterval);
-        setTimeout(() => connectWS(() => {
-            if (currentRole === 'player' && activeRoomCode && myUsername) {
-                sendWS({ type: 'join_game', room_code: activeRoomCode, username: myUsername });
-            }
-        }), 2000);
+        if (hasLeftArena) return;
+        setTimeout(() => {
+            if (hasLeftArena) return;
+            connectWS(() => {
+                if (!hasLeftArena && currentRole === 'player' && activeRoomCode && myUsername) {
+                    sendWS({ type: 'join_game', room_code: activeRoomCode, username: myUsername });
+                }
+            });
+        }, 2000);
     };
 
     socket.onmessage = (e) => handleServerEvent(JSON.parse(e.data));
@@ -1226,6 +1260,7 @@ function joinAsPlayer() {
         return;
     }
 
+    hasLeftArena = false;
     myUsername = name;
     activeRoomCode = roomCode;
     connectWS(() => {
@@ -1304,7 +1339,6 @@ const DANGER_ROW_THRESHOLD = 4;
 
 function resizeBoardForScreen() {
     const w = window.innerWidth || 360;
-    // Sisakan ruang untuk meter charge (26px) + panel kanan (~135px) + padding (24px)
     const maxBoardW = Math.max(120, Math.min(200, w - 190));
     BLOCK_SIZE = Math.max(12, Math.floor(maxBoardW / COLS));
     canvas.width = BLOCK_SIZE * COLS;
@@ -1447,7 +1481,7 @@ function getBoardSnap() {
 }
 
 function syncBoard() {
-    if (!isPlaying) return;
+    if (!isPlaying || hasLeftArena) return;
     sendWS({ type: 'update_board', score, grid: getBoardSnap() });
 }
 
@@ -1525,7 +1559,6 @@ function sweepLines() {
         score += cl * 100;
         document.getElementById('score').innerText = score;
 
-        // 1 line = +10, 2 line = +22, 3 line = +35, Tetris (4 line) = +50
         const lineGainMap = { 1: 10, 2: 22, 3: 35, 4: 50 };
         const baseGain = lineGainMap[cl] || (cl * 12);
         const critBoost = dangerLevel > 0 ? 1.4 : 1.0;
@@ -1743,14 +1776,13 @@ function loop(t = 0) {
     const dtSec = dt / 1000;
     updateAnimations(dtSec);
 
-    if (isPlaying) {
+    if (isPlaying && !hasLeftArena) {
         dropC += dt;
         syncC += dt;
         uiC += dt;
 
         dangerLevel = computeDangerLevel(grid);
 
-        // Terisi otomatis sangat lambat: 1 charge/detik (sedikit naik saat kritis)
         const passiveRate = dangerLevel > 0 ? 2.5 : 1.0;
         addItemCharge(passiveRate * dtSec);
 
@@ -1961,7 +1993,7 @@ function handleServerEvent(d) {
         hidePodiums();
         setKoBanner(false);
         SFX.clear(2);
-        if (currentRole === 'player') {
+        if (currentRole === 'player' && !hasLeftArena) {
             const me = d.players && d.players[clientId];
             const amIAlive = me ? !!me.alive : true;
             grid = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
@@ -1992,7 +2024,7 @@ function handleServerEvent(d) {
     } else if (d.type === 'room_reset') {
         hidePodiums();
         setKoBanner(false);
-        if (currentRole === 'player') {
+        if (currentRole === 'player' && !hasLeftArena) {
             isPlaying = false; dangerLevel = 0; dangerFlashOn = false;
             itemTokens = 0; itemCharge = 0; armorCharges = 0; doubleExpiresAt = 0;
             grid = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
