@@ -4,7 +4,7 @@ import random
 import string
 import sqlite3
 import asyncio
-from typing import Dict, Optional
+from typing import Dict, Optional, List, Tuple
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
 
@@ -104,51 +104,122 @@ def compute_bot_view_grid(bot: dict):
     return snap
 
 
-def pick_human_like_target(bot: dict):
-    """Pilih target x dan rotasi secara heuristik, tetapi sengaja diberi peluang salah/kurang pas."""
-    board = bot["board"]
-    base_shape = random.choice(SHAPES)
-    rot_times = random.randint(0, 3)
-    shape = [row[:] for row in base_shape]
-    for _ in range(rot_times):
-        shape = rotate_matrix(shape)
+def evaluate_board(board: List[List[int]], lines_cleared: int) -> float:
+    """Heuristik posisi papan setelah blok mendarat."""
+    agg_height = 0
+    holes = 0
+    col_heights = [0] * COLS
 
-    w = len(shape[0])
-    max_x = max(0, COLS - w)
-
-    # Cari kolom dengan tinggi tumpukan terendah sebagai opsi masuk akal
-    col_heights = []
     for c in range(COLS):
-        h = ROWS
+        block_seen = False
         for r in range(ROWS):
             if board[r][c] != 0:
-                h = r
-                break
-        col_heights.append(h)
+                if not block_seen:
+                    col_heights[c] = ROWS - r
+                    agg_height += col_heights[c]
+                    block_seen = True
+            else:
+                if block_seen:
+                    holes += 1
 
-    # 65% pilih kolom relatif rendah/layak, 35% acak (termasuk bikin kesalahan/menumpuk)
-    if random.random() < 0.65:
-        candidates = []
-        for x in range(max_x + 1):
-            min_h = min(col_heights[x : min(COLS, x + w)])
-            candidates.append((min_h, x))
-        candidates.sort(reverse=True)
-        top_pool = [x for _, x in candidates[: max(1, len(candidates) // 2)]]
-        target_x = random.choice(top_pool)
+    bumpiness = sum(abs(col_heights[i] - col_heights[i + 1]) for i in range(COLS - 1))
+    max_height = max(col_heights) if col_heights else 0
+
+    line_bonus = {0: 0.0, 1: 4.5, 2: 11.0, 3: 22.0, 4: 40.0}.get(lines_cleared, lines_cleared * 8.0)
+
+    return (
+        line_bonus
+        - (holes * 5.2)
+        - (agg_height * 0.45)
+        - (bumpiness * 1.1)
+        - (max(0, max_height - 12) * 1.6)
+    )
+
+
+def simulate_landing(board: List[List[int]], shape: List[List[int]], x: int) -> Optional[Tuple[int, float]]:
+    """Simulasikan drop blok pada kolom x, kembalikan (final_y, score_heuristik)."""
+    if bot_collide(board, shape, x, 0):
+        return None
+
+    y = 0
+    while not bot_collide(board, shape, x, y + 1):
+        y += 1
+
+    temp = [row[:] for row in board]
+    for r_idx, row in enumerate(shape):
+        for c_idx, val in enumerate(row):
+            if val:
+                nr = y + r_idx
+                nc = x + c_idx
+                if 0 <= nr < ROWS and 0 <= nc < COLS:
+                    temp[nr][nc] = val
+
+    cleared = 0
+    kept = []
+    for r in temp:
+        if all(cell != 0 for cell in r):
+            cleared += 1
+        else:
+            kept.append(r)
+    while len(kept) < ROWS:
+        kept.insert(0, [0] * COLS)
+
+    # Penalti jika puncak papan menyentuh baris teratas
+    top_blocked = 12.0 if any(cell != 0 for cell in kept[0]) else 0.0
+    score_val = evaluate_board(kept, cleared) - top_blocked
+    return y, score_val
+
+
+def pick_smart_human_target(bot: dict):
+    """Pilih rotasi & target_x terbaik secara heuristik, dengan sedikit variasi manusiawi."""
+    board = bot["board"]
+    base_shape = random.choice(SHAPES)
+
+    # Kumpulkan semua orientasi unik
+    rotations: List[List[List[int]]] = []
+    curr = [row[:] for row in base_shape]
+    for _ in range(4):
+        if not any(curr == existing for existing in rotations):
+            rotations.append([row[:] for row in curr])
+        curr = rotate_matrix(curr)
+
+    moves = []
+    for rot_shape in rotations:
+        w = len(rot_shape[0])
+        for x in range(COLS - w + 1):
+            sim = simulate_landing(board, rot_shape, x)
+            if sim is not None:
+                _, h_score = sim
+                moves.append((h_score, rot_shape, x))
+
+    if not moves:
+        w = len(base_shape[0])
+        start_x = max(0, min(COLS - w, COLS // 2 - w // 2))
+        return {
+            "shape": [row[:] for row in base_shape],
+            "x": start_x,
+            "y": 0,
+            "target_x": start_x,
+            "hesitate_ticks": 0,
+        }
+
+    moves.sort(key=lambda item: item[0], reverse=True)
+
+    # 85% pilih langkah terbaik, 15% pilih opsi #2/#3 agar tidak seperti mesin super-sempurna
+    if random.random() < 0.85 or len(moves) == 1:
+        _, chosen_shape, target_x = moves[0]
     else:
-        target_x = random.randint(0, max_x)
+        _, chosen_shape, target_x = random.choice(moves[1 : min(3, len(moves))])
 
-    # Kadang bot salah kira arah lalu meleset 1 kolom
-    if random.random() < 0.25:
-        target_x = max(0, min(max_x, target_x + random.choice([-1, 1])))
+    w = len(chosen_shape[0])
+    start_x = max(0, min(COLS - w, COLS // 2 - w // 2))
 
-    start_x = max(0, min(max_x, COLS // 2 - w // 2))
     return {
-        "shape": shape,
+        "shape": chosen_shape,
         "x": start_x,
         "y": 0,
         "target_x": target_x,
-        "hesitate_ticks": random.randint(0, 2),
+        "hesitate_ticks": random.randint(0, 1),
     }
 
 
@@ -367,7 +438,6 @@ async def perform_attack(room_code: str, attacker_id: str, lines: int):
     if target_player and target_player.get("is_bot") and target_player["alive"]:
         append_random_garbage_rows(target_player["board"], min(garbage_count, 5))
         target_player["last_attacker_id"] = attacker_id
-        # Jika blok bot bertabrakan akibat sampah naik, geser ke atas atau reset piece
         cur = target_player.get("cur_piece")
         if cur and bot_collide(target_player["board"], cur["shape"], cur["x"], cur["y"]):
             cur["y"] = max(0, cur["y"] - min(garbage_count, 4))
@@ -433,7 +503,7 @@ async def eliminate_player(room_code: str, victim_id: str, killer_id: Optional[s
 
 async def bot_loop():
     while True:
-        await asyncio.sleep(0.35)
+        await asyncio.sleep(0.28)
         for room_code, room in list(rooms.items()):
             if not room.get("active"):
                 continue
@@ -449,14 +519,13 @@ async def bot_loop():
                     board = empty_grid()
                     p["board"] = board
 
-                # Jeda antar piece agar tidak langsung spawn tanpa napas
                 if p.get("spawn_cooldown", 0) > 0:
                     p["spawn_cooldown"] -= 1
                     continue
 
                 cur = p.get("cur_piece")
                 if not cur:
-                    new_piece = pick_human_like_target(p)
+                    new_piece = pick_smart_human_target(p)
                     if bot_collide(board, new_piece["shape"], new_piece["x"], new_piece["y"]):
                         await eliminate_player(room_code, pid, p.get("last_attacker_id"))
                         continue
@@ -464,24 +533,17 @@ async def bot_loop():
                     cur = new_piece
                     any_bot_moved = True
 
-                # Gerakan 1 langkah per tick: geser x dulu, lalu turun bertahap
+                # Gerak 1 langkah per tick menuju target_x lalu turun bertahap
                 if cur.get("hesitate_ticks", 0) > 0:
                     cur["hesitate_ticks"] -= 1
                 elif cur["x"] < cur["target_x"] and not bot_collide(board, cur["shape"], cur["x"] + 1, cur["y"]):
                     cur["x"] += 1
-                    # Kadang bot agak ragu / over-geser sedikit lalu balik
-                    if random.random() < 0.12 and cur["x"] > 0 and not bot_collide(board, cur["shape"], cur["x"] - 1, cur["y"]):
-                        cur["x"] -= 1
                 elif cur["x"] > cur["target_x"] and not bot_collide(board, cur["shape"], cur["x"] - 1, cur["y"]):
                     cur["x"] -= 1
-                    if random.random() < 0.12 and cur["x"] < COLS - 1 and not bot_collide(board, cur["shape"], cur["x"] + 1, cur["y"]):
-                        cur["x"] += 1
                 else:
-                    # Turun 1 baris bertahap (tidak hard-drop instan)
                     if not bot_collide(board, cur["shape"], cur["x"], cur["y"] + 1):
                         cur["y"] += 1
                     else:
-                        # Lock piece ke board
                         for r_idx, row in enumerate(cur["shape"]):
                             for c_idx, val in enumerate(row):
                                 if val:
@@ -491,9 +553,8 @@ async def bot_loop():
                                         board[nr][nc] = val
 
                         p["cur_piece"] = None
-                        p["spawn_cooldown"] = random.randint(1, 2)
+                        p["spawn_cooldown"] = 1
 
-                        # Cek baris penuh secara natural
                         cleared_lines = 0
                         new_board = []
                         for r in board:
@@ -572,7 +633,6 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                 await websocket.send_text(json.dumps({"type": "pong"}))
                 continue
 
-            # --- ADMIN EVENTS ---
             if event == "create_room":
                 custom_code = str(data.get("room_code", "")).strip().upper()[:8]
                 room_code = custom_code if custom_code else generate_room_code()
@@ -735,7 +795,6 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                     "players": get_room_players_summary(current_room, include_grid=True),
                 })
 
-            # --- PLAYER EVENTS ---
             elif event == "join_game":
                 room_code = str(data.get("room_code", "")).strip().upper()
                 username = str(data.get("username", "")).strip()[:15] or f"Player_{client_id[:4]}"
