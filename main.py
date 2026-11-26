@@ -1,5 +1,6 @@
 import os
 import json
+import time
 import random
 import string
 import sqlite3
@@ -12,6 +13,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(BASE_DIR, "tetris_br.db")
 BARCODE_PATH = os.path.join(BASE_DIR, "KepoTetris.jpeg")
 ROWS, COLS = 20, 10
+DOUBLE_DURATION_SEC = 5.0
 
 SHAPES = [
     [[1, 1, 1, 1]],
@@ -217,13 +219,20 @@ def pick_smart_human_target(bot: dict):
     }
 
 
+def is_double_active_now(player: dict, now_ts: Optional[float] = None) -> bool:
+    ts = time.time() if now_ts is None else now_ts
+    return float(player.get("double_until", 0.0)) > ts
+
+
 def get_room_players_summary(room_code: str, include_grid: bool = False):
     room = rooms.get(room_code)
     if not room:
         return {}
+    now_ts = time.time()
     result = {}
     for pid, p in room["players"].items():
         is_quitter = (not p.get("is_bot")) and (p.get("quitter", False) or not p.get("connected", True))
+        rem_dbl = max(0.0, float(p.get("double_until", 0.0)) - now_ts)
         item = {
             "name": p["name"],
             "is_bot": p.get("is_bot", False),
@@ -232,6 +241,8 @@ def get_room_players_summary(room_code: str, include_grid: bool = False):
             "alive": p["alive"],
             "ko": p["ko"],
             "score": p["score"],
+            "armor_charges": p.get("armor_charges", 0),
+            "double_remaining": round(rem_dbl, 1),
         }
         if include_grid:
             item["grid"] = compute_bot_view_grid(p) if p.get("is_bot") else p["grid"]
@@ -403,13 +414,18 @@ def append_random_garbage_rows(grid: list, count: int):
         grid.append(row)
 
 
-async def perform_attack(room_code: str, attacker_id: str, lines: int):
+async def perform_attack(room_code: str, attacker_id: str, lines: int, client_double: bool = False):
     room = rooms.get(room_code)
     if not room or not room["active"] or attacker_id not in room["players"]:
         return
 
     attack_map = {1: 1, 2: 2, 3: 3, 4: 5}
     garbage_count = attack_map.get(lines, 1)
+
+    attacker = room["players"][attacker_id]
+    dbl_active = is_double_active_now(attacker) or bool(client_double)
+    if dbl_active:
+        garbage_count *= 2
 
     alive_opponents = [
         pid for pid, p in room["players"].items()
@@ -418,13 +434,36 @@ async def perform_attack(room_code: str, attacker_id: str, lines: int):
     if not alive_opponents:
         return
 
-    attacker = room["players"][attacker_id]
     candidates = [pid for pid in alive_opponents if pid != attacker.get("last_target_id")]
     target_id = random.choice(candidates if candidates else alive_opponents)
     attacker["last_target_id"] = target_id
 
     attacker_name = attacker["name"]
-    target_name = room["players"][target_id]["name"]
+    target_player = room["players"][target_id]
+    target_name = target_player["name"]
+    dbl_tag = " [2X DOUBLE]" if dbl_active else ""
+
+    if target_player.get("armor_charges", 0) > 0:
+        target_player["armor_charges"] -= 1
+        rem = target_player["armor_charges"]
+        if not target_player.get("is_bot"):
+            await send_to_player(room_code, target_id, {
+                "type": "armor_blocked",
+                "from_id": attacker_id,
+                "from_name": attacker_name,
+                "blocked_lines": garbage_count,
+                "remaining_charges": rem,
+            })
+        await broadcast_to_room(room_code, {
+            "type": "attack_log",
+            "msg": f"🛡️ Armor {target_name} menangkis {garbage_count} baris{dbl_tag} dari {attacker_name}! (Sisa {rem}x)",
+            "target_id": target_id,
+        })
+        await broadcast_to_room(room_code, {
+            "type": "lobby_update",
+            "players": get_room_players_summary(room_code, include_grid=False),
+        })
+        return
 
     await send_to_player(room_code, target_id, {
         "type": "receive_attack",
@@ -433,8 +472,7 @@ async def perform_attack(room_code: str, attacker_id: str, lines: int):
         "lines": garbage_count,
     })
 
-    target_player = room["players"].get(target_id)
-    if target_player and target_player.get("is_bot") and target_player["alive"]:
+    if target_player.get("is_bot") and target_player["alive"]:
         append_random_garbage_rows(target_player["board"], min(garbage_count, 5))
         target_player["last_attacker_id"] = attacker_id
         cur = target_player.get("cur_piece")
@@ -455,7 +493,7 @@ async def perform_attack(room_code: str, attacker_id: str, lines: int):
 
     await broadcast_to_room(room_code, {
         "type": "attack_log",
-        "msg": f"⚡ {attacker_name} mengirim {garbage_count} baris sampah ke {target_name}!",
+        "msg": f"⚡ {attacker_name} mengirim {garbage_count} baris sampah{dbl_tag} ke {target_name}!",
         "target_id": target_id,
     })
 
@@ -693,6 +731,8 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                     "spawn_cooldown": 0,
                     "last_attacker_id": None,
                     "last_target_id": None,
+                    "double_until": 0.0,
+                    "armor_charges": 0,
                 }
 
                 await broadcast_to_room(current_room, {
@@ -765,6 +805,8 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                     p["spawn_cooldown"] = random.randint(0, 2)
                     p["last_attacker_id"] = None
                     p["last_target_id"] = None
+                    p["double_until"] = 0.0
+                    p["armor_charges"] = 0
 
                 await broadcast_to_room(current_room, {
                     "type": "match_started",
@@ -791,6 +833,8 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                     p["spawn_cooldown"] = 0
                     p["last_attacker_id"] = None
                     p["last_target_id"] = None
+                    p["double_until"] = 0.0
+                    p["armor_charges"] = 0
 
                 await broadcast_to_room(current_room, {
                     "type": "room_reset",
@@ -843,6 +887,8 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                         "grid": empty_grid(),
                         "last_attacker_id": None,
                         "last_target_id": None,
+                        "double_until": 0.0,
+                        "armor_charges": 0,
                     }
                     can_play_now = not is_mid_game
 
@@ -865,6 +911,39 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                     "type": "admin_players_sync",
                     "players": get_room_players_summary(room_code, include_grid=True),
                 })
+
+            elif event == "use_item":
+                if role != "player" or not current_room or current_room not in rooms:
+                    continue
+                room = rooms[current_room]
+                if not room.get("active"):
+                    continue
+                p = room["players"].get(client_id)
+                if not p or not p.get("alive"):
+                    continue
+
+                item_type = data.get("item")
+                if item_type == "armor":
+                    p["armor_charges"] = 3
+                    await broadcast_to_room(current_room, {
+                        "type": "attack_log",
+                        "msg": f"🛡️ {p['name']} mengaktifkan ARMOR (tahan 3 serangan)!",
+                    })
+                    await broadcast_to_room(current_room, {
+                        "type": "lobby_update",
+                        "players": get_room_players_summary(current_room, include_grid=False),
+                    })
+                elif item_type == "double":
+                    p["double_until"] = time.time() + DOUBLE_DURATION_SEC
+                    await send_to_player(current_room, client_id, {
+                        "type": "item_activated",
+                        "item": "double",
+                        "double_seconds": int(DOUBLE_DURATION_SEC),
+                    })
+                    await broadcast_to_room(current_room, {
+                        "type": "attack_log",
+                        "msg": f"⚡ {p['name']} mengaktifkan DOUBLE ATTACK selama {int(DOUBLE_DURATION_SEC)} detik!",
+                    })
 
             elif event == "update_board":
                 if role != "player" or not current_room or current_room not in rooms:
@@ -893,7 +972,8 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                 if not room["active"] or not p or not p.get("alive"):
                     continue
                 lines = int(data.get("lines", 1))
-                await perform_attack(current_room, client_id, lines)
+                client_double = bool(data.get("double_active", False))
+                await perform_attack(current_room, client_id, lines, client_double=client_double)
 
             elif event == "player_eliminated":
                 if role != "player" or not current_room or current_room not in rooms:
