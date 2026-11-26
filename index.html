@@ -56,32 +56,33 @@
             padding: 14px;
             border-radius: 12px;
             width: 100%;
-            max-width: 420px;
+            max-width: 440px;
             border: 1px solid #334155;
             box-shadow: 0 8px 24px rgba(0,0,0,0.4);
         }
         .tabs {
             display: flex;
-            gap: 8px;
+            flex-wrap: wrap;
+            gap: 6px;
             margin-bottom: 12px;
         }
         .tab-btn {
-            flex: 1;
+            flex: 1 1 46%;
             background: #0f172a;
             color: #94a3b8;
             border: 1px solid #334155;
-            padding: 9px;
+            padding: 8px 6px;
             border-radius: 8px;
             cursor: pointer;
             font-weight: bold;
-            font-size: 13px;
+            font-size: 12px;
         }
         .tab-btn.active {
             background: #2563eb;
             color: white;
             border-color: #3b82f6;
         }
-        input {
+        input, select {
             width: 100%;
             padding: 10px;
             border-radius: 8px;
@@ -154,6 +155,44 @@
             margin-top: 4px;
         }
 
+        .mode-info-box {
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 8px 10px;
+            font-size: 11px;
+            color: #cbd5e1;
+            margin-bottom: 10px;
+            line-height: 1.45;
+        }
+        .bot-count-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 8px 10px;
+            margin-bottom: 10px;
+            font-size: 12px;
+        }
+        .bot-stepper {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .step-btn {
+            background: #1e293b;
+            color: #f8fafc;
+            border: 1px solid #475569;
+            border-radius: 6px;
+            width: 28px;
+            height: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
         .barcode-box {
             margin-top: 12px;
             padding-top: 10px;
@@ -206,7 +245,7 @@
             display: flex;
             flex-direction: column;
             gap: 8px;
-            max-height: 220px;
+            max-height: 200px;
             overflow-y: auto;
         }
         .lobby-room-item {
@@ -370,7 +409,7 @@
             display: block;
         }
 
-        /* METER CHARGE VERTIKAL DI SAMPING LAYAR TETRIS (NAIK KE ATAS SAAT TERISI) */
+        /* METER CHARGE VERTIKAL DI SAMPING LAYAR TETRIS */
         .side-charge-column {
             width: 24px;
             flex-shrink: 0;
@@ -506,6 +545,12 @@
             flex-direction: column;
             gap: 2px;
         }
+        .opp-badge.clickable-bot {
+            cursor: pointer;
+        }
+        .opp-badge.clickable-bot:hover {
+            border-color: #38bdf8;
+        }
         .opp-badge-row {
             display: flex;
             justify-content: space-between;
@@ -555,7 +600,69 @@
             z-index: 50;
         }
 
-        /* TOMBOL KONTROL PONSEL — SELALU TERLIHAT & PAS DI LEBAR HP */
+        /* PANEL SPECTATOR BOT UNTUK PEMAIN SAAT KALAH / LAWAN BOT */
+        .bot-spectator-box {
+            width: 100%;
+            background: #1e293b;
+            border: 1px solid #38bdf8;
+            border-radius: 12px;
+            padding: 10px;
+            margin-top: 4px;
+        }
+        .bot-spectator-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+            font-size: 12px;
+            font-weight: 800;
+            color: #38bdf8;
+        }
+        .bot-spectator-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+            gap: 8px;
+        }
+        .bot-mini-card {
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 6px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            cursor: pointer;
+        }
+        .bot-mini-card.alive { border-color: #22c55e; }
+        .bot-mini-card.dead { border-color: #ef4444; opacity: 0.72; }
+        .bot-mini-card.focused { border: 2px solid #38bdf8; box-shadow: 0 0 10px rgba(56,189,248,0.35); }
+        .bot-mini-card canvas {
+            background: #020617;
+            border: 1px solid #475569;
+            border-radius: 3px;
+            margin: 4px 0;
+        }
+        .bot-zoom-panel {
+            background: #0f172a;
+            border: 1px solid #38bdf8;
+            border-radius: 10px;
+            padding: 8px;
+            margin-bottom: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .mode-action-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            width: 100%;
+        }
+
+        /* TOMBOL KONTROL PONSEL */
         .mobile-controls {
             display: flex;
             justify-content: space-between;
@@ -675,11 +782,40 @@
     <!-- LOBBY -->
     <div id="lobby-card" class="card">
         <div class="tabs">
-            <button id="tab-player" class="tab-btn active" onclick="switchTab('player')">🎮 Pemain</button>
+            <button id="tab-solo" class="tab-btn active" onclick="switchTab('solo')">🎯 Main Sendiri</button>
+            <button id="tab-vsbot" class="tab-btn" onclick="switchTab('vsbot')">🤖 Lawan Bot</button>
+            <button id="tab-player" class="tab-btn" onclick="switchTab('player')">🌐 Battle Royale</button>
             <button id="tab-admin" class="tab-btn" onclick="switchTab('admin')">👑 Admin</button>
         </div>
 
-        <div id="form-player">
+        <!-- MODE MAIN SENDIRI (LEVEL CEPAT, TANPA POWER-UP) -->
+        <div id="form-solo">
+            <div class="mode-info-box">
+                <b>🎯 Mode Main Sendiri:</b> Naik level tiap <b>4 baris</b> cleared. Kecepatan jatuh makin cepat di tiap level, <b>tanpa power-up</b>.
+            </div>
+            <input type="text" id="solo-name" placeholder="Nama Pemain (opsional)..." maxlength="15">
+            <button class="primary" onclick="startSoloMode()">▶ Mulai Main Sendiri</button>
+        </div>
+
+        <!-- MODE LAWAN BOT (LAYAR SENDIRI + PANTAU BOT SAAT KALAH) -->
+        <div id="form-vsbot" style="display:none;">
+            <div class="mode-info-box">
+                <b>🤖 Mode Lawan Bot:</b> Punya layar sendiri saat bertarung melawan AI Bot dengan power-up. Jika kalah (KO), layar bot otomatis terbuka untuk dipantau!
+            </div>
+            <input type="text" id="vsbot-name" placeholder="Nama Anda (opsional)..." maxlength="15">
+            <div class="bot-count-row">
+                <span>Jumlah Bot Lawan:</span>
+                <div class="bot-stepper">
+                    <button type="button" class="step-btn" onclick="changeVsBotCount(-1)">-</button>
+                    <b id="vsbot-count-label">3</b>
+                    <button type="button" class="step-btn" onclick="changeVsBotCount(1)">+</button>
+                </div>
+            </div>
+            <button class="primary" onclick="startVsBotMode()">⚔️ Mulai Lawan Bot</button>
+        </div>
+
+        <!-- MODE BATTLE ROYALE (MULTI-PEMAIN) -->
+        <div id="form-player" style="display:none;">
             <input type="text" id="player-name" placeholder="Nama Anda (Wajib diisi)..." maxlength="15" required>
             <input type="text" id="join-room-code" placeholder="Kode Room (misal: AB12C)" maxlength="8" style="text-transform:uppercase;">
             <button class="primary" onclick="joinAsPlayer()">Masuk Arena</button>
@@ -695,6 +831,7 @@
             </div>
         </div>
 
+        <!-- MODE ADMIN -->
         <div id="form-admin" style="display:none;">
             <input type="text" id="custom-room-code" placeholder="Kode Room (Jika sama, room lama kereset)" maxlength="8" style="text-transform:uppercase;">
             <button class="primary" onclick="createAdminRoom()">Buat Room Admin</button>
@@ -711,16 +848,16 @@
         </div>
     </div>
 
-    <!-- TAMPILAN PEMAIN -->
+    <!-- TAMPILAN PEMAIN / SOLO / LAWAN BOT -->
     <div id="player-view" class="player-layout" style="display:none;">
         <div class="top-hud">
-            <div>Room: <b id="p-room-code">-</b></div>
+            <div>Mode: <b id="p-mode-label" style="color:#38bdf8;">-</b></div>
+            <div>Lv: <b id="p-level" style="color:#facc15;">1</b> | Baris: <b id="p-lines">0</b></div>
             <div>Skor: <b id="score">0</b> | KO: <b id="ko">0</b></div>
-            <div>Ready: <b id="item-tokens" style="color:#facc15;">0</b></div>
             <div id="p-status" style="color:#38bdf8; font-weight:bold;">Menunggu...</div>
         </div>
 
-        <!-- DOCK POWER-UP (MENYALA & NAIK SAAT CHARGE PENUH) -->
+        <!-- DOCK POWER-UP (DISEMBUNYIKAN PADA MODE MAIN SENDIRI) -->
         <div id="item-dock" class="item-dock">
             <button type="button" id="btn-item-armor" class="item-btn" onclick="activateItem('armor')" disabled>
                 <span>🛡️ Armor (<b id="armor-count">0</b>x)</span>
@@ -747,7 +884,7 @@
                 </div>
             </div>
 
-            <!-- METER CHARGE VERTIKAL DI SAMPING LAYAR TETRIS -->
+            <!-- METER CHARGE VERTIKAL DI SAMPING LAYAR TETRIS (DISEMBUNYIKAN PADA MODE MAIN SENDIRI) -->
             <div id="side-charge-col" class="side-charge-column">
                 <div id="charge-pct-label" class="side-charge-pct">0%</div>
                 <div id="side-charge-track" class="side-charge-track">
@@ -757,11 +894,40 @@
             </div>
 
             <div class="side-info">
-                <div style="font-size:11px; font-weight:bold;">Skor Peserta</div>
+                <div id="side-list-title" style="font-size:11px; font-weight:bold;">Skor Peserta</div>
                 <div id="opponents" class="opponents-list"></div>
                 <div style="font-size:11px; font-weight:bold; margin-top:2px;">Log Arena</div>
                 <div id="player-log" class="log-box"></div>
             </div>
+        </div>
+
+        <!-- PANEL PANTAU BOT (TERBUKA OTOMATIS SAAT KALAH DI MODE LAWAN BOT) -->
+        <div id="bot-spectator-panel" class="bot-spectator-box" style="display:none;">
+            <div class="bot-spectator-header">
+                <span>🤖 Layar Pantau Bot</span>
+                <span id="bot-spectator-hint" style="font-size:10px; color:#94a3b8;">Klik bot untuk zoom</span>
+            </div>
+
+            <div id="bot-zoom-panel" class="bot-zoom-panel" style="display:none;">
+                <div style="width:100%; display:flex; justify-content:space-between; align-items:center;">
+                    <b id="bot-zoom-name" style="font-size:12px; color:#38bdf8;">-</b>
+                    <button type="button" class="close-focus-btn" onclick="clearBotZoom()">✕ Tutup Zoom</button>
+                </div>
+                <canvas id="bot-zoom-canvas" width="160" height="320"></canvas>
+                <div style="width:100%; display:flex; justify-content:space-between; font-size:11px;">
+                    <span id="bot-zoom-status">🟢 Main</span>
+                    <span>Skor: <b id="bot-zoom-score">0</b> | KO: <b id="bot-zoom-ko">0</b></span>
+                </div>
+            </div>
+
+            <div id="bot-spectator-grid" class="bot-spectator-grid"></div>
+        </div>
+
+        <!-- AKSI MODE LOKAL (MAIN SENDIRI / LAWAN BOT) -->
+        <div id="local-mode-actions" class="mode-action-row" style="display:none;">
+            <button type="button" class="success" style="flex:1;" onclick="restartLocalMode()">↻ Main Lagi</button>
+            <button type="button" class="bot-btn" id="btn-local-addbot" style="display:none;" onclick="localAddBot()">🤖 +Bot</button>
+            <button type="button" class="danger" onclick="exitToLobby()">🏠 Menu Utama</button>
         </div>
 
         <!-- KONTROL PONSEL SELALU TERLIHAT & PAS -->
@@ -901,6 +1067,58 @@ function vibrate(ms = 15) {
     if (navigator.vibrate) navigator.vibrate(ms);
 }
 
+// --- MODE & LEVEL STATE ---
+// mode: 'solo' | 'vsbot' | 'online' | 'admin'
+let gameMode = 'solo';
+let soloLevel = 1;
+let totalLinesCleared = 0;
+let playerKoCount = 0;
+let vsBotDesiredCount = 3;
+let vsBotSerial = 1;
+let localBots = [];
+let botLoopTimer = null;
+let focusedBotId = null;
+
+function getDropIntervalMs() {
+    if (gameMode === 'solo') {
+        return Math.max(95, 620 - (soloLevel - 1) * 52);
+    }
+    return 600;
+}
+
+function updateLevelDisplay() {
+    document.getElementById('p-level').innerText = soloLevel;
+    document.getElementById('p-lines').innerText = totalLinesCleared;
+}
+
+function hasPowerupsInCurrentMode() {
+    return gameMode !== 'solo';
+}
+
+function applyModeVisibilityToPlayerView() {
+    const showPowerups = hasPowerupsInCurrentMode();
+    document.getElementById('item-dock').style.display = showPowerups ? 'flex' : 'none';
+    document.getElementById('side-charge-col').style.display = showPowerups ? 'flex' : 'none';
+    document.getElementById('local-mode-actions').style.display = (gameMode === 'solo' || gameMode === 'vsbot') ? 'flex' : 'none';
+    document.getElementById('btn-local-addbot').style.display = gameMode === 'vsbot' ? 'inline-block' : 'none';
+    document.getElementById('side-list-title').innerText = gameMode === 'solo'
+        ? 'Info Level'
+        : (gameMode === 'vsbot' ? 'Papan Bot & Skor' : 'Skor Peserta');
+
+    if (gameMode === 'solo') {
+        document.getElementById('p-mode-label').innerText = '🎯 Solo';
+    } else if (gameMode === 'vsbot') {
+        document.getElementById('p-mode-label').innerText = '🤖 Vs Bot';
+    } else {
+        document.getElementById('p-mode-label').innerText = '🌐 BR';
+    }
+}
+
+function changeVsBotCount(delta) {
+    vsBotDesiredCount = Math.max(1, Math.min(8, vsBotDesiredCount + delta));
+    document.getElementById('vsbot-count-label').innerText = vsBotDesiredCount;
+}
+
 // --- POWER-UP CHARGE SYSTEM ---
 const DOUBLE_DURATION_MS = 5000;
 let itemTokens = 0;
@@ -909,7 +1127,7 @@ let armorCharges = 0;
 let doubleExpiresAt = 0;
 
 function isDoubleActive() {
-    return performance.now() < doubleExpiresAt;
+    return hasPowerupsInCurrentMode() && performance.now() < doubleExpiresAt;
 }
 
 function getDoubleRemainingSec() {
@@ -918,10 +1136,12 @@ function getDoubleRemainingSec() {
 }
 
 function isPowerupReady() {
-    return isPlaying && (itemTokens > 0 || itemCharge >= 100);
+    return hasPowerupsInCurrentMode() && isPlaying && (itemTokens > 0 || itemCharge >= 100);
 }
 
 function refreshItemUI() {
+    if (!hasPowerupsInCurrentMode()) return;
+
     const isFull = itemCharge >= 100;
     const ready = isPowerupReady();
 
@@ -974,7 +1194,7 @@ function refreshItemUI() {
 }
 
 function addItemCharge(amount) {
-    if (!isPlaying || amount <= 0) return;
+    if (!hasPowerupsInCurrentMode() || !isPlaying || amount <= 0) return;
     if (itemTokens > 0 || itemCharge >= 100) {
         itemCharge = 100;
         itemTokens = 1;
@@ -992,7 +1212,7 @@ function addItemCharge(amount) {
 }
 
 function activateItem(itemType) {
-    if (!isPlaying || (!isPowerupReady())) return;
+    if (!hasPowerupsInCurrentMode() || !isPlaying || !isPowerupReady()) return;
     ensureAudio();
     if (itemType === 'double' && isDoubleActive()) return;
 
@@ -1003,18 +1223,18 @@ function activateItem(itemType) {
         armorCharges = 3;
         SFX.block();
         addLog('player-log', '🛡️ ARMOR aktif! Menahan 3 serangan masuk.');
-        sendWS({ type: 'use_item', item: 'armor' });
+        if (gameMode === 'online') sendWS({ type: 'use_item', item: 'armor' });
     } else if (itemType === 'double') {
         doubleExpiresAt = performance.now() + DOUBLE_DURATION_MS;
         SFX.clear(3);
         addLog('player-log', '⚡ DOUBLE aktif selama 5 detik! Serangan 2x.');
-        sendWS({ type: 'use_item', item: 'double' });
+        if (gameMode === 'online') sendWS({ type: 'use_item', item: 'double' });
     } else if (itemType === 'breaker') {
         const removedCount = breakTwoRandomRows();
         SFX.drop();
         vibrate(30);
         addLog('player-log', `💥 BREAKER menghapus ${removedCount} baris acak!`);
-        sendWS({ type: 'use_item', item: 'breaker' });
+        if (gameMode === 'online') sendWS({ type: 'use_item', item: 'breaker' });
         syncBoard();
     }
 
@@ -1147,7 +1367,573 @@ function stopLobbyPolling() {
     clearInterval(lobbyPollInterval);
 }
 
-// --- WEBSOCKET & QUIT LIFECYCLE ---
+// --- LOCAL AI BOT ENGINE (UNTUK MODE LAWAN BOT) ---
+function createEmptyGrid() {
+    return Array.from({ length: ROWS }, () => Array(COLS).fill(0));
+}
+
+function localBotCollide(board, shape, px, py) {
+    for (let r = 0; r < shape.length; r++) {
+        for (let c = 0; c < shape[r].length; c++) {
+            if (shape[r][c]) {
+                const nr = py + r;
+                const nc = px + c;
+                if (nc < 0 || nc >= COLS || nr >= ROWS) return true;
+                if (nr >= 0 && board[nr][nc] !== 0) return true;
+            }
+        }
+    }
+    return false;
+}
+
+function evaluateLocalBoard(board, linesCleared) {
+    let aggHeight = 0;
+    let holes = 0;
+    const colHeights = Array(COLS).fill(0);
+
+    for (let c = 0; c < COLS; c++) {
+        let seen = false;
+        for (let r = 0; r < ROWS; r++) {
+            if (board[r][c] !== 0) {
+                if (!seen) {
+                    colHeights[c] = ROWS - r;
+                    aggHeight += colHeights[c];
+                    seen = true;
+                }
+            } else if (seen) {
+                holes++;
+            }
+        }
+    }
+
+    let bumpiness = 0;
+    for (let i = 0; i < COLS - 1; i++) {
+        bumpiness += Math.abs(colHeights[i] - colHeights[i + 1]);
+    }
+    const maxHeight = Math.max(...colHeights, 0);
+    const lineBonus = ({ 0: 0, 1: 4.5, 2: 11, 3: 22, 4: 40 })[linesCleared] || (linesCleared * 8);
+
+    return lineBonus - (holes * 5.2) - (aggHeight * 0.45) - (bumpiness * 1.1) - (Math.max(0, maxHeight - 12) * 1.6);
+}
+
+function pickLocalBotPiece(bot) {
+    const board = bot.board;
+    const baseShape = SHAPES[Math.floor(Math.random() * 7) + 1];
+    const rotations = [];
+    let curr = baseShape.map(r => [...r]);
+
+    for (let i = 0; i < 4; i++) {
+        const key = JSON.stringify(curr);
+        if (!rotations.some(item => JSON.stringify(item) === key)) {
+            rotations.push(curr.map(r => [...r]));
+        }
+        curr = rotateMatrix(curr);
+    }
+
+    const moves = [];
+    for (const rotShape of rotations) {
+        const w = rotShape[0].length;
+        for (let x = 0; x <= COLS - w; x++) {
+            if (localBotCollide(board, rotShape, x, 0)) continue;
+            let y = 0;
+            while (!localBotCollide(board, rotShape, x, y + 1)) y++;
+
+            const temp = board.map(r => [...r]);
+            for (let r = 0; r < rotShape.length; r++) {
+                for (let c = 0; c < rotShape[r].length; c++) {
+                    if (rotShape[r][c]) {
+                        const nr = y + r;
+                        const nc = x + c;
+                        if (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS) temp[nr][nc] = rotShape[r][c];
+                    }
+                }
+            }
+
+            let cleared = 0;
+            const kept = [];
+            for (const row of temp) {
+                if (row.every(v => v !== 0)) cleared++;
+                else kept.push(row);
+            }
+            while (kept.length < ROWS) kept.unshift(Array(COLS).fill(0));
+            const topPenalty = kept[0].some(v => v !== 0) ? 12 : 0;
+            moves.push({ score: evaluateLocalBoard(kept, cleared) - topPenalty, shape: rotShape, x });
+        }
+    }
+
+    moves.sort((a, b) => b.score - a.score);
+    const chosen = moves.length > 0
+        ? (Math.random() < 0.85 || moves.length === 1 ? moves[0] : moves[Math.floor(Math.random() * Math.min(3, moves.length))])
+        : { shape: baseShape.map(r => [...r]), x: Math.floor(COLS / 2) - 1 };
+
+    const startX = Math.max(0, Math.min(COLS - chosen.shape[0].length, Math.floor(COLS / 2) - Math.floor(chosen.shape[0].length / 2)));
+    return {
+        shape: chosen.shape,
+        x: startX,
+        y: 0,
+        targetX: chosen.x,
+        hesitate: Math.floor(Math.random() * 2)
+    };
+}
+
+function getLocalBotGrid(bot) {
+    const snap = bot.board.map(r => [...r]);
+    if (bot.alive && bot.curPiece) {
+        bot.curPiece.shape.forEach((r, y) => r.forEach((v, x) => {
+            if (v) {
+                const nr = bot.curPiece.y + y;
+                const nc = bot.curPiece.x + x;
+                if (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS) snap[nr][nc] = v;
+            }
+        }));
+    }
+    return snap;
+}
+
+function makeLocalBotObj(name) {
+    return {
+        id: `lbot_${vsBotSerial++}`,
+        name,
+        is_bot: true,
+        alive: true,
+        score: 0,
+        ko: 0,
+        board: createEmptyGrid(),
+        curPiece: null,
+        spawnCooldown: Math.floor(Math.random() * 3),
+        charge: 0,
+        armorCharges: 0,
+        doubleUntil: 0
+    };
+}
+
+function setupLocalBots(count) {
+    localBots = [];
+    for (let i = 0; i < count; i++) {
+        localBots.push(makeLocalBotObj(`Bot_${i + 1}`));
+    }
+    renderVsBotSideList();
+    renderBotSpectatorPanel();
+}
+
+function localAddBot() {
+    if (gameMode !== 'vsbot') return;
+    const b = makeLocalBotObj(`Bot_${localBots.length + 1}`);
+    localBots.push(b);
+    addLog('player-log', `🤖 ${b.name} masuk ke arena!`);
+    renderVsBotSideList();
+    renderBotSpectatorPanel();
+}
+
+function localAttackFromPlayer(lines, forceDbl) {
+    if (gameMode !== 'vsbot') return;
+    const map = { 1: 1, 2: 2, 3: 3, 4: 5 };
+    let dmg = map[lines] || 1;
+    if (forceDbl) dmg *= 2;
+
+    const aliveBots = localBots.filter(b => b.alive);
+    if (aliveBots.length === 0) return;
+
+    const target = aliveBots[Math.floor(Math.random() * aliveBots.length)];
+    if (target.armorCharges > 0) {
+        target.armorCharges--;
+        addLog('player-log', `🛡️ Armor ${target.name} menangkis ${dmg} baris!`);
+        renderVsBotSideList();
+        return;
+    }
+
+    appendGarbageToGrid(target.board, Math.min(dmg, 5));
+    addLog('player-log', `⚡ Anda mengirim ${dmg} baris ke ${target.name}!`);
+    if (target.board[0].some(v => v !== 0)) {
+        target.alive = false;
+        playerKoCount++;
+        document.getElementById('ko').innerText = playerKoCount;
+        addLog('player-log', `💀 Anda meng-KO ${target.name}!`);
+        checkVsBotMatchState();
+    }
+    renderVsBotSideList();
+    renderBotSpectatorPanel();
+}
+
+function localAttackFromBot(bot, lines) {
+    const map = { 1: 1, 2: 2, 3: 3, 4: 5 };
+    let dmg = map[lines] || 1;
+    if (performance.now() < bot.doubleUntil) dmg *= 2;
+
+    const targets = [];
+    if (isPlaying) targets.push({ type: 'player' });
+    localBots.forEach(b => { if (b.alive && b.id !== bot.id) targets.push({ type: 'bot', bot: b }); });
+    if (targets.length === 0) return;
+
+    const chosen = targets[Math.floor(Math.random() * targets.length)];
+    if (chosen.type === 'player') {
+        if (armorCharges > 0) {
+            armorCharges--;
+            SFX.block();
+            refreshItemUI();
+            addLog('player-log', `🛡️ Armor Anda menahan ${dmg} baris dari ${bot.name}! (Sisa ${armorCharges}x)`);
+            return;
+        }
+        pendingGarbage += dmg;
+        lastAttackerId = bot.id;
+        SFX.attack();
+        triggerAttackAnimation(dmg, bot.name);
+        updateAlert();
+        addLog('player-log', `🚨 ${bot.name} mengirim +${dmg} baris!`);
+    } else {
+        const tBot = chosen.bot;
+        if (tBot.armorCharges > 0) {
+            tBot.armorCharges--;
+            addLog('player-log', `🛡️ Armor ${tBot.name} menahan serangan ${bot.name}!`);
+            return;
+        }
+        appendGarbageToGrid(tBot.board, Math.min(dmg, 4));
+        addLog('player-log', `⚡ ${bot.name} mengirim ${dmg} baris ke ${tBot.name}`);
+        if (tBot.board[0].some(v => v !== 0)) {
+            tBot.alive = false;
+            bot.ko++;
+            addLog('player-log', `💀 ${bot.name} meng-KO ${tBot.name}!`);
+            checkVsBotMatchState();
+        }
+    }
+}
+
+function appendGarbageToGrid(targetGrid, count) {
+    let lastHole = -1;
+    for (let i = 0; i < count; i++) {
+        let hole = Math.floor(Math.random() * COLS);
+        if (COLS > 1 && hole === lastHole) hole = (hole + 1 + Math.floor(Math.random() * (COLS - 1))) % COLS;
+        lastHole = hole;
+        targetGrid.shift();
+        const row = Array(COLS).fill(8);
+        row[hole] = 0;
+        targetGrid.push(row);
+    }
+}
+
+function checkVsBotMatchState() {
+    if (gameMode !== 'vsbot') return;
+    const aliveBots = localBots.filter(b => b.alive);
+    if (!isPlaying && aliveBots.length > 0) {
+        document.getElementById('bot-spectator-panel').style.display = 'block';
+        if (!focusedBotId && aliveBots[0]) focusedBotId = aliveBots[0].id;
+        renderBotSpectatorPanel();
+    } else if (isPlaying && aliveBots.length === 0 && localBots.length > 0) {
+        isPlaying = false;
+        dangerLevel = 0;
+        dangerFlashOn = false;
+        refreshItemUI();
+        SFX.win();
+        document.getElementById('p-status').innerText = '🏆 MENANG!';
+        document.getElementById('p-status').style.color = '#facc15';
+        renderPodium('player-podium', [{
+            rank: 1,
+            name: myUsername || 'Anda',
+            is_bot: false,
+            score,
+            ko: playerKoCount,
+            reason: 'Mengalahkan Semua Bot'
+        }]);
+        addLog('player-log', '🏆 Selamat! Anda mengalahkan semua bot!');
+    }
+}
+
+function startLocalBotLoop() {
+    stopLocalBotLoop();
+    botLoopTimer = setInterval(() => {
+        if (gameMode !== 'vsbot') return;
+        const aliveBots = localBots.filter(b => b.alive);
+        if (!isPlaying && aliveBots.length === 0) return;
+
+        for (const bot of localBots) {
+            if (!bot.alive) continue;
+
+            bot.charge += 0.35;
+            if (bot.charge >= 100) {
+                bot.charge = 0;
+                const isCrit = bot.board.slice(0, 5).some(r => r.some(v => v !== 0));
+                if (isCrit && bot.armorCharges === 0) {
+                    bot.armorCharges = 3;
+                    addLog('player-log', `🛡️ ${bot.name} mengaktifkan ARMOR!`);
+                } else {
+                    bot.doubleUntil = performance.now() + DOUBLE_DURATION_MS;
+                    addLog('player-log', `⚡ ${bot.name} mengaktifkan DOUBLE 5 detik!`);
+                }
+            }
+
+            if (bot.spawnCooldown > 0) {
+                bot.spawnCooldown--;
+                continue;
+            }
+
+            if (!bot.curPiece) {
+                const nextP = pickLocalBotPiece(bot);
+                if (localBotCollide(bot.board, nextP.shape, nextP.x, nextP.y)) {
+                    bot.alive = false;
+                    addLog('player-log', `💀 ${bot.name} tereliminasi!`);
+                    checkVsBotMatchState();
+                    continue;
+                }
+                bot.curPiece = nextP;
+            }
+
+            const cur = bot.curPiece;
+            if (cur.hesitate > 0) {
+                cur.hesitate--;
+            } else if (cur.x < cur.targetX && !localBotCollide(bot.board, cur.shape, cur.x + 1, cur.y)) {
+                cur.x++;
+            } else if (cur.x > cur.targetX && !localBotCollide(bot.board, cur.shape, cur.x - 1, cur.y)) {
+                cur.x--;
+            } else if (!localBotCollide(bot.board, cur.shape, cur.x, cur.y + 1)) {
+                cur.y++;
+            } else {
+                cur.shape.forEach((r, y) => r.forEach((v, x) => {
+                    if (v && cur.y + y >= 0 && cur.y + y < ROWS && cur.x + x >= 0 && cur.x + x < COLS) {
+                        bot.board[cur.y + y][cur.x + x] = v;
+                    }
+                }));
+                bot.curPiece = null;
+                bot.spawnCooldown = 1;
+
+                let cleared = 0;
+                const kept = [];
+                for (const row of bot.board) {
+                    if (row.every(v => v !== 0)) cleared++;
+                    else kept.push(row);
+                }
+                while (kept.length < ROWS) kept.unshift(Array(COLS).fill(0));
+                bot.board = kept;
+
+                if (cleared > 0) {
+                    bot.score += cleared * 100;
+                    const gainMap = { 1: 10, 2: 22, 3: 35, 4: 50 };
+                    bot.charge = Math.min(100, bot.charge + (gainMap[cleared] || cleared * 12));
+                    localAttackFromBot(bot, cleared);
+                }
+
+                if (bot.board[0].some(v => v !== 0)) {
+                    bot.alive = false;
+                    addLog('player-log', `💀 ${bot.name} tereliminasi!`);
+                    checkVsBotMatchState();
+                }
+            }
+        }
+
+        renderVsBotSideList();
+        if (!isPlaying || document.getElementById('bot-spectator-panel').style.display !== 'none') {
+            renderBotSpectatorPanel();
+        }
+    }, 280);
+}
+
+function stopLocalBotLoop() {
+    if (botLoopTimer) {
+        clearInterval(botLoopTimer);
+        botLoopTimer = null;
+    }
+}
+
+function renderVsBotSideList() {
+    const c = document.getElementById('opponents');
+    if (!c || gameMode !== 'vsbot') return;
+
+    const rows = [
+        {
+            id: 'self',
+            name: `${myUsername || 'Anda'} (Anda)`,
+            score,
+            ko: playerKoCount,
+            alive: isPlaying,
+            is_bot: false
+        },
+        ...localBots.map(b => ({
+            id: b.id,
+            name: b.name,
+            score: b.score,
+            ko: b.ko,
+            alive: b.alive,
+            is_bot: true
+        }))
+    ].sort((a, b) => (b.score - a.score) || (b.ko - a.ko));
+
+    c.innerHTML = rows.map(item => {
+        const cls = item.alive ? '' : 'dead';
+        const clickAttr = item.is_bot ? `onclick="openBotSpectatorAndFocus('${item.id}')"` : '';
+        return `
+            <div class="opp-badge ${cls} ${item.is_bot ? 'clickable-bot' : ''}" ${clickAttr}>
+                <div class="opp-badge-row">
+                    <span class="opp-name">${item.is_bot ? '🤖 ' : ''}${escapeHtml(item.name)} ${item.alive ? '🟢' : '💀'}</span>
+                    <span class="opp-stats"><b>${item.score}</b>p • KO:${item.ko}</span>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function openBotSpectatorAndFocus(botId) {
+    focusedBotId = botId;
+    document.getElementById('bot-spectator-panel').style.display = 'block';
+    renderBotSpectatorPanel();
+}
+
+function clearBotZoom() {
+    focusedBotId = null;
+    document.getElementById('bot-zoom-panel').style.display = 'none';
+    renderBotSpectatorPanel();
+}
+
+function renderBotSpectatorPanel() {
+    const panel = document.getElementById('bot-spectator-panel');
+    if (!panel || gameMode !== 'vsbot') return;
+
+    const gridEl = document.getElementById('bot-spectator-grid');
+    gridEl.innerHTML = '';
+
+    localBots.forEach(bot => {
+        const card = document.createElement('div');
+        const isFocused = bot.id === focusedBotId;
+        card.className = `bot-mini-card ${bot.alive ? 'alive' : 'dead'}${isFocused ? ' focused' : ''}`;
+        card.onclick = () => {
+            focusedBotId = bot.id;
+            renderBotSpectatorPanel();
+        };
+        card.innerHTML = `
+            <div style="font-size:11px; font-weight:700;">🤖 ${escapeHtml(bot.name)} ${bot.alive ? '🟢' : '💀'}</div>
+            <canvas id="bmini-${bot.id}" width="80" height="160"></canvas>
+            <div style="width:100%; display:flex; justify-content:space-between; font-size:10px; color:#cbd5e1;">
+                <span>S:${bot.score}</span>
+                <span>K:${bot.ko}</span>
+            </div>
+        `;
+        gridEl.appendChild(card);
+        drawGrid(document.getElementById(`bmini-${bot.id}`), getLocalBotGrid(bot), 8);
+    });
+
+    const zoomPanel = document.getElementById('bot-zoom-panel');
+    const targetBot = localBots.find(b => b.id === focusedBotId);
+    if (targetBot) {
+        zoomPanel.style.display = 'flex';
+        document.getElementById('bot-zoom-name').innerText = `🤖 ${targetBot.name}`;
+        document.getElementById('bot-zoom-score').innerText = targetBot.score;
+        document.getElementById('bot-zoom-ko').innerText = targetBot.ko;
+        const stEl = document.getElementById('bot-zoom-status');
+        stEl.innerText = targetBot.alive ? '🟢 Sedang Main' : '💀 Tereliminasi';
+        stEl.style.color = targetBot.alive ? '#22c55e' : '#ef4444';
+        drawGrid(document.getElementById('bot-zoom-canvas'), getLocalBotGrid(targetBot), 16);
+    } else {
+        zoomPanel.style.display = 'none';
+    }
+}
+
+// --- START & EXIT MODES ---
+function resetBoardStateForMatch() {
+    grid = createEmptyGrid();
+    piece = null;
+    score = 0;
+    soloLevel = 1;
+    totalLinesCleared = 0;
+    playerKoCount = 0;
+    pendingGarbage = 0;
+    lastAttackerId = null;
+    dangerLevel = 0;
+    dangerFlashOn = false;
+    dropC = 0;
+    itemTokens = 0;
+    itemCharge = 0;
+    armorCharges = 0;
+    doubleExpiresAt = 0;
+    particles = [];
+    floatingTexts = [];
+    lineFlashRows = [];
+    shakeTimer = 0;
+    attackFlashTimer = 0;
+
+    document.getElementById('score').innerText = '0';
+    document.getElementById('ko').innerText = '0';
+    document.getElementById('player-log').innerHTML = '';
+    updateLevelDisplay();
+    updateAlert();
+    hidePodiums();
+    setKoBanner(false);
+}
+
+function startSoloMode() {
+    ensureAudio();
+    gameMode = 'solo';
+    hasLeftArena = true;
+    stopLobbyPolling();
+    stopLocalBotLoop();
+    myUsername = document.getElementById('solo-name').value.trim() || 'Pemain Solo';
+
+    document.getElementById('lobby-card').style.display = 'none';
+    document.getElementById('admin-view').style.display = 'none';
+    document.getElementById('player-view').style.display = 'flex';
+    document.getElementById('bot-spectator-panel').style.display = 'none';
+    document.getElementById('opponents').innerHTML = `
+        <div class="opp-badge">
+            <div class="opp-badge-row">
+                <span class="opp-name">⚡ Kecepatan Naik Tiap Level</span>
+                <span class="opp-stats">4 Baris / Lv</span>
+            </div>
+        </div>
+    `;
+
+    applyModeVisibilityToPlayerView();
+    resetBoardStateForMatch();
+    resizeBoardForScreen();
+    isPlaying = true;
+    document.getElementById('p-status').innerText = '🟢 Main';
+    document.getElementById('p-status').style.color = '#22c55e';
+    spawnPiece();
+    addLog('player-log', '🎯 Mode Main Sendiri dimulai! Lv. 1');
+}
+
+function startVsBotMode() {
+    ensureAudio();
+    gameMode = 'vsbot';
+    hasLeftArena = true;
+    stopLobbyPolling();
+    myUsername = document.getElementById('vsbot-name').value.trim() || 'Anda';
+    focusedBotId = null;
+
+    document.getElementById('lobby-card').style.display = 'none';
+    document.getElementById('admin-view').style.display = 'none';
+    document.getElementById('player-view').style.display = 'flex';
+    document.getElementById('bot-spectator-panel').style.display = 'none';
+
+    applyModeVisibilityToPlayerView();
+    resetBoardStateForMatch();
+    resizeBoardForScreen();
+    refreshItemUI();
+    setupLocalBots(vsBotDesiredCount);
+
+    isPlaying = true;
+    document.getElementById('p-status').innerText = '🟢 Main';
+    document.getElementById('p-status').style.color = '#22c55e';
+    spawnPiece();
+    startLocalBotLoop();
+    addLog('player-log', `⚔️ Lawan ${vsBotDesiredCount} Bot dimulai!`);
+}
+
+function restartLocalMode() {
+    if (gameMode === 'solo') startSoloMode();
+    else if (gameMode === 'vsbot') startVsBotMode();
+}
+
+function exitToLobby() {
+    stopLocalBotLoop();
+    isPlaying = false;
+    dangerLevel = 0;
+    dangerFlashOn = false;
+    setKoBanner(false);
+    hidePodiums();
+    document.getElementById('player-view').style.display = 'none';
+    document.getElementById('admin-view').style.display = 'none';
+    document.getElementById('lobby-card').style.display = 'block';
+    startLobbyPolling();
+}
+
+// --- WEBSOCKET & QUIT LIFECYCLE (ONLINE BATTLE ROYALE) ---
 const clientId = Math.random().toString(36).substring(2, 10);
 let socket = null;
 let pingInterval = null;
@@ -1157,7 +1943,7 @@ let myUsername = '';
 let hasLeftArena = false;
 
 function notifyPlayerQuit() {
-    if (currentRole !== 'player' || !activeRoomCode || hasLeftArena) return;
+    if (gameMode !== 'online' || currentRole !== 'player' || !activeRoomCode || hasLeftArena) return;
     hasLeftArena = true;
     isPlaying = false;
     dangerLevel = 0;
@@ -1182,17 +1968,23 @@ function notifyPlayerQuit() {
 window.addEventListener('pagehide', notifyPlayerQuit);
 window.addEventListener('beforeunload', notifyPlayerQuit);
 document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'hidden' && currentRole === 'player' && isPlaying) {
+    if (document.visibilityState === 'hidden' && gameMode === 'online' && currentRole === 'player' && isPlaying) {
         notifyPlayerQuit();
     }
 });
 
 function switchTab(tab) {
     ensureAudio();
+    document.getElementById('tab-solo').classList.toggle('active', tab === 'solo');
+    document.getElementById('tab-vsbot').classList.toggle('active', tab === 'vsbot');
     document.getElementById('tab-player').classList.toggle('active', tab === 'player');
     document.getElementById('tab-admin').classList.toggle('active', tab === 'admin');
+
+    document.getElementById('form-solo').style.display = tab === 'solo' ? 'block' : 'none';
+    document.getElementById('form-vsbot').style.display = tab === 'vsbot' ? 'block' : 'none';
     document.getElementById('form-player').style.display = tab === 'player' ? 'block' : 'none';
     document.getElementById('form-admin').style.display = tab === 'admin' ? 'block' : 'none';
+
     if (tab === 'player') fetchLobbyRooms();
 }
 
@@ -1212,11 +2004,11 @@ function connectWS(onOpen) {
 
     socket.onclose = () => {
         clearInterval(pingInterval);
-        if (hasLeftArena) return;
+        if (hasLeftArena || gameMode !== 'online') return;
         setTimeout(() => {
-            if (hasLeftArena) return;
+            if (hasLeftArena || gameMode !== 'online') return;
             connectWS(() => {
-                if (!hasLeftArena && currentRole === 'player' && activeRoomCode && myUsername) {
+                if (!hasLeftArena && gameMode === 'online' && currentRole === 'player' && activeRoomCode && myUsername) {
                     sendWS({ type: 'join_game', room_code: activeRoomCode, username: myUsername });
                 }
             });
@@ -1234,6 +2026,7 @@ function sendWS(payload) {
 
 function createAdminRoom() {
     ensureAudio();
+    gameMode = 'admin';
     const customCode = document.getElementById('custom-room-code').value.trim().toUpperCase();
     connectWS(() => {
         currentRole = 'admin';
@@ -1260,6 +2053,7 @@ function joinAsPlayer() {
         return;
     }
 
+    gameMode = 'online';
     hasLeftArena = false;
     myUsername = name;
     activeRoomCode = roomCode;
@@ -1361,7 +2155,7 @@ const SHAPES = [
     [[7,7,0],[0,7,7]]
 ];
 
-let grid = Array.from({length: ROWS}, () => Array(COLS).fill(0));
+let grid = createEmptyGrid();
 let piece = null, score = 0, isPlaying = false, lastAttackerId = null, pendingGarbage = 0;
 let dangerLevel = 0, dangerBlinkTimer = 0, dangerFlashOn = false;
 
@@ -1375,14 +2169,14 @@ function spawnClearAnimation(clearedRows, rowColorsList) {
     const baseAttack = { 1: 1, 2: 2, 3: 3, 4: 5 }[clearedRows.length] || 1;
     const attackPreview = isDoubleActive() ? baseAttack * 2 : baseAttack;
     const labelMap = {
-        1: `CLEAR +${attackPreview}`,
-        2: `DOUBLE +${attackPreview}`,
-        3: `TRIPLE +${attackPreview}`,
-        4: `⚡ TETRIS +${attackPreview}`
+        1: gameMode === 'solo' ? `CLEAR +${clearedRows.length * 100}` : `CLEAR +${attackPreview}`,
+        2: gameMode === 'solo' ? `DOUBLE +${clearedRows.length * 100}` : `DOUBLE +${attackPreview}`,
+        3: gameMode === 'solo' ? `TRIPLE +${clearedRows.length * 100}` : `TRIPLE +${attackPreview}`,
+        4: gameMode === 'solo' ? `⚡ TETRIS +${clearedRows.length * 100}` : `⚡ TETRIS +${attackPreview}`
     };
     const label = pendingGarbage > 0
         ? `🛡️ BLOCK -${Math.min(pendingGarbage, clearedRows.length)}`
-        : (labelMap[clearedRows.length] || `CLEAR +${attackPreview}`);
+        : (labelMap[clearedRows.length] || `CLEAR`);
 
     const textColor = pendingGarbage > 0 ? '#38bdf8' : (clearedRows.length >= 4 ? '#facc15' : '#4ade80');
     const centerRow = clearedRows[0] ?? 10;
@@ -1481,8 +2275,30 @@ function getBoardSnap() {
 }
 
 function syncBoard() {
-    if (!isPlaying || hasLeftArena) return;
+    if (gameMode !== 'online' || !isPlaying || hasLeftArena) return;
     sendWS({ type: 'update_board', score, grid: getBoardSnap() });
+}
+
+function handlePlayerKO() {
+    isPlaying = false;
+    dangerLevel = 0;
+    dangerFlashOn = false;
+    if (hasPowerupsInCurrentMode()) refreshItemUI();
+    canvas.style.borderColor = '#ef4444';
+    canvas.style.boxShadow = '0 0 14px rgba(239,68,68,0.65)';
+    document.getElementById('p-status').innerText = '💀 KO';
+    document.getElementById('p-status').style.color = '#ef4444';
+    setKoBanner(true);
+    SFX.ko();
+    addLog('player-log', `❌ ELIMINATED! Skor akhir: ${score}`);
+
+    if (gameMode === 'online') {
+        sendWS({ type: 'update_board', score, grid: getBoardSnap() });
+        sendWS({ type: 'player_eliminated', last_attacker_id: lastAttackerId });
+    } else if (gameMode === 'vsbot') {
+        renderVsBotSideList();
+        checkVsBotMatchState();
+    }
 }
 
 function spawnPiece() {
@@ -1490,19 +2306,7 @@ function spawnPiece() {
     const shape = SHAPES[id];
     piece = { shape, x: Math.floor(COLS / 2) - Math.floor(shape[0].length / 2), y: 0 };
     if (collide(grid, piece)) {
-        isPlaying = false;
-        dangerLevel = 0;
-        dangerFlashOn = false;
-        refreshItemUI();
-        canvas.style.borderColor = '#ef4444';
-        canvas.style.boxShadow = '0 0 14px rgba(239,68,68,0.65)';
-        document.getElementById('p-status').innerText = '💀 KO';
-        document.getElementById('p-status').style.color = '#ef4444';
-        setKoBanner(true);
-        SFX.ko();
-        sendWS({ type: 'update_board', score, grid: getBoardSnap() });
-        sendWS({ type: 'player_eliminated', last_attacker_id: lastAttackerId });
-        addLog('player-log', '❌ ELIMINATED! Anda Ter-KO.');
+        handlePlayerKO();
     }
 }
 
@@ -1555,16 +2359,31 @@ function sweepLines() {
         } else {
             SFX.clear(cl);
         }
+
         const forceDbl = isDoubleActive();
-        score += cl * 100;
+        score += cl * 100 * (gameMode === 'solo' ? soloLevel : 1);
         document.getElementById('score').innerText = score;
 
-        const lineGainMap = { 1: 10, 2: 22, 3: 35, 4: 50 };
-        const baseGain = lineGainMap[cl] || (cl * 12);
-        const critBoost = dangerLevel > 0 ? 1.4 : 1.0;
-        addItemCharge(baseGain * critBoost);
+        if (gameMode === 'solo') {
+            totalLinesCleared += cl;
+            const nextLv = Math.floor(totalLinesCleared / 4) + 1;
+            if (nextLv > soloLevel) {
+                soloLevel = nextLv;
+                addLog('player-log', `⚡ NAIK LEVEL ${soloLevel}! Kecepatan jatuh bertambah.`);
+            }
+            updateLevelDisplay();
+        } else {
+            const lineGainMap = { 1: 10, 2: 22, 3: 35, 4: 50 };
+            const baseGain = lineGainMap[cl] || (cl * 12);
+            const critBoost = dangerLevel > 0 ? 1.4 : 1.0;
+            addItemCharge(baseGain * critBoost);
 
-        sendWS({ type: 'line_cleared', lines: cl, double_active: forceDbl });
+            if (gameMode === 'online') {
+                sendWS({ type: 'line_cleared', lines: cl, double_active: forceDbl });
+            } else if (gameMode === 'vsbot') {
+                localAttackFromPlayer(cl, forceDbl);
+            }
+        }
     } else if (pendingGarbage > 0) {
         applyGarbage(pendingGarbage);
         pendingGarbage = 0;
@@ -1648,9 +2467,9 @@ document.addEventListener('keydown', e => {
     else if (e.key === 'ArrowDown') moveDown();
     else if (e.key === 'ArrowUp') rotatePiece();
     else if (e.key === ' ') { e.preventDefault(); hardDrop(); }
-    else if (e.key === '1' || e.key.toLowerCase() === 'q') activateItem('armor');
-    else if (e.key === '2' || e.key.toLowerCase() === 'e') activateItem('double');
-    else if (e.key === '3' || e.key.toLowerCase() === 'r') activateItem('breaker');
+    else if (hasPowerupsInCurrentMode() && (e.key === '1' || e.key.toLowerCase() === 'q')) activateItem('armor');
+    else if (hasPowerupsInCurrentMode() && (e.key === '2' || e.key.toLowerCase() === 'e')) activateItem('double');
+    else if (hasPowerupsInCurrentMode() && (e.key === '3' || e.key.toLowerCase() === 'r')) activateItem('breaker');
 });
 
 let tSX = 0, tSY = 0;
@@ -1776,15 +2595,17 @@ function loop(t = 0) {
     const dtSec = dt / 1000;
     updateAnimations(dtSec);
 
-    if (isPlaying && !hasLeftArena) {
+    if (isPlaying && piece && (gameMode !== 'online' || !hasLeftArena)) {
         dropC += dt;
         syncC += dt;
         uiC += dt;
 
         dangerLevel = computeDangerLevel(grid);
 
-        const passiveRate = dangerLevel > 0 ? 2.5 : 1.0;
-        addItemCharge(passiveRate * dtSec);
+        if (hasPowerupsInCurrentMode()) {
+            const passiveRate = dangerLevel > 0 ? 2.5 : 1.0;
+            addItemCharge(passiveRate * dtSec);
+        }
 
         if (dangerLevel > 0) {
             const bIM = Math.max(75, 460 - (dangerLevel * 75));
@@ -1799,7 +2620,7 @@ function loop(t = 0) {
             dangerBlinkTimer = 0;
         }
 
-        if (dropC > 600) {
+        if (dropC > getDropIntervalMs()) {
             piece.y++;
             if (collide(grid, piece)) {
                 piece.y--;
@@ -1810,11 +2631,11 @@ function loop(t = 0) {
             }
             dropC = 0;
         }
-        if (syncC > 350) {
+        if (gameMode === 'online' && syncC > 350) {
             syncBoard();
             syncC = 0;
         }
-        if (uiC > 120) {
+        if (hasPowerupsInCurrentMode() && uiC > 120) {
             refreshItemUI();
             uiC = 0;
         }
@@ -1967,10 +2788,13 @@ function handleServerEvent(d) {
         alert(d.msg || 'Room telah di-reset oleh Admin.');
         location.reload();
     } else if (d.type === 'joined_success') {
+        gameMode = 'online';
         stopLobbyPolling();
+        applyModeVisibilityToPlayerView();
         setKoBanner(false);
         document.getElementById('lobby-card').style.display = 'none';
         document.getElementById('player-view').style.display = 'flex';
+        document.getElementById('bot-spectator-panel').style.display = 'none';
         document.getElementById('p-room-code').innerText = d.room_code;
         resizeBoardForScreen();
         refreshItemUI();
@@ -1996,13 +2820,15 @@ function handleServerEvent(d) {
         if (currentRole === 'player' && !hasLeftArena) {
             const me = d.players && d.players[clientId];
             const amIAlive = me ? !!me.alive : true;
-            grid = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
-            score = 0; pendingGarbage = 0; lastAttackerId = null; dangerLevel = 0; dangerFlashOn = false;
+            grid = createEmptyGrid();
+            score = 0; soloLevel = 1; totalLinesCleared = 0; pendingGarbage = 0;
+            lastAttackerId = null; dangerLevel = 0; dangerFlashOn = false;
             itemTokens = 0; itemCharge = 0; armorCharges = 0; doubleExpiresAt = 0;
             particles = []; floatingTexts = []; lineFlashRows = []; shakeTimer = 0; attackFlashTimer = 0;
             isPlaying = amIAlive;
             document.getElementById('score').innerText = '0';
             document.getElementById('ko').innerText = '0';
+            updateLevelDisplay();
             refreshItemUI();
             if (amIAlive) {
                 document.getElementById('p-status').innerText = '🟢 Main';
@@ -2027,10 +2853,11 @@ function handleServerEvent(d) {
         if (currentRole === 'player' && !hasLeftArena) {
             isPlaying = false; dangerLevel = 0; dangerFlashOn = false;
             itemTokens = 0; itemCharge = 0; armorCharges = 0; doubleExpiresAt = 0;
-            grid = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
-            score = 0; pendingGarbage = 0;
+            grid = createEmptyGrid();
+            score = 0; soloLevel = 1; totalLinesCleared = 0; pendingGarbage = 0;
             document.getElementById('score').innerText = '0';
             document.getElementById('ko').innerText = '0';
+            updateLevelDisplay();
             refreshItemUI();
             updateAlert();
             document.getElementById('p-status').innerText = 'Menunggu...';
