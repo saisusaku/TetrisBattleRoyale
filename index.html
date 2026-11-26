@@ -283,6 +283,8 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            flex-wrap: wrap;
+            gap: 6px;
             width: 100%;
             background: #1e293b;
             padding: 7px 12px;
@@ -290,6 +292,87 @@
             font-size: 12px;
             border: 1px solid #334155;
         }
+        .charge-bar-wrap {
+            width: 100%;
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 10px;
+            padding: 6px 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .charge-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            font-weight: 700;
+            color: #cbd5e1;
+        }
+        .charge-track {
+            width: 100%;
+            height: 7px;
+            background: #0f172a;
+            border-radius: 999px;
+            overflow: hidden;
+            border: 1px solid #334155;
+        }
+        .charge-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #38bdf8, #a855f7);
+            transition: width 0.12s linear;
+        }
+        .charge-fill.critical {
+            background: linear-gradient(90deg, #f97316, #ef4444, #facc15);
+        }
+
+        .item-dock {
+            display: flex;
+            gap: 6px;
+            width: 100%;
+            background: #1e293b;
+            padding: 6px 8px;
+            border-radius: 10px;
+            border: 1px solid #334155;
+        }
+        .item-btn {
+            flex: 1;
+            background: #0f172a;
+            color: #f8fafc;
+            border: 1px solid #475569;
+            border-radius: 8px;
+            padding: 6px 6px;
+            font-size: 11px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+            transition: border-color 0.12s, transform 0.1s;
+        }
+        .item-btn:hover:not(:disabled) {
+            border-color: #38bdf8;
+        }
+        .item-btn:active:not(:disabled) {
+            transform: scale(0.97);
+        }
+        .item-btn:disabled {
+            opacity: 0.42;
+            cursor: not-allowed;
+        }
+        .item-btn.active-buff {
+            border-color: #facc15;
+            background: rgba(250, 204, 21, 0.16);
+            box-shadow: 0 0 8px rgba(250, 204, 21, 0.35);
+        }
+        .item-sub {
+            font-size: 9px;
+            color: #94a3b8;
+            font-weight: 500;
+        }
+
         .main-stage {
             display: flex;
             justify-content: center;
@@ -722,7 +805,35 @@
         <div class="top-hud">
             <div>Room: <b id="p-room-code">-</b></div>
             <div>Skor: <b id="score">0</b> | KO: <b id="ko">0</b></div>
+            <div>Item Slot: <b id="item-tokens" style="color:#facc15;">0</b></div>
             <div id="p-status" style="color:#38bdf8; font-weight:bold;">Menunggu...</div>
+        </div>
+
+        <!-- PROGRESS BAR ITEM CHARGE (LEBIH CEPAT SAAT KRITIS) -->
+        <div class="charge-bar-wrap">
+            <div class="charge-header">
+                <span id="charge-mode-label">⚡ Item Charge (Normal)</span>
+                <span id="charge-pct-label">0%</span>
+            </div>
+            <div class="charge-track">
+                <div id="charge-fill" class="charge-fill"></div>
+            </div>
+        </div>
+
+        <!-- DOCK ITEM PEMAIN -->
+        <div class="item-dock">
+            <button type="button" id="btn-item-armor" class="item-btn" onclick="activateItem('armor')" disabled>
+                <span>🛡️ Armor (<b id="armor-count">0</b>x)</span>
+                <span class="item-sub">Tahan 3 serangan</span>
+            </button>
+            <button type="button" id="btn-item-double" class="item-btn" onclick="activateItem('double')" disabled>
+                <span>⚡ Double <span id="double-timer-badge"></span></span>
+                <span class="item-sub">2x serangan (5 dtk)</span>
+            </button>
+            <button type="button" id="btn-item-breaker" class="item-btn" onclick="activateItem('breaker')" disabled>
+                <span>💥 Breaker</span>
+                <span class="item-sub">Hapus 2 row acak</span>
+            </button>
         </div>
 
         <div id="incoming-alert" style="height:18px; text-align:center;"></div>
@@ -883,6 +994,136 @@ const SFX = {
 
 function vibrate(ms = 15) {
     if (navigator.vibrate) navigator.vibrate(ms);
+}
+
+// --- ITEM SYSTEM STATE ---
+const DOUBLE_DURATION_MS = 5000;
+let itemTokens = 0;
+let itemCharge = 0; // 0 .. 100
+let armorCharges = 0;
+let doubleExpiresAt = 0;
+
+function isDoubleActive() {
+    return performance.now() < doubleExpiresAt;
+}
+
+function getDoubleRemainingSec() {
+    const rem = Math.max(0, doubleExpiresAt - performance.now());
+    return (rem / 1000).toFixed(1);
+}
+
+function refreshItemUI() {
+    document.getElementById('item-tokens').innerText = itemTokens;
+    document.getElementById('armor-count').innerText = armorCharges;
+
+    const btnArmor = document.getElementById('btn-item-armor');
+    const btnDouble = document.getElementById('btn-item-double');
+    const btnBreaker = document.getElementById('btn-item-breaker');
+    const dblBadge = document.getElementById('double-timer-badge');
+
+    const dblOn = isDoubleActive();
+    const canUse = isPlaying && itemTokens > 0;
+
+    btnArmor.disabled = !canUse;
+    btnDouble.disabled = !canUse || dblOn;
+    btnBreaker.disabled = !canUse;
+
+    btnArmor.classList.toggle('active-buff', armorCharges > 0);
+    btnDouble.classList.toggle('active-buff', dblOn);
+    dblBadge.innerText = dblOn ? `(${getDoubleRemainingSec()}s)` : '';
+
+    const pct = Math.min(100, Math.floor(itemCharge));
+    const fillEl = document.getElementById('charge-fill');
+    const pctEl = document.getElementById('charge-pct-label');
+    const modeEl = document.getElementById('charge-mode-label');
+
+    fillEl.style.width = `${pct}%`;
+    pctEl.innerText = `${pct}%`;
+
+    const isCrit = isPlaying && dangerLevel > 0;
+    fillEl.classList.toggle('critical', isCrit);
+    if (isCrit) {
+        modeEl.innerText = `🔥 Item Charge (KRITIS LV.${dangerLevel} - 2.5x Cepat!)`;
+        modeEl.style.color = '#f87171';
+    } else {
+        modeEl.innerText = '⚡ Item Charge (Normal)';
+        modeEl.style.color = '#cbd5e1';
+    }
+}
+
+function addItemCharge(amount) {
+    if (!isPlaying || amount <= 0) return;
+    itemCharge += amount;
+    while (itemCharge >= 100) {
+        itemCharge -= 100;
+        itemTokens += 1;
+        addLog('player-log', '🎁 Item Charge penuh! +1 Item Slot.');
+    }
+    refreshItemUI();
+}
+
+function activateItem(itemType) {
+    if (!isPlaying || itemTokens <= 0) return;
+    ensureAudio();
+
+    if (itemType === 'double' && isDoubleActive()) return;
+
+    itemTokens -= 1;
+
+    if (itemType === 'armor') {
+        armorCharges = 3;
+        SFX.block();
+        addLog('player-log', '🛡️ ARMOR aktif! Menahan 3 serangan masuk.');
+        sendWS({ type: 'use_item', item: 'armor' });
+    } else if (itemType === 'double') {
+        doubleExpiresAt = performance.now() + DOUBLE_DURATION_MS;
+        SFX.clear(3);
+        addLog('player-log', '⚡ DOUBLE aktif selama 5 detik! Serangan 2x.');
+        sendWS({ type: 'use_item', item: 'double' });
+    } else if (itemType === 'breaker') {
+        const removedCount = breakTwoRandomRows();
+        SFX.drop();
+        vibrate(30);
+        addLog('player-log', `💥 BREAKER menghapus ${removedCount} baris acak!`);
+        syncBoard();
+    }
+
+    refreshItemUI();
+}
+
+function breakTwoRandomRows() {
+    const candidateRows = [];
+    for (let r = 0; r < ROWS; r++) {
+        if (grid[r].some(cell => cell !== 0)) {
+            candidateRows.push(r);
+        }
+    }
+    if (candidateRows.length === 0) return 0;
+
+    candidateRows.sort(() => Math.random() - 0.5);
+    const toRemove = candidateRows.slice(0, 2);
+
+    toRemove.forEach(r => {
+        lineFlashRows.push({ row: r, life: 0.28, maxLife: 0.28 });
+    });
+
+    const filtered = grid.filter((_, idx) => !toRemove.includes(idx));
+    while (filtered.length < ROWS) {
+        filtered.unshift(Array(COLS).fill(0));
+    }
+    grid = filtered;
+
+    floatingTexts.push({
+        text: `💥 BREAKER -${toRemove.length} ROW`,
+        x: canvas.width / 2,
+        y: canvas.height * 0.5,
+        vy: -30,
+        color: '#facc15',
+        life: 0.9,
+        maxLife: 0.9
+    });
+
+    return toRemove.length;
 }
 
 // --- BANNER HELPERS ---
@@ -1158,7 +1399,8 @@ let shakeTimer = 0;
 let attackFlashTimer = 0;
 
 function spawnClearAnimation(clearedRows, rowColorsList) {
-    const attackPreview = { 1: 1, 2: 2, 3: 3, 4: 5 }[clearedRows.length] || 1;
+    const baseAttack = { 1: 1, 2: 2, 3: 3, 4: 5 }[clearedRows.length] || 1;
+    const attackPreview = isDoubleActive() ? baseAttack * 2 : baseAttack;
     const labelMap = {
         1: `CLEAR +${attackPreview}`,
         2: `DOUBLE +${attackPreview}`,
@@ -1281,6 +1523,7 @@ function spawnPiece() {
         isPlaying = false;
         dangerLevel = 0;
         dangerFlashOn = false;
+        refreshItemUI();
         canvas.style.borderColor = '#ef4444';
         canvas.style.boxShadow = '0 0 14px rgba(239,68,68,0.65)';
         document.getElementById('p-status').innerText = '💀 ELIMINATED';
@@ -1342,9 +1585,14 @@ function sweepLines() {
         } else {
             SFX.clear(cl);
         }
+        const forceDbl = isDoubleActive();
         score += cl * 100;
         document.getElementById('score').innerText = score;
-        sendWS({ type: 'line_cleared', lines: cl });
+
+        // Saat kritis, setiap line clear memberi charge ekstra
+        const critMultiplier = dangerLevel > 0 ? 2.5 : 1.0;
+        addItemCharge(cl * 34 * critMultiplier);
+        sendWS({ type: 'line_cleared', lines: cl, double_active: forceDbl });
     } else if (pendingGarbage > 0) {
         applyGarbage(pendingGarbage);
         pendingGarbage = 0;
@@ -1428,6 +1676,9 @@ document.addEventListener('keydown', e => {
     else if (e.key === 'ArrowDown') moveDown();
     else if (e.key === 'ArrowUp') rotatePiece();
     else if (e.key === ' ') { e.preventDefault(); hardDrop(); }
+    else if (e.key === '1' || e.key.toLowerCase() === 'q') activateItem('armor');
+    else if (e.key === '2' || e.key.toLowerCase() === 'e') activateItem('double');
+    else if (e.key === '3' || e.key.toLowerCase() === 'r') activateItem('breaker');
 });
 
 let tSX = 0, tSY = 0;
@@ -1534,6 +1785,12 @@ function draw() {
     if (attackFlashTimer > 0) {
         canvas.style.borderColor = '#f87171';
         canvas.style.boxShadow = '0 0 18px rgba(248,113,113,0.9)';
+    } else if (isDoubleActive() && isPlaying) {
+        canvas.style.borderColor = '#facc15';
+        canvas.style.boxShadow = '0 0 14px rgba(250,204,21,0.75)';
+    } else if (armorCharges > 0 && isPlaying) {
+        canvas.style.borderColor = '#38bdf8';
+        canvas.style.boxShadow = '0 0 14px rgba(56,189,248,0.65)';
     } else if (isPlaying && dangerLevel > 0 && dangerFlashOn) {
         canvas.style.borderColor = '#ef4444';
         canvas.style.boxShadow = `0 0 ${8 + dangerLevel * 4}px rgba(239,68,68,0.8)`;
@@ -1543,16 +1800,24 @@ function draw() {
     }
 }
 
-let dropC = 0, syncC = 0, lT = 0;
+let dropC = 0, syncC = 0, uiC = 0, lT = 0;
 function loop(t = 0) {
     const dt = Math.min(100, t - lT || 16);
     lT = t;
-    updateAnimations(dt / 1000);
+    const dtSec = dt / 1000;
+    updateAnimations(dtSec);
 
     if (isPlaying) {
         dropC += dt;
         syncC += dt;
+        uiC += dt;
+
         dangerLevel = computeDangerLevel(grid);
+
+        // Charge item otomatis berjalan; saat kritis (dangerLevel > 0) jauh lebih cepat
+        const chargePerSec = dangerLevel > 0 ? (11 + dangerLevel * 4) : 4.5;
+        addItemCharge(chargePerSec * dtSec);
+
         if (dangerLevel > 0) {
             const bIM = Math.max(75, 460 - (dangerLevel * 75));
             dangerBlinkTimer += dt;
@@ -1565,6 +1830,7 @@ function loop(t = 0) {
             dangerFlashOn = false;
             dangerBlinkTimer = 0;
         }
+
         if (dropC > 600) {
             piece.y++;
             if (collide(grid, piece)) {
@@ -1579,6 +1845,10 @@ function loop(t = 0) {
         if (syncC > 350) {
             syncBoard();
             syncC = 0;
+        }
+        if (uiC > 120) {
+            refreshItemUI();
+            uiC = 0;
         }
     }
     draw();
@@ -1622,19 +1892,22 @@ function renderOpponents(ps) {
         if (pid === clientId) {
             document.getElementById('ko').innerText = p.ko || 0;
             document.getElementById('score').innerText = p.score || 0;
+            armorCharges = p.armor_charges || 0;
+            refreshItemUI();
         }
         const quitter = isPlayerQuitter(p);
         const d = document.createElement('div');
         d.className = 'opp-badge' + (quitter ? ' quitter' : (p.alive ? '' : ' dead'));
         const statusIcon = quitter ? '🟨' : (p.alive ? '🟢' : '💀');
         const youTag = pid === clientId ? ' (Anda)' : '';
+        const armorTag = (p.armor_charges > 0) ? ` 🛡️${p.armor_charges}` : '';
         const quitterBanner = quitter
             ? `<div class="police-line-banner"><span>QUITTER</span></div>`
             : '';
 
         d.innerHTML = `
             <div class="opp-badge-row">
-                <span class="opp-name">${p.is_bot ? '🤖 ' : ''}${escapeHtml(p.name)}${escapeHtml(youTag)} ${statusIcon}</span>
+                <span class="opp-name">${p.is_bot ? '🤖 ' : ''}${escapeHtml(p.name)}${escapeHtml(youTag)} ${statusIcon}${escapeHtml(armorTag)}</span>
                 <span class="opp-stats"><b>${p.score || 0}</b>p • KO:${p.ko || 0}</span>
             </div>
             ${quitterBanner}
@@ -1735,6 +2008,7 @@ function handleServerEvent(d) {
         document.getElementById('lobby-card').style.display = 'none';
         document.getElementById('player-view').style.display = 'flex';
         document.getElementById('p-room-code').innerText = d.room_code;
+        refreshItemUI();
         if (d.active && !d.alive) {
             document.getElementById('p-status').innerText = '⏳ Menunggu ronde berikut...';
         }
@@ -1759,10 +2033,12 @@ function handleServerEvent(d) {
             const amIAlive = me ? !!me.alive : true;
             grid = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
             score = 0; pendingGarbage = 0; lastAttackerId = null; dangerLevel = 0; dangerFlashOn = false;
+            itemTokens = 0; itemCharge = 0; armorCharges = 0; doubleExpiresAt = 0;
             particles = []; floatingTexts = []; lineFlashRows = []; shakeTimer = 0; attackFlashTimer = 0;
             isPlaying = amIAlive;
             document.getElementById('score').innerText = '0';
             document.getElementById('ko').innerText = '0';
+            refreshItemUI();
             if (amIAlive) {
                 document.getElementById('p-status').innerText = '🟢 Main';
                 document.getElementById('p-status').style.color = '#22c55e';
@@ -1785,10 +2061,12 @@ function handleServerEvent(d) {
         setKoBanner(false);
         if (currentRole === 'player') {
             isPlaying = false; dangerLevel = 0; dangerFlashOn = false;
+            itemTokens = 0; itemCharge = 0; armorCharges = 0; doubleExpiresAt = 0;
             grid = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
             score = 0; pendingGarbage = 0;
             document.getElementById('score').innerText = '0';
             document.getElementById('ko').innerText = '0';
+            refreshItemUI();
             updateAlert();
             document.getElementById('p-status').innerText = 'Menunggu...';
             document.getElementById('p-status').style.color = '#38bdf8';
@@ -1798,6 +2076,13 @@ function handleServerEvent(d) {
             document.getElementById('admin-match-status').innerText = 'Menunggu Pemain';
             document.getElementById('admin-match-status').style.color = '#fbbf24';
             renderMonitor(d.players);
+        }
+    } else if (d.type === 'armor_blocked') {
+        if (currentRole === 'player') {
+            armorCharges = d.remaining_charges ?? 0;
+            SFX.block();
+            refreshItemUI();
+            addLog('player-log', `🛡️ Armor menahan ${d.blocked_lines} baris dari ${d.from_name}! (Sisa ${armorCharges}x)`);
         }
     } else if (d.type === 'receive_attack') {
         if (currentRole === 'player' && isPlaying) {
@@ -1859,6 +2144,7 @@ function handleServerEvent(d) {
         SFX.win();
         if (currentRole === 'player') {
             isPlaying = false; dangerLevel = 0; dangerFlashOn = false;
+            refreshItemUI();
             document.getElementById('p-status').innerText = '🏆 Selesai';
             document.getElementById('p-status').style.color = '#facc15';
             renderPodium('player-podium', d.podium);
