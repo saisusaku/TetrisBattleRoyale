@@ -175,7 +175,7 @@
             border: 1px solid #475569;
         }
 
-        /* LOBBY LIST */
+        /* LOBBY LIST & SCOREBOARD */
         .lobby-list-box {
             margin-top: 14px;
             padding-top: 12px;
@@ -203,15 +203,14 @@
         .lobby-rooms {
             display: flex;
             flex-direction: column;
-            gap: 6px;
-            max-height: 200px;
+            gap: 8px;
+            max-height: 250px;
             overflow-y: auto;
         }
         .lobby-room-item {
             display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 8px;
+            flex-direction: column;
+            gap: 6px;
             background: #0f172a;
             border: 1px solid #334155;
             border-radius: 8px;
@@ -220,6 +219,12 @@
             transition: border-color 0.15s;
         }
         .lobby-room-item:hover { border-color: #38bdf8; }
+        .lobby-room-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+        }
         .lobby-room-code {
             font-weight: 800;
             color: #38bdf8;
@@ -230,6 +235,23 @@
             font-size: 11px;
             color: #94a3b8;
             margin-top: 2px;
+        }
+        .lobby-scores {
+            border-top: 1px dashed #1e293b;
+            padding-top: 5px;
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+        .lobby-score-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            color: #cbd5e1;
+        }
+        .lobby-score-row.left {
+            opacity: 0.7;
+            color: #94a3b8;
         }
         .badge-waiting { color: #fbbf24; font-weight: bold; }
         .badge-playing { color: #4ade80; font-weight: bold; }
@@ -294,7 +316,7 @@
             display: flex;
             flex-direction: column;
             gap: 4px;
-            max-height: 145px;
+            max-height: 155px;
             overflow-y: auto;
         }
         .opp-badge {
@@ -308,7 +330,7 @@
             text-overflow: ellipsis;
         }
         .opp-badge.dead {
-            opacity: 0.45;
+            opacity: 0.55;
             border-color: #ef4444;
         }
         .log-box {
@@ -359,7 +381,7 @@
             display: flex; flex-direction: column; align-items: center;
         }
         .screen-card.alive { border-color: #22c55e; }
-        .screen-card.dead { border-color: #ef4444; opacity: 0.55; }
+        .screen-card.dead { border-color: #ef4444; opacity: 0.6; }
         .screen-card canvas { background: #020617; border: 1px solid #475569; border-radius: 3px; margin: 4px 0; }
         .screen-meta { width: 100%; display: flex; justify-content: space-between; font-size: 11px; color: #cbd5e1; }
 
@@ -472,7 +494,7 @@
 
             <div class="lobby-list-box">
                 <div class="lobby-list-header">
-                    <span>📋 Daftar Lobby / Room</span>
+                    <span>📋 Daftar Lobby & Skor</span>
                     <button type="button" class="refresh-btn" onclick="fetchLobbyRooms()">🔄 Refresh</button>
                 </div>
                 <div id="lobby-rooms-list" class="lobby-rooms">
@@ -518,7 +540,7 @@
             <canvas id="board" width="200" height="400"></canvas>
 
             <div class="side-info">
-                <div style="font-size:12px; font-weight:bold;">Peserta</div>
+                <div style="font-size:12px; font-weight:bold;">Skor Peserta</div>
                 <div id="opponents" class="opponents-list"></div>
                 <div style="font-size:12px; font-weight:bold; margin-top:2px;">Log Arena</div>
                 <div id="player-log" class="log-box"></div>
@@ -639,7 +661,7 @@ function vibrate(ms = 15) {
     if (navigator.vibrate) navigator.vibrate(ms);
 }
 
-// --- LOBBY LIST FETCHER ---
+// --- LOBBY LIST & SCOREBOARD FETCHER ---
 let lobbyPollInterval = null;
 
 async function fetchLobbyRooms() {
@@ -661,13 +683,28 @@ async function fetchLobbyRooms() {
                 : (r.state === 'finished' ? 'badge-finished' : 'badge-waiting');
             const winnerInfo = r.last_winner ? ` • Juara: ${escapeHtml(r.last_winner)}` : '';
             const botInfo = r.bot_count > 0 ? ` (${r.bot_count} bot)` : '';
+            const scores = (r.scoreboard || []).slice(0, 5);
+            const scoresHtml = scores.length > 0
+                ? `<div class="lobby-scores">${scores.map((s, idx) => {
+                    const leftTag = (!s.is_bot && s.connected === false) ? ' [Keluar]' : '';
+                    const stateIcon = s.alive ? '🟢' : (s.connected === false && !s.is_bot ? '🚪' : '💀');
+                    return `<div class="lobby-score-row ${s.connected === false && !s.is_bot ? 'left' : ''}">
+                        <span>#${idx + 1} ${s.is_bot ? '🤖 ' : ''}${escapeHtml(s.name)} ${stateIcon}${escapeHtml(leftTag)}</span>
+                        <span><b>${s.score}</b> pts • KO:${s.ko}</span>
+                    </div>`;
+                }).join('')}</div>`
+                : '';
+
             return `
                 <div class="lobby-room-item" onclick="selectRoomFromLobby('${escapeHtml(r.room_code)}')">
-                    <div>
-                        <div class="lobby-room-code">${escapeHtml(r.room_code)} <span class="${badgeClass}">• ${escapeHtml(r.status_label)}</span></div>
-                        <div class="lobby-room-meta">Peserta: <b>${r.players_count}</b>${botInfo}${winnerInfo}</div>
+                    <div class="lobby-room-top">
+                        <div>
+                            <div class="lobby-room-code">${escapeHtml(r.room_code)} <span class="${badgeClass}">• ${escapeHtml(r.status_label)}</span></div>
+                            <div class="lobby-room-meta">Peserta: <b>${r.players_count}</b>${botInfo}${winnerInfo}</div>
+                        </div>
+                        <button type="button" class="join-mini-btn" onclick="event.stopPropagation(); quickJoinRoom('${escapeHtml(r.room_code)}')">Gabung</button>
                     </div>
-                    <button type="button" class="join-mini-btn" onclick="event.stopPropagation(); quickJoinRoom('${escapeHtml(r.room_code)}')">Gabung</button>
+                    ${scoresHtml}
                 </div>
             `;
         }).join('');
@@ -942,6 +979,7 @@ function getBoardSnap() {
 }
 
 function syncBoard() {
+    if (!isPlaying) return;
     sendWS({ type: 'update_board', score, grid: getBoardSnap() });
 }
 
@@ -958,7 +996,7 @@ function spawnPiece() {
         document.getElementById('p-status').innerText = '💀 KO';
         document.getElementById('p-status').style.color = '#ef4444';
         SFX.ko();
-        syncBoard();
+        sendWS({ type: 'update_board', score, grid: getBoardSnap() });
         sendWS({ type: 'player_eliminated', last_attacker_id: lastAttackerId });
         addLog('player-log', '❌ Anda Tereliminasi!');
     }
@@ -1266,7 +1304,7 @@ function renderPodium(id, list) {
         const m = medals[i.rank] || `#${i.rank}`;
         const b = i.is_bot ? ' 🤖' : '';
         h += `<div style="display:flex; justify-content:space-between; padding:6px 8px; margin-bottom:4px; background:#0f172a; border-radius:6px; border-left:4px solid ${i.rank===1?'#facc15':'#64748b'}">
-            <div style="font-size:13px;"><b>${m} ${i.name}${b}</b><div style="font-size:10px; color:#94a3b8;">${i.reason||''}</div></div>
+            <div style="font-size:13px;"><b>${m} ${escapeHtml(i.name)}${b}</b><div style="font-size:10px; color:#94a3b8;">${escapeHtml(i.reason||'')}</div></div>
             <div style="font-size:11px; text-align:right;">Skor: <b>${i.score}</b><br>KO: <b>${i.ko}</b></div>
         </div>`;
     });
@@ -1282,14 +1320,24 @@ function hidePodiums() {
 function renderOpponents(ps) {
     const c = document.getElementById('opponents');
     c.innerHTML = '';
-    Object.entries(ps).forEach(([pid, p]) => {
+
+    const entries = Object.entries(ps).sort((a, b) => {
+        const sb = (b[1].score || 0) - (a[1].score || 0);
+        if (sb !== 0) return sb;
+        return (b[1].ko || 0) - (a[1].ko || 0);
+    });
+
+    entries.forEach(([pid, p]) => {
         if (pid === clientId) {
             document.getElementById('ko').innerText = p.ko || 0;
-            return;
+            document.getElementById('score').innerText = p.score || 0;
         }
         const d = document.createElement('div');
+        const isLeft = !p.is_bot && p.connected === false;
         d.className = 'opp-badge' + (p.alive ? '' : ' dead');
-        d.innerHTML = `<b>${p.is_bot ? '🤖 ' : ''}${p.name}</b> (${p.alive ? '🟢' : '💀'}) KO:${p.ko || 0}`;
+        const statusIcon = p.alive ? '🟢' : (isLeft ? '🚪' : '💀');
+        const youTag = pid === clientId ? ' (Anda)' : (isLeft ? ' [Keluar]' : '');
+        d.innerHTML = `<b>${p.is_bot ? '🤖 ' : ''}${escapeHtml(p.name)}${escapeHtml(youTag)}</b> ${statusIcon} <b>${p.score || 0}</b>p KO:${p.ko || 0}`;
         c.appendChild(d);
     });
 }
@@ -1305,7 +1353,8 @@ function renderMonitor(ps) {
         const delBtn = p.is_bot
             ? `<button class="mini-del-btn" onclick="adminRemoveBot('${pid}')">🗑 Hapus Bot</button>`
             : '';
-        d.innerHTML = `<div style="font-size:11px; font-weight:bold;">${p.is_bot ? '🤖 ' : ''}${p.name}</div>
+        const leftBadge = (!p.is_bot && p.connected === false) ? ' <span style="color:#94a3b8;">(Keluar)</span>' : '';
+        d.innerHTML = `<div style="font-size:11px; font-weight:bold;">${p.is_bot ? '🤖 ' : ''}${escapeHtml(p.name)}${leftBadge}</div>
             <canvas id="mc-${pid}" width="80" height="160"></canvas>
             <div class="screen-meta"><span>S:${p.score}</span><span>K:${p.ko}</span></div>
             ${delBtn}`;
@@ -1331,7 +1380,7 @@ function handleServerEvent(d) {
         document.getElementById('player-view').style.display = 'flex';
         document.getElementById('p-room-code').innerText = d.room_code;
         if (d.active && !d.alive) {
-            document.getElementById('p-status').innerText = '⏳ Menunggu...';
+            document.getElementById('p-status').innerText = '⏳ Menunggu ronde berikut...';
         }
     } else if (d.type === 'room_created') {
         activeRoomCode = d.room_code;
@@ -1347,18 +1396,25 @@ function handleServerEvent(d) {
         hidePodiums();
         SFX.clear(2);
         if (currentRole === 'player') {
+            const me = d.players && d.players[clientId];
+            const amIAlive = me ? !!me.alive : true;
             grid = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
             score = 0; pendingGarbage = 0; lastAttackerId = null; dangerLevel = 0; dangerFlashOn = false;
             particles = []; floatingTexts = []; lineFlashRows = []; shakeTimer = 0; attackFlashTimer = 0;
-            isPlaying = true;
+            isPlaying = amIAlive;
             document.getElementById('score').innerText = '0';
             document.getElementById('ko').innerText = '0';
-            document.getElementById('p-status').innerText = '🟢 Main';
-            document.getElementById('p-status').style.color = '#22c55e';
-            updateAlert();
-            spawnPiece();
-            syncBoard();
-            addLog('player-log', '🔥 MULAI!');
+            if (amIAlive) {
+                document.getElementById('p-status').innerText = '🟢 Main';
+                document.getElementById('p-status').style.color = '#22c55e';
+                updateAlert();
+                spawnPiece();
+                syncBoard();
+                addLog('player-log', '🔥 MULAI!');
+            } else {
+                document.getElementById('p-status').innerText = '⏳ Menunggu...';
+                document.getElementById('p-status').style.color = '#38bdf8';
+            }
             renderOpponents(d.players);
         } else if (currentRole === 'admin') {
             document.getElementById('admin-match-status').innerText = '🔥 Sedang Berlangsung';
@@ -1370,7 +1426,9 @@ function handleServerEvent(d) {
         if (currentRole === 'player') {
             isPlaying = false; dangerLevel = 0; dangerFlashOn = false;
             grid = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
-            pendingGarbage = 0;
+            score = 0; pendingGarbage = 0;
+            document.getElementById('score').innerText = '0';
+            document.getElementById('ko').innerText = '0';
             updateAlert();
             document.getElementById('p-status').innerText = 'Menunggu...';
             document.getElementById('p-status').style.color = '#38bdf8';
@@ -1426,6 +1484,7 @@ function handleServerEvent(d) {
             document.getElementById('p-status').innerText = '🏆 Selesai';
             document.getElementById('p-status').style.color = '#facc15';
             renderPodium('player-podium', d.podium);
+            if (d.players) renderOpponents(d.players);
             addLog('player-log', `🏆 Juara 1: ${d.winner}`);
         } else if (currentRole === 'admin') {
             document.getElementById('admin-match-status').innerText = `🏆 Juara 1: ${d.winner}`;
