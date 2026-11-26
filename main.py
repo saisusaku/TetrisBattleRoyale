@@ -633,7 +633,6 @@ async def bot_loop():
             if not room.get("active"):
                 continue
 
-            # Cek koneksi pemain manusia yang mati / terputus agar langsung jadi quitter
             for pid, p in list(room["players"].items()):
                 if p.get("is_bot") or not p.get("alive"):
                     continue
