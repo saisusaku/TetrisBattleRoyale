@@ -250,8 +250,8 @@
             color: #cbd5e1;
         }
         .lobby-score-row.left {
-            opacity: 0.7;
-            color: #94a3b8;
+            opacity: 0.85;
+            color: #facc15;
         }
         .badge-waiting { color: #fbbf24; font-weight: bold; }
         .badge-playing { color: #4ade80; font-weight: bold; }
@@ -275,7 +275,7 @@
             flex-direction: column;
             align-items: center;
             width: 100%;
-            max-width: 460px;
+            max-width: 520px;
             gap: 6px;
             position: relative;
         }
@@ -297,41 +297,129 @@
             gap: 10px;
             width: 100%;
         }
+        .board-wrap {
+            position: relative;
+            flex-shrink: 0;
+        }
         canvas#board {
             background: #020617;
             border: 2px solid #475569;
             border-radius: 6px;
             box-shadow: 0 0 12px rgba(0, 0, 0, 0.5);
             transition: border-color 0.1s, box-shadow 0.1s;
+            display: block;
         }
+
+        /* BANNER MERAH MELINTANG SAAT KO */
+        .ko-banner-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.55);
+            border-radius: 6px;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            pointer-events: none;
+            z-index: 20;
+        }
+        .ko-banner-overlay.active {
+            display: flex;
+        }
+        .ko-banner-ribbon {
+            width: 140%;
+            background: linear-gradient(90deg, #991b1b, #ef4444, #dc2626, #ef4444, #991b1b);
+            color: #ffffff;
+            font-weight: 900;
+            font-size: 16px;
+            letter-spacing: 3px;
+            text-align: center;
+            padding: 8px 0;
+            transform: rotate(-18deg);
+            border-top: 2px solid #fca5a5;
+            border-bottom: 2px solid #fca5a5;
+            box-shadow: 0 6px 20px rgba(239, 68, 68, 0.75);
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.85);
+        }
+
+        /* BANNER KUNING POLICE LINE QUITTER */
+        .police-line-banner {
+            width: 100%;
+            margin-top: 4px;
+            padding: 3px 6px;
+            border-radius: 4px;
+            font-size: 9px;
+            font-weight: 900;
+            letter-spacing: 1.5px;
+            text-align: center;
+            color: #0f172a;
+            background: repeating-linear-gradient(
+                -45deg,
+                #facc15,
+                #facc15 8px,
+                #1e293b 8px,
+                #1e293b 16px
+            );
+            border: 1px solid #fde047;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+        }
+        .police-line-banner span {
+            background: #facc15;
+            padding: 0 6px;
+            border-radius: 2px;
+        }
+
         .side-info {
             flex: 1;
             display: flex;
             flex-direction: column;
             gap: 6px;
-            min-width: 120px;
-            max-width: 210px;
+            min-width: 165px;
+            max-width: 250px;
         }
         .opponents-list {
             display: flex;
             flex-direction: column;
-            gap: 4px;
-            max-height: 155px;
+            gap: 5px;
+            max-height: 225px;
             overflow-y: auto;
+            padding-right: 2px;
         }
         .opp-badge {
             background: #0f172a;
-            padding: 5px 7px;
+            padding: 6px 8px;
             border-radius: 6px;
             font-size: 11px;
             border: 1px solid #334155;
-            white-space: nowrap;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .opp-badge-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 4px;
+        }
+        .opp-name {
+            font-weight: 700;
+            color: #f8fafc;
             overflow: hidden;
             text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .opp-stats {
+            color: #cbd5e1;
+            font-size: 10px;
+            white-space: nowrap;
         }
         .opp-badge.dead {
-            opacity: 0.55;
             border-color: #ef4444;
+            background: rgba(127, 29, 29, 0.25);
+        }
+        .opp-badge.quitter {
+            border-color: #eab308;
+            background: rgba(113, 63, 18, 0.28);
         }
         .log-box {
             height: 115px;
@@ -357,14 +445,14 @@
             border-radius: 12px;
             padding: 14px;
             width: 100%;
-            max-width: 480px;
+            max-width: 520px;
             box-shadow: 0 12px 30px rgba(0, 0, 0, 0.7);
             position: relative;
             z-index: 50;
         }
 
-        /* ADMIN MONITOR */
-        .admin-layout { width: 100%; max-width: 1360px; }
+        /* ADMIN MONITOR & SCOREBOARD */
+        .admin-layout { width: 100%; max-width: 1420px; }
         .admin-header {
             display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px;
             background: #1e293b; padding: 12px; border-radius: 10px; border: 1px solid #334155; margin-bottom: 12px;
@@ -435,7 +523,40 @@
         }
         .admin-center-area {
             flex: 1;
-            min-width: 280px;
+            min-width: 300px;
+        }
+        .admin-right-panel {
+            width: 260px;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .admin-scoreboard-box {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 10px;
+            padding: 10px;
+        }
+        .admin-scoreboard-list {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            max-height: 260px;
+            overflow-y: auto;
+        }
+        .admin-score-row {
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 6px;
+            padding: 6px 8px;
+            font-size: 11px;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .admin-score-row.quitter {
+            border-color: #eab308;
         }
         .monitor-grid {
             display: grid; grid-template-columns: repeat(auto-fill, minmax(136px, 1fr)); gap: 10px;
@@ -447,7 +568,8 @@
         }
         .screen-card:hover { border-color: #38bdf8; transform: translateY(-1px); }
         .screen-card.alive { border-color: #22c55e; }
-        .screen-card.dead { border-color: #ef4444; opacity: 0.65; }
+        .screen-card.dead { border-color: #ef4444; opacity: 0.72; }
+        .screen-card.quitter { border-color: #eab308; opacity: 0.92; }
         .screen-card.focused {
             border: 2px solid #38bdf8 !important;
             box-shadow: 0 0 12px rgba(56, 189, 248, 0.35);
@@ -608,7 +730,12 @@
         <div id="player-podium" class="podium-box" style="display:none;"></div>
 
         <div class="main-stage">
-            <canvas id="board" width="200" height="400"></canvas>
+            <div class="board-wrap">
+                <canvas id="board" width="200" height="400"></canvas>
+                <div id="ko-banner" class="ko-banner-overlay">
+                    <div class="ko-banner-ribbon">ELIMINATED</div>
+                </div>
+            </div>
 
             <div class="side-info">
                 <div style="font-size:12px; font-weight:bold;">Skor Peserta</div>
@@ -683,19 +810,24 @@
                     <span>Skor: <b id="focus-player-score">0</b></span>
                     <span>KO: <b id="focus-player-ko">0</b></span>
                 </div>
+                <div id="focus-quitter-banner" class="police-line-banner" style="display:none;"><span>QUITTER</span></div>
             </div>
 
-            <!-- AREA GRID MONITOR & LOG -->
+            <!-- AREA GRID MONITOR -->
             <div class="admin-center-area">
-                <div class="main-stage" style="align-items:flex-start;">
-                    <div style="flex:1;">
-                        <h4 style="margin:0 0 8px 0; font-size:14px;">Monitor Peserta & Bot <span style="font-size:11px; font-weight:normal; color:#94a3b8;">(Klik kartu untuk perbesar di kiri)</span></h4>
-                        <div id="monitor-grid" class="monitor-grid"></div>
-                    </div>
-                    <div class="side-info" style="max-width:240px;">
-                        <div style="font-size:12px; font-weight:bold;">Log Serangan</div>
-                        <div id="admin-log" class="log-box" style="height:300px;"></div>
-                    </div>
+                <h4 style="margin:0 0 8px 0; font-size:14px;">Monitor Peserta & Bot <span style="font-size:11px; font-weight:normal; color:#94a3b8;">(Klik kartu untuk perbesar di kiri)</span></h4>
+                <div id="monitor-grid" class="monitor-grid"></div>
+            </div>
+
+            <!-- SCOREBOARD & LOG ADMIN DI SISI KANAN -->
+            <div class="admin-right-panel">
+                <div class="admin-scoreboard-box">
+                    <div style="font-size:12px; font-weight:bold; margin-bottom:6px; color:#38bdf8;">🏆 Scoreboard Peserta</div>
+                    <div id="admin-scoreboard" class="admin-scoreboard-list"></div>
+                </div>
+                <div class="side-info" style="max-width:100%;">
+                    <div style="font-size:12px; font-weight:bold;">Log Serangan</div>
+                    <div id="admin-log" class="log-box" style="height:180px;"></div>
                 </div>
             </div>
         </div>
@@ -753,6 +885,16 @@ function vibrate(ms = 15) {
     if (navigator.vibrate) navigator.vibrate(ms);
 }
 
+// --- BANNER HELPERS ---
+function setKoBanner(show) {
+    const el = document.getElementById('ko-banner');
+    if (el) el.classList.toggle('active', !!show);
+}
+
+function isPlayerQuitter(p) {
+    return !p.is_bot && (p.quitter === true || p.connected === false);
+}
+
 // --- LOBBY LIST & SCOREBOARD FETCHER ---
 let lobbyPollInterval = null;
 
@@ -778,9 +920,9 @@ async function fetchLobbyRooms() {
             const scores = (r.scoreboard || []).slice(0, 5);
             const scoresHtml = scores.length > 0
                 ? `<div class="lobby-scores">${scores.map((s, idx) => {
-                    const leftTag = (!s.is_bot && s.connected === false) ? ' [Keluar]' : '';
-                    const stateIcon = s.alive ? '🟢' : (s.connected === false && !s.is_bot ? '🚪' : '💀');
-                    return `<div class="lobby-score-row ${s.connected === false && !s.is_bot ? 'left' : ''}">
+                    const leftTag = (!s.is_bot && (s.quitter || s.connected === false)) ? ' [QUITTER]' : '';
+                    const stateIcon = s.alive ? '🟢' : ((!s.is_bot && (s.quitter || s.connected === false)) ? '🟨' : '💀');
+                    return `<div class="lobby-score-row ${(!s.is_bot && (s.quitter || s.connected === false)) ? 'left' : ''}">
                         <span>#${idx + 1} ${s.is_bot ? '🤖 ' : ''}${escapeHtml(s.name)} ${stateIcon}${escapeHtml(leftTag)}</span>
                         <span><b>${s.score}</b> pts • KO:${s.ko}</span>
                     </div>`;
@@ -960,7 +1102,7 @@ function renderAdminFocusPanel() {
         return;
     }
     const p = latestAdminPlayers[focusedPlayerId];
-    const isLeft = !p.is_bot && p.connected === false;
+    const quitter = isPlayerQuitter(p);
 
     panel.style.display = 'flex';
     document.getElementById('focus-player-name').innerText = `${p.is_bot ? '🤖 ' : ''}${p.name}`;
@@ -968,15 +1110,19 @@ function renderAdminFocusPanel() {
     document.getElementById('focus-player-ko').innerText = p.ko || 0;
 
     const stEl = document.getElementById('focus-player-status');
-    if (p.alive) {
+    const qBanner = document.getElementById('focus-quitter-banner');
+    if (quitter) {
+        stEl.innerText = '🟨 Quitter';
+        stEl.style.color = '#facc15';
+        qBanner.style.display = 'block';
+    } else if (p.alive) {
         stEl.innerText = '🟢 Sedang Main';
         stEl.style.color = '#22c55e';
-    } else if (isLeft) {
-        stEl.innerText = '🚪 Keluar Arena';
-        stEl.style.color = '#94a3b8';
+        qBanner.style.display = 'none';
     } else {
-        stEl.innerText = '💀 Tereliminasi / KO';
+        stEl.innerText = '💀 Eliminated';
         stEl.style.color = '#ef4444';
+        qBanner.style.display = 'none';
     }
 
     drawGrid(document.getElementById('admin-focus-canvas'), p.grid, 20);
@@ -1135,14 +1281,15 @@ function spawnPiece() {
         isPlaying = false;
         dangerLevel = 0;
         dangerFlashOn = false;
-        canvas.style.borderColor = '#475569';
-        canvas.style.boxShadow = '0 0 12px rgba(0,0,0,0.5)';
-        document.getElementById('p-status').innerText = '💀 KO';
+        canvas.style.borderColor = '#ef4444';
+        canvas.style.boxShadow = '0 0 14px rgba(239,68,68,0.65)';
+        document.getElementById('p-status').innerText = '💀 ELIMINATED';
         document.getElementById('p-status').style.color = '#ef4444';
+        setKoBanner(true);
         SFX.ko();
         sendWS({ type: 'update_board', score, grid: getBoardSnap() });
         sendWS({ type: 'player_eliminated', last_attacker_id: lastAttackerId });
-        addLog('player-log', '❌ Anda Tereliminasi!');
+        addLog('player-log', '❌ ELIMINATED! Anda Ter-KO.');
     }
 }
 
@@ -1462,9 +1609,10 @@ function hidePodiums() {
 
 function renderOpponents(ps) {
     const c = document.getElementById('opponents');
+    if (!c) return;
     c.innerHTML = '';
 
-    const entries = Object.entries(ps).sort((a, b) => {
+    const entries = Object.entries(ps || {}).sort((a, b) => {
         const sb = (b[1].score || 0) - (a[1].score || 0);
         if (sb !== 0) return sb;
         return (b[1].ko || 0) - (a[1].ko || 0);
@@ -1475,14 +1623,58 @@ function renderOpponents(ps) {
             document.getElementById('ko').innerText = p.ko || 0;
             document.getElementById('score').innerText = p.score || 0;
         }
+        const quitter = isPlayerQuitter(p);
         const d = document.createElement('div');
-        const isLeft = !p.is_bot && p.connected === false;
-        d.className = 'opp-badge' + (p.alive ? '' : ' dead');
-        const statusIcon = p.alive ? '🟢' : (isLeft ? '🚪' : '💀');
-        const youTag = pid === clientId ? ' (Anda)' : (isLeft ? ' [Keluar]' : '');
-        d.innerHTML = `<b>${p.is_bot ? '🤖 ' : ''}${escapeHtml(p.name)}${escapeHtml(youTag)}</b> ${statusIcon} <b>${p.score || 0}</b>p KO:${p.ko || 0}`;
+        d.className = 'opp-badge' + (quitter ? ' quitter' : (p.alive ? '' : ' dead'));
+        const statusIcon = quitter ? '🟨' : (p.alive ? '🟢' : '💀');
+        const youTag = pid === clientId ? ' (Anda)' : '';
+        const quitterBanner = quitter
+            ? `<div class="police-line-banner"><span>QUITTER</span></div>`
+            : '';
+
+        d.innerHTML = `
+            <div class="opp-badge-row">
+                <span class="opp-name">${p.is_bot ? '🤖 ' : ''}${escapeHtml(p.name)}${escapeHtml(youTag)} ${statusIcon}</span>
+                <span class="opp-stats"><b>${p.score || 0}</b>p • KO:${p.ko || 0}</span>
+            </div>
+            ${quitterBanner}
+        `;
         c.appendChild(d);
     });
+}
+
+function renderAdminScoreboard(ps) {
+    const box = document.getElementById('admin-scoreboard');
+    if (!box) return;
+    const entries = Object.entries(ps || {}).sort((a, b) => {
+        const sb = (b[1].score || 0) - (a[1].score || 0);
+        if (sb !== 0) return sb;
+        return (b[1].ko || 0) - (a[1].ko || 0);
+    });
+
+    if (entries.length === 0) {
+        box.innerHTML = `<div style="font-size:11px; color:#94a3b8;">Belum ada peserta.</div>`;
+        return;
+    }
+
+    box.innerHTML = entries.map(([pid, p], idx) => {
+        const quitter = isPlayerQuitter(p);
+        const stText = quitter ? '🟨 QUITTER' : (p.alive ? '🟢 MAIN' : '💀 KO');
+        const qBanner = quitter ? `<div class="police-line-banner"><span>QUITTER</span></div>` : '';
+        return `
+            <div class="admin-score-row ${quitter ? 'quitter' : ''}" onclick="selectAdminFocus('${pid}')" style="cursor:pointer;">
+                <div style="display:flex; justify-content:space-between; align-items:center; gap:4px;">
+                    <span style="font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">#${idx + 1} ${p.is_bot ? '🤖 ' : ''}${escapeHtml(p.name)}</span>
+                    <span style="font-size:10px; font-weight:bold;">${stText}</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; color:#cbd5e1; font-size:10px;">
+                    <span>Skor: <b>${p.score || 0}</b></span>
+                    <span>KO: <b>${p.ko || 0}</b></span>
+                </div>
+                ${qBanner}
+            </div>
+        `;
+    }).join('');
 }
 
 function renderMonitor(ps) {
@@ -1497,24 +1689,31 @@ function renderMonitor(ps) {
     c.innerHTML = '';
 
     es.forEach(([pid, p]) => {
+        const quitter = isPlayerQuitter(p);
         const d = document.createElement('div');
         d.dataset.pid = pid;
         const isFocused = pid === focusedPlayerId;
-        d.className = `screen-card ${p.alive ? 'alive' : 'dead'}${isFocused ? ' focused' : ''}`;
+        const stateCls = quitter ? 'quitter' : (p.alive ? 'alive' : 'dead');
+        d.className = `screen-card ${stateCls}${isFocused ? ' focused' : ''}`;
         d.onclick = () => selectAdminFocus(pid);
 
         const delBtn = p.is_bot
             ? `<button class="mini-del-btn" onclick="event.stopPropagation(); adminRemoveBot('${pid}')">🗑 Hapus Bot</button>`
             : '';
-        const leftBadge = (!p.is_bot && p.connected === false) ? ' <span style="color:#94a3b8;">(Keluar)</span>' : '';
-        d.innerHTML = `<div style="font-size:11px; font-weight:bold;">${p.is_bot ? '🤖 ' : ''}${escapeHtml(p.name)}${leftBadge}</div>
+        const qBanner = quitter
+            ? `<div class="police-line-banner"><span>QUITTER</span></div>`
+            : '';
+
+        d.innerHTML = `<div style="font-size:11px; font-weight:bold;">${p.is_bot ? '🤖 ' : ''}${escapeHtml(p.name)}</div>
             <canvas id="mc-${pid}" width="80" height="160"></canvas>
             <div class="screen-meta"><span>S:${p.score}</span><span>K:${p.ko}</span></div>
+            ${qBanner}
             ${delBtn}`;
         c.appendChild(d);
         drawGrid(document.getElementById(`mc-${pid}`), p.grid, 8);
     });
 
+    renderAdminScoreboard(latestAdminPlayers);
     renderAdminFocusPanel();
 }
 
@@ -1526,11 +1725,13 @@ function handleServerEvent(d) {
         isPlaying = false;
         dangerLevel = 0;
         dangerFlashOn = false;
+        setKoBanner(false);
         hidePodiums();
         alert(d.msg || 'Room telah di-reset oleh Admin.');
         location.reload();
     } else if (d.type === 'joined_success') {
         stopLobbyPolling();
+        setKoBanner(false);
         document.getElementById('lobby-card').style.display = 'none';
         document.getElementById('player-view').style.display = 'flex';
         document.getElementById('p-room-code').innerText = d.room_code;
@@ -1551,6 +1752,7 @@ function handleServerEvent(d) {
         renderMonitor(d.players);
     } else if (d.type === 'match_started') {
         hidePodiums();
+        setKoBanner(false);
         SFX.clear(2);
         if (currentRole === 'player') {
             const me = d.players && d.players[clientId];
@@ -1580,6 +1782,7 @@ function handleServerEvent(d) {
         }
     } else if (d.type === 'room_reset') {
         hidePodiums();
+        setKoBanner(false);
         if (currentRole === 'player') {
             isPlaying = false; dangerLevel = 0; dangerFlashOn = false;
             grid = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
@@ -1621,6 +1824,7 @@ function handleServerEvent(d) {
         alert(d.msg);
     } else if (d.type === 'lobby_update') {
         if (currentRole === 'player') renderOpponents(d.players);
+        else if (currentRole === 'admin') renderAdminScoreboard(d.players);
     } else if (d.type === 'admin_players_sync') {
         if (currentRole === 'admin') renderMonitor(d.players);
     } else if (d.type === 'admin_screen_update') {
@@ -1638,11 +1842,15 @@ function handleServerEvent(d) {
             const cv = document.getElementById(`mc-${d.pid}`);
             if (cv) {
                 drawGrid(cv, d.grid, 8);
-                cv.parentElement.className = `screen-card ${d.alive ? 'alive' : 'dead'}${d.pid === focusedPlayerId ? ' focused' : ''}`;
+                const pObj = latestAdminPlayers[d.pid] || {};
+                const quitter = isPlayerQuitter(pObj);
+                const stateCls = quitter ? 'quitter' : (d.alive ? 'alive' : 'dead');
+                cv.parentElement.className = `screen-card ${stateCls}${d.pid === focusedPlayerId ? ' focused' : ''}`;
                 const metas = cv.parentElement.querySelectorAll('.screen-meta span');
                 if (metas[0]) metas[0].innerText = `S:${d.score}`;
                 if (metas[1]) metas[1].innerText = `K:${d.ko}`;
             }
+            renderAdminScoreboard(latestAdminPlayers);
             if (d.pid === focusedPlayerId) {
                 renderAdminFocusPanel();
             }
