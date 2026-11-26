@@ -113,15 +113,6 @@ def bot_is_critical(board: List[List[int]]) -> bool:
     return False
 
 
-def add_bot_charge(room_code: str, bot_id: str, bot: dict, amount: float):
-    if amount <= 0:
-        return
-    bot["charge"] = float(bot.get("charge", 0.0)) + amount
-    if bot["charge"] >= 100.0:
-        bot["charge"] = 100.0
-        asyncio.create_task(bot_use_powerup(room_code, bot_id, bot))
-
-
 async def bot_use_powerup(room_code: str, bot_id: str, bot: dict):
     room = rooms.get(room_code)
     if not room or not room.get("active") or not bot.get("alive"):
@@ -454,6 +445,49 @@ async def send_to_admins(room_code: str, message: dict):
         room["admins"].pop(aid, None)
 
 
+async def mark_player_quit(room_code: str, player_id: str, reason_msg: Optional[str] = None):
+    room = rooms.get(room_code)
+    if not room or player_id not in room["players"]:
+        return
+
+    p = room["players"][player_id]
+    if p.get("is_bot"):
+        return
+
+    already_quitter = bool(p.get("quitter")) and not bool(p.get("alive")) and not bool(p.get("connected", True))
+    was_alive = bool(p.get("alive"))
+    left_name = p["name"]
+
+    p["connected"] = False
+    p["quitter"] = True
+    p["alive"] = False
+    p["ws"] = None
+
+    if already_quitter:
+        if room.get("active"):
+            await check_winner(room_code)
+        return
+
+    if was_alive:
+        record_stat(left_name, win=0, ko=p.get("ko", 0), score=p.get("score", 0))
+
+    await broadcast_to_room(room_code, {
+        "type": "attack_log",
+        "msg": reason_msg or f"🟨 {left_name} keluar arena (QUITTER - tampil sampai ronde selesai/reset).",
+    })
+    await broadcast_to_room(room_code, {
+        "type": "lobby_update",
+        "players": get_room_players_summary(room_code, include_grid=False),
+    })
+    await send_to_admins(room_code, {
+        "type": "admin_players_sync",
+        "players": get_room_players_summary(room_code, include_grid=True),
+    })
+
+    if room.get("active"):
+        await check_winner(room_code)
+
+
 def append_random_garbage_rows(grid: list, count: int):
     last_hole = None
     for _ in range(max(1, count)):
@@ -599,6 +633,18 @@ async def bot_loop():
             if not room.get("active"):
                 continue
 
+            # Cek koneksi pemain manusia yang mati / terputus agar langsung jadi quitter
+            for pid, p in list(room["players"].items()):
+                if p.get("is_bot") or not p.get("alive"):
+                    continue
+                ws = p.get("ws")
+                if not p.get("connected", True) or ws is None or getattr(ws.client_state, "name", "") != "CONNECTED":
+                    await mark_player_quit(room_code, pid)
+
+            await check_winner(room_code)
+            if not room.get("active"):
+                continue
+
             any_bot_moved = False
 
             for pid, p in list(room["players"].items()):
@@ -610,7 +656,6 @@ async def bot_loop():
                     board = empty_grid()
                     p["board"] = board
 
-                # Charge pasif bot sangat lambat (~1 charge/detik), naik saat kritis
                 crit_bonus = 1.5 if bot_is_critical(board) else 0.0
                 p["charge"] = float(p.get("charge", 0.0)) + ((1.0 + crit_bonus) * tick_sec)
                 if p["charge"] >= 100.0:
@@ -719,6 +764,15 @@ async def serve_barcode():
 @app.get("/api/rooms")
 async def api_get_rooms():
     return {"rooms": get_lobby_list()}
+
+
+@app.post("/api/quit/{room_code}/{client_id}")
+async def api_player_quit(room_code: str, client_id: str):
+    code = room_code.strip().upper()
+    if code in rooms and client_id in rooms[code]["players"]:
+        p = rooms[code]["players"][client_id]
+        await mark_player_quit(code, client_id, f"🟨 {p['name']} meninggalkan halaman (QUITTER).")
+    return {"ok": True}
 
 
 @app.websocket("/ws/{client_id}")
@@ -849,7 +903,7 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                 room = rooms[current_room]
                 active_participants = [
                     pid for pid, p in room["players"].items()
-                    if p.get("is_bot") or p.get("connected", True)
+                    if p.get("is_bot") or (p.get("connected", True) and not p.get("quitter", False))
                 ]
                 if len(active_participants) < 2:
                     await websocket.send_text(json.dumps({
@@ -861,7 +915,7 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                 room["active"] = True
                 room["last_winner"] = None
                 for pid, p in list(room["players"].items()):
-                    if not p.get("is_bot") and not p.get("connected", True):
+                    if not p.get("is_bot") and (not p.get("connected", True) or p.get("quitter", False)):
                         p["alive"] = False
                         p["quitter"] = True
                         continue
@@ -891,7 +945,7 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                 room["active"] = False
                 room["last_winner"] = None
                 for pid, p in list(room["players"].items()):
-                    if not p.get("is_bot") and not p.get("connected", True):
+                    if not p.get("is_bot") and (not p.get("connected", True) or p.get("quitter", False)):
                         del room["players"][pid]
                         continue
                     p["alive"] = True
@@ -927,7 +981,7 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                 room = rooms[room_code]
 
                 duplicate_name = any(
-                    pid != client_id and p["name"].lower() == username.lower() and (p.get("is_bot") or p.get("connected", True))
+                    pid != client_id and p["name"].lower() == username.lower() and (p.get("is_bot") or (p.get("connected", True) and not p.get("quitter", False)))
                     for pid, p in room["players"].items()
                 )
                 if duplicate_name:
@@ -940,7 +994,7 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                 existing = room["players"].get(client_id)
                 is_mid_game = room["active"]
 
-                if existing and is_mid_game:
+                if existing and is_mid_game and not existing.get("quitter", False):
                     existing["ws"] = websocket
                     existing["connected"] = True
                     existing["quitter"] = False
@@ -984,6 +1038,12 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                     "type": "admin_players_sync",
                     "players": get_room_players_summary(room_code, include_grid=True),
                 })
+
+            elif event == "player_quit":
+                if role == "player" and current_room and current_room in rooms:
+                    p = rooms[current_room]["players"].get(client_id)
+                    msg = f"🟨 {p['name']} meninggalkan halaman (QUITTER)." if p else None
+                    await mark_player_quit(current_room, client_id, msg)
 
             elif event == "use_item":
                 if role != "player" or not current_room or current_room not in rooms:
@@ -1031,7 +1091,7 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                     continue
                 room = rooms[current_room]
                 p = room["players"].get(client_id)
-                if p and p.get("alive"):
+                if p and p.get("alive") and not p.get("quitter", False):
                     p["score"] = int(data.get("score", 0))
                     p["grid"] = data.get("grid", [])
 
@@ -1050,7 +1110,7 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                     continue
                 room = rooms[current_room]
                 p = room["players"].get(client_id)
-                if not room["active"] or not p or not p.get("alive"):
+                if not room["active"] or not p or not p.get("alive") or p.get("quitter", False):
                     continue
                 lines = int(data.get("lines", 1))
                 client_double = bool(data.get("double_active", False))
@@ -1066,32 +1126,14 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
         if current_room and current_room in rooms:
             room = rooms[current_room]
             if role == "player" and client_id in room["players"]:
-                p = room["players"][client_id]
-                left_name = p["name"]
-                was_alive = p["alive"]
-                p["connected"] = False
-                p["quitter"] = True
-                p["alive"] = False
-                p["ws"] = None
-
-                if was_alive:
-                    record_stat(left_name, win=0, ko=p["ko"], score=p["score"])
-
-                await broadcast_to_room(current_room, {
-                    "type": "attack_log",
-                    "msg": f"🟨 {left_name} keluar arena (QUITTER - tampil sampai ronde selesai/reset).",
-                })
-                await broadcast_to_room(current_room, {
-                    "type": "lobby_update",
-                    "players": get_room_players_summary(current_room, include_grid=False),
-                })
-                await send_to_admins(current_room, {
-                    "type": "admin_players_sync",
-                    "players": get_room_players_summary(current_room, include_grid=True),
-                })
-                await check_winner(current_room)
+                await mark_player_quit(current_room, client_id)
             elif role == "admin" and client_id in room["admins"]:
                 del room["admins"][client_id]
+    finally:
+        if current_room and current_room in rooms and role == "player" and client_id in rooms[current_room]["players"]:
+            p = rooms[current_room]["players"][client_id]
+            if p.get("alive") or p.get("connected", True):
+                await mark_player_quit(current_room, client_id)
 
 
 async def check_winner(room_code: str):
@@ -1101,7 +1143,7 @@ async def check_winner(room_code: str):
 
     survivors = [
         pid for pid, p in room["players"].items()
-        if p["alive"] and (p.get("is_bot") or p.get("connected", True))
+        if p["alive"] and not p.get("quitter", False) and (p.get("is_bot") or p.get("connected", True))
     ]
 
     if len(survivors) == 1:
@@ -1122,8 +1164,13 @@ async def check_winner(room_code: str):
         })
     elif len(survivors) == 0:
         room["active"] = False
+        non_quitters = [
+            (pid, p) for pid, p in room["players"].items()
+            if p.get("is_bot") or not p.get("quitter", False)
+        ]
+        pool = non_quitters if non_quitters else list(room["players"].items())
         ranked = sorted(
-            room["players"].items(),
+            pool,
             key=lambda item: (item[1]["score"], item[1]["ko"]),
             reverse=True,
         )
