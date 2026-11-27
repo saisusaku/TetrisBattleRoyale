@@ -2192,8 +2192,17 @@ function drawGrid(cv, gd, bs) {
     const c = cv.getContext('2d');
     c.fillStyle = '#020617';
     c.fillRect(0, 0, cv.width, cv.height);
-    if (!gd || gd.length === 0) return;
-    gd.forEach((r, y) => r.forEach((v, x) => { if (v) drawBlock(c, x, y, COLORS[v] || '#64748b', bs); }));
+
+    const hasValidGrid = Array.isArray(gd) && gd.length > 0 && Array.isArray(gd[0]);
+    if (hasValidGrid) {
+        gd.forEach((r, y) => {
+            if (!Array.isArray(r)) return;
+            r.forEach((v, x) => {
+                if (v) drawBlock(c, x, y, COLORS[v] || '#64748b', bs);
+            });
+        });
+    }
+
     const dY = (DANGER_ROW_THRESHOLD + 1) * bs;
     c.strokeStyle = 'rgba(239,68,68,0.5)';
     c.setLineDash([3, 3]);
