@@ -2388,7 +2388,7 @@ function connectWS(onOpenCallback) {
     socket.onopen = () => {
         pingInterval = setInterval(() => {
             if (socket && socket.readyState === WebSocket.OPEN) {
-                socket.send(JSON.stringify({ type: 'ping' }));
+                socket.send(JSON.stringify({ type: 'ping', is_away: Boolean(document.hidden) }));
             }
         }, 10000);
         if (onOpenCallback) onOpenCallback();
@@ -2462,7 +2462,7 @@ function applyServerSync(data) {
             SFX.ko();
             document.getElementById('p-status').innerText = '💀 Eliminasi';
             document.getElementById('p-status').style.color = '#ef4444';
-        } else if (nowAlive && !isPlaying && activeRoomCode) {
+        } else if (nowAlive) {
             isPlaying = true;
             setKoOverlay(false);
             document.getElementById('p-status').innerText = '🟢 Main';
