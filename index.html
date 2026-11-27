@@ -1140,8 +1140,8 @@
 
         <div id="bot-spectator-panel" class="bot-spectator-box" style="display:none;">
             <div class="bot-spectator-header">
-                <span>🤖 Layar Pantau Bot</span>
-                <span id="bot-spectator-hint" style="font-size:10px; color:#94a3b8;">Klik bot untuk zoom</span>
+                <span id="bot-spectator-title">🤖 Layar Pantau Peserta & Bot</span>
+                <span id="bot-spectator-hint" style="font-size:10px; color:#94a3b8;">Klik layar untuk zoom</span>
             </div>
 
             <div id="bot-zoom-panel" class="bot-zoom-panel" style="display:none;">
@@ -1355,6 +1355,7 @@ let isOnlineRoomHost = false;
 let pendingPlayerCreateRoom = false;
 let adminLasers = [];
 let latestAdminPlayers = {};
+let latestOnlinePlayers = {};
 let focusedPlayerId = null;
 let countdownLabelText = '';
 
@@ -1568,7 +1569,7 @@ function isPowerupReady() {
 function refreshItemUI() {
     if (!hasPowerupsInCurrentMode()) return;
 
-    const isFull = itemCharge >= 100;
+    const isFull = itemCharge >= 100 || itemTokens > 0;
     const ready = isPowerupReady();
 
     const tokenEl = document.getElementById('item-tokens');
@@ -1596,7 +1597,7 @@ function refreshItemUI() {
     if (btnDouble) btnDouble.classList.toggle('active-buff', dblOn);
     if (dblBadge) dblBadge.innerText = dblOn ? `(${getDoubleRemainingSec()}s)` : '';
 
-    const pct = Math.max(0, Math.min(100, Math.floor(itemCharge)));
+    const pct = Math.max(0, Math.min(100, Math.floor(ready ? 100 : itemCharge)));
     const fillEl = document.getElementById('charge-fill');
     const pctEl = document.getElementById('charge-pct-label');
     const modeEl = document.getElementById('charge-mode-label');
@@ -1660,16 +1661,11 @@ function activateItem(itemType) {
         addLog('player-log', '⚡ DOUBLE aktif selama 10 detik! Serangan 2x.');
         if (gameMode === 'online') sendWS({ type: 'use_item', item: 'double' });
     } else if (itemType === 'breaker') {
-        if (gameMode !== 'online') {
-            const removedCount = breakTwoRandomRows();
-            SFX.drop();
-            vibrate(30);
-            addLog('player-log', `💥 BREAKER menghapus ${removedCount} baris acak!`);
-        } else {
-            const removedCount = breakTwoRandomRows();
-            SFX.drop();
-            vibrate(30);
-            addLog('player-log', `💥 BREAKER menghapus ${removedCount} baris acak!`);
+        const removedCount = breakTwoRandomRows();
+        SFX.drop();
+        vibrate(30);
+        addLog('player-log', `💥 BREAKER menghapus ${removedCount} baris acak!`);
+        if (gameMode === 'online') {
             sendWS({ type: 'use_item', item: 'breaker' });
             sendWS({ type: 'update_board', score, grid });
         }
@@ -1914,6 +1910,7 @@ function resetPlayerStateForNewMatch(keepBots = false) {
     armorCharges = 0;
     doubleExpiresAt = 0;
     focusedBotId = null;
+    latestOnlinePlayers = {};
     if (!keepBots) {
         localBots = [];
     }
@@ -2081,6 +2078,8 @@ function checkVsBotMatchEnd() {
         ];
         renderPodium('player-podium', podiumData, myUsername);
         addLog('player-log', '🏆 Selamat! Anda mengalahkan semua bot!');
+        document.getElementById('bot-spectator-panel').style.display = 'block';
+        renderBotSpectatorGrid();
     }
 }
 
@@ -2271,22 +2270,74 @@ function renderLocalSideList() {
     }
 }
 
+function getSpectatorCandidates() {
+    if (gameMode === 'vsbot') {
+        return localBots.map(b => ({
+            id: b.id,
+            name: b.name,
+            isBot: true,
+            alive: b.alive,
+            score: b.score,
+            ko: b.ko,
+            grid: b.board,
+            piece: b.alive ? b.curPiece : null,
+        }));
+    }
+    if (gameMode === 'online') {
+        return dedupPlayerMap(latestOnlinePlayers || {})
+            .filter(([pid]) => pid !== clientId)
+            .map(([pid, p]) => ({
+                id: pid,
+                name: p.name || pid,
+                isBot: Boolean(p.is_bot),
+                alive: Boolean(p.alive) && !Boolean(p.quitter),
+                score: Number(p.score || 0),
+                ko: Number(p.ko || 0),
+                grid: p.grid || createEmptyGrid(),
+                piece: p.active_piece || null,
+            }));
+    }
+    return [];
+}
+
 function renderBotSpectatorGrid() {
     const gridEl = document.getElementById('bot-spectator-grid');
-    if (!gridEl || gameMode !== 'vsbot') return;
-    if (gridEl.children.length !== localBots.length) {
+    const titleEl = document.getElementById('bot-spectator-title');
+    if (!gridEl) return;
+
+    const candidates = getSpectatorCandidates();
+    if (titleEl) {
+        titleEl.innerText = gameMode === 'online'
+            ? '🌐 Layar Pantau Peserta & Bot Lain'
+            : '🤖 Layar Pantau Bot';
+    }
+
+    if (candidates.length === 0) {
+        gridEl.innerHTML = `<div style="font-size:11px; color:#94a3b8;">Belum ada papan lawan lain yang bisa dipantau.</div>`;
+        return;
+    }
+
+    if (!focusedBotId || !candidates.some(c => c.id === focusedBotId)) {
+        const firstAlive = candidates.find(c => c.alive) || candidates[0];
+        focusedBotId = firstAlive.id;
+    }
+
+    const expectedIds = candidates.map(c => `spec-${c.id}`).join('|');
+    const currentIds = Array.from(gridEl.children).map(el => el.id).join('|');
+
+    if (expectedIds !== currentIds) {
         gridEl.innerHTML = '';
-        for (const bot of localBots) {
+        for (const item of candidates) {
             const card = document.createElement('div');
-            card.id = `bot-spec-${bot.id}`;
-            card.className = `bot-mini-card ${bot.alive ? 'alive' : 'dead'} ${focusedBotId === bot.id ? 'focused' : ''}`;
-            card.onclick = () => focusBotInSpectator(bot.id);
+            card.id = `spec-${item.id}`;
+            card.className = `bot-mini-card ${item.alive ? 'alive' : 'dead'} ${focusedBotId === item.id ? 'focused' : ''}`;
+            card.onclick = () => focusBotInSpectator(item.id);
 
             const title = document.createElement('div');
             title.className = 'b-title';
             title.style.fontSize = '11px';
             title.style.fontWeight = '700';
-            title.innerText = `${bot.alive ? '🤖' : '💀'} ${bot.name}`;
+            title.innerText = `${item.alive ? (item.isBot ? '🤖' : '👤') : '💀'} ${item.name}`;
 
             const cMini = document.createElement('canvas');
             cMini.width = 80;
@@ -2296,7 +2347,7 @@ function renderBotSpectatorGrid() {
             meta.className = 'b-meta';
             meta.style.fontSize = '10px';
             meta.style.color = '#cbd5e1';
-            meta.innerText = `Skor: ${bot.score} | KO: ${bot.ko}`;
+            meta.innerText = `Skor: ${item.score} | KO: ${item.ko}`;
 
             card.appendChild(title);
             card.appendChild(cMini);
@@ -2305,24 +2356,24 @@ function renderBotSpectatorGrid() {
         }
     }
 
-    for (const bot of localBots) {
-        const card = document.getElementById(`bot-spec-${bot.id}`);
+    for (const item of candidates) {
+        const card = document.getElementById(`spec-${item.id}`);
         if (!card) continue;
-        card.className = `bot-mini-card ${bot.alive ? 'alive' : 'dead'} ${focusedBotId === bot.id ? 'focused' : ''}`;
-        card.querySelector('.b-title').innerText = `${bot.alive ? '🤖' : '💀'} ${bot.name}`;
-        card.querySelector('.b-meta').innerText = `Skor: ${bot.score} | KO: ${bot.ko}`;
-        drawGridDirect(card.querySelector('canvas'), bot.board, bot.alive ? bot.curPiece : null, 8);
+        card.className = `bot-mini-card ${item.alive ? 'alive' : 'dead'} ${focusedBotId === item.id ? 'focused' : ''}`;
+        card.querySelector('.b-title').innerText = `${item.alive ? (item.isBot ? '🤖' : '👤') : '💀'} ${item.name}`;
+        card.querySelector('.b-meta').innerText = `Skor: ${item.score} | KO: ${item.ko}`;
+        drawGridDirect(card.querySelector('canvas'), item.grid, item.piece, 8);
     }
 
     if (focusedBotId) {
-        const fBot = localBots.find(b => b.id === focusedBotId);
-        if (fBot) {
+        const fItem = candidates.find(c => c.id === focusedBotId);
+        if (fItem) {
             document.getElementById('bot-zoom-panel').style.display = 'flex';
-            document.getElementById('bot-zoom-name').innerText = `🤖 ${fBot.name}`;
-            document.getElementById('bot-zoom-status').innerText = fBot.alive ? '🟢 Aktif' : '💀 Tereliminasi';
-            document.getElementById('bot-zoom-score').innerText = fBot.score;
-            document.getElementById('bot-zoom-ko').innerText = fBot.ko;
-            drawGridDirect(document.getElementById('bot-zoom-canvas'), fBot.board, fBot.alive ? fBot.curPiece : null, 16);
+            document.getElementById('bot-zoom-name').innerText = `${fItem.isBot ? '🤖' : '👤'} ${fItem.name}`;
+            document.getElementById('bot-zoom-status').innerText = fItem.alive ? '🟢 Aktif' : '💀 Tereliminasi';
+            document.getElementById('bot-zoom-score').innerText = fItem.score;
+            document.getElementById('bot-zoom-ko').innerText = fItem.ko;
+            drawGridDirect(document.getElementById('bot-zoom-canvas'), fItem.grid, fItem.piece, 16);
         }
     }
 }
@@ -2587,12 +2638,16 @@ function handleServerMessage(data) {
         if (currentRole === 'player' && hasPowerupsInCurrentMode()) {
             const wasFull = itemTokens > 0 || itemCharge >= 100;
             const serverCharge = Math.max(0, Math.min(100, Number(data.charge ?? itemCharge)));
-            itemCharge = serverCharge;
-            itemTokens = Number(data.item_tokens ?? (itemCharge >= 100 ? 1 : 0));
-            if (itemCharge >= 100) {
+            const serverTokens = Number(data.item_tokens ?? 0);
+
+            if (serverTokens > 0 || serverCharge >= 100) {
                 itemCharge = 100;
                 itemTokens = 1;
+            } else {
+                itemCharge = Math.max(itemCharge, serverCharge);
+                itemTokens = serverTokens;
             }
+
             if ((itemTokens > 0 || itemCharge >= 100) && (!wasFull || data.full_now)) {
                 SFX.block();
                 addLog('player-log', '✨ CHARGE 100%! Pilih power-up yang menyala!');
@@ -2665,7 +2720,8 @@ function handleServerMessage(data) {
             piece = null;
             document.getElementById('p-status').innerText = '⏳ Menonton Ronde';
             document.getElementById('p-status').style.color = '#fbbf24';
-            addLog('player-log', '⏳ Ronde sedang berjalan. Tunggu ronde berikutnya.');
+            document.getElementById('bot-spectator-panel').style.display = 'block';
+            addLog('player-log', '⏳ Ronde sedang berjalan. Pantau peserta lain & tunggu ronde berikutnya.');
         } else {
             isPlaying = false;
             piece = null;
@@ -2694,6 +2750,9 @@ function handleServerMessage(data) {
             renderAdminScoreboard(data.players || {});
         } else if (currentRole === 'player') {
             renderOpponents(data.players || {});
+            if (document.getElementById('bot-spectator-panel').style.display !== 'none') {
+                renderBotSpectatorGrid();
+            }
         }
         return;
     }
@@ -2718,6 +2777,7 @@ function handleServerMessage(data) {
             if (canPlay) {
                 isPlaying = true;
                 piece = newPiece();
+                document.getElementById('bot-spectator-panel').style.display = 'none';
                 document.getElementById('p-status').innerText = '🟢 Main';
                 document.getElementById('p-status').style.color = '#22c55e';
                 sendWS({ type: 'update_board', score, grid });
@@ -2726,10 +2786,14 @@ function handleServerMessage(data) {
                 piece = null;
                 document.getElementById('p-status').innerText = '💀 Eliminasi';
                 document.getElementById('p-status').style.color = '#ef4444';
+                document.getElementById('bot-spectator-panel').style.display = 'block';
             }
             refreshItemUI();
             addLog('player-log', '🚀 Pertandingan dimulai!');
             renderOpponents(data.players || {});
+            if (document.getElementById('bot-spectator-panel').style.display !== 'none') {
+                renderBotSpectatorGrid();
+            }
         } else if (currentRole === 'admin') {
             document.getElementById('admin-match-status').innerText = 'Berlangsung';
             document.getElementById('admin-match-status').style.color = '#22c55e';
@@ -2757,6 +2821,7 @@ function handleServerMessage(data) {
             updateLevelDisplay();
             pendingGarbage = 0; armorCharges = 0; doubleExpiresAt = 0; itemTokens = 0; itemCharge = 0;
             resetVisualEffects();
+            document.getElementById('bot-spectator-panel').style.display = 'none';
             document.getElementById('p-status').innerText = '⏳ Menunggu Mulai';
             document.getElementById('p-status').style.color = '#fbbf24';
             refreshItemUI();
@@ -2823,6 +2888,18 @@ function handleServerMessage(data) {
         if (currentRole === 'admin') {
             applyAdminFrameObject(data);
             renderAdminScoreboard(latestAdminPlayers);
+        } else if (currentRole === 'player' && gameMode === 'online' && data.pid) {
+            latestOnlinePlayers[data.pid] = {
+                ...(latestOnlinePlayers[data.pid] || {}),
+                name: data.name ?? (latestOnlinePlayers[data.pid] && latestOnlinePlayers[data.pid].name) ?? data.pid,
+                alive: data.alive !== undefined ? Boolean(data.alive) : true,
+                score: Number(data.score ?? 0),
+                ko: Number(data.ko ?? 0),
+                grid: data.grid || (latestOnlinePlayers[data.pid] && latestOnlinePlayers[data.pid].grid),
+            };
+            if (document.getElementById('bot-spectator-panel').style.display !== 'none') {
+                renderBotSpectatorGrid();
+            }
         }
         return;
     }
@@ -2833,6 +2910,21 @@ function handleServerMessage(data) {
                 applyAdminFrameObject(f);
             }
             renderAdminScoreboard(latestAdminPlayers);
+        } else if (currentRole === 'player' && gameMode === 'online' && Array.isArray(data.frames)) {
+            for (const f of data.frames) {
+                if (!f || !f.pid) continue;
+                latestOnlinePlayers[f.pid] = {
+                    ...(latestOnlinePlayers[f.pid] || {}),
+                    name: f.name ?? (latestOnlinePlayers[f.pid] && latestOnlinePlayers[f.pid].name) ?? f.pid,
+                    alive: f.alive !== undefined ? Boolean(f.alive) : true,
+                    score: Number(f.score ?? 0),
+                    ko: Number(f.ko ?? 0),
+                    grid: f.grid || (latestOnlinePlayers[f.pid] && latestOnlinePlayers[f.pid].grid),
+                };
+            }
+            if (document.getElementById('bot-spectator-panel').style.display !== 'none') {
+                renderBotSpectatorGrid();
+            }
         }
         return;
     }
@@ -2848,7 +2940,12 @@ function handleServerMessage(data) {
             document.getElementById('p-status').style.color = '#facc15';
             addLog('player-log', `🏆 Pemenang: <b>${escapeHtml(data.winner)}</b>!`);
             renderPodium('player-podium', data.podium || [], data.winner);
-            if (data.players) renderOpponents(data.players);
+            if (data.players) {
+                latestOnlinePlayers = { ...latestOnlinePlayers, ...data.players };
+                renderOpponents(data.players);
+            }
+            document.getElementById('bot-spectator-panel').style.display = 'block';
+            renderBotSpectatorGrid();
         } else if (currentRole === 'admin') {
             document.getElementById('admin-match-status').innerText = 'Selesai';
             document.getElementById('admin-match-status').style.color = '#facc15';
@@ -2870,6 +2967,15 @@ function handleServerMessage(data) {
 
 function renderOpponents(playersObj) {
     if (gameMode !== 'online') return;
+    if (playersObj && typeof playersObj === 'object') {
+        for (const [pid, p] of Object.entries(playersObj)) {
+            latestOnlinePlayers[pid] = {
+                ...(latestOnlinePlayers[pid] || {}),
+                ...p,
+                grid: p.grid || (latestOnlinePlayers[pid] && latestOnlinePlayers[dataPidGridFallback(pid)]) || createEmptyGrid(),
+            };
+        }
+    }
     const el = document.getElementById('opponents');
     if (!el) return;
     const entries = dedupPlayerMap(playersObj || {});
@@ -2889,9 +2995,10 @@ function renderOpponents(playersObj) {
             p.armor_charges > 0 ? `🛡️${p.armor_charges}` : '',
             p.double_active ? '⚡2x' : ''
         ].filter(Boolean).join(' ');
+        const canSpectate = !isMe && !isPlaying;
 
         return `
-            <div class="opp-badge ${badgeClass}">
+            <div class="opp-badge ${badgeClass} ${canSpectate ? 'clickable-bot' : ''}" ${canSpectate ? `onclick="openBotSpectatorAndZoom('${pid}')"` : ''}>
                 <div class="opp-badge-row">
                     <span class="opp-name">#${idx + 1} ${escapeHtml(p.name || pid)}${isMe ? ' (Anda)' : ''}</span>
                     <span class="opp-stats">${statusIcon} ${buffs}</span>
@@ -2900,6 +3007,10 @@ function renderOpponents(playersObj) {
             </div>
         `;
     }).join('');
+}
+
+function dataPidGridFallback(pid) {
+    return pid;
 }
 
 function resizeAdminLaserCanvas() {
@@ -3338,7 +3449,9 @@ function checkTopOut() {
                 type: 'player_eliminated',
                 last_attacker_id: lastAttackerId,
             });
-            addLog('player-log', '💀 Anda tereliminasi!');
+            addLog('player-log', '💀 Anda tereliminasi! Memantau peserta & bot lain...');
+            document.getElementById('bot-spectator-panel').style.display = 'block';
+            renderBotSpectatorGrid();
         } else if (gameMode === 'vsbot') {
             stopLocalBotLoop();
             addLog('player-log', '💀 Anda tereliminasi! Memantau sisa bot...');
@@ -3394,6 +3507,8 @@ function moveDown() {
             document.getElementById('p-status').style.color = '#ef4444';
             if (gameMode === 'online') {
                 sendWS({ type: 'player_eliminated', last_attacker_id: lastAttackerId });
+                document.getElementById('bot-spectator-panel').style.display = 'block';
+                renderBotSpectatorGrid();
             } else if (gameMode === 'vsbot') {
                 stopLocalBotLoop();
                 document.getElementById('bot-spectator-panel').style.display = 'block';
@@ -3590,6 +3705,10 @@ function advanceGameTick(dt) {
         return;
     }
 
+    if (gameMode === 'online') {
+        addItemCharge(3.5 * dt);
+    }
+
     dropC += dt * 1000;
     const intervalMs = getDropIntervalMs();
     while (isPlaying && dropC >= intervalMs) {
@@ -3672,7 +3791,7 @@ function update(time = 0) {
 
     if (document.getElementById('player-view').style.display !== 'none') {
         drawPlayerBoard();
-        if (gameMode === 'vsbot' && document.getElementById('bot-spectator-panel').style.display !== 'none') {
+        if ((gameMode === 'vsbot' || gameMode === 'online') && document.getElementById('bot-spectator-panel').style.display !== 'none') {
             renderBotSpectatorGrid();
         }
     }
