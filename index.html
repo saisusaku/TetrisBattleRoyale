@@ -1183,7 +1183,7 @@
 
             <div class="admin-center-area">
                 <canvas id="admin-laser-canvas"></canvas>
-                <h4 style="margin:0 0 8px 0; font-size:14px;">Monitor Peserta & Bot</h4>
+                <h4 style="margin:0 0 8px 0; font-size:14px;">Monitor Peserta & Bot (Real-Time)</h4>
                 <div id="monitor-grid" class="monitor-grid"></div>
             </div>
 
@@ -1311,6 +1311,7 @@ let isOnlineRoomHost = false;
 let pendingPlayerCreateRoom = false;
 let adminLasers = [];
 let latestAdminPlayers = {};
+let adminSmoothPos = {};
 let focusedPlayerId = null;
 
 function hasPowerupsInCurrentMode() {
@@ -1398,6 +1399,7 @@ function createEmptyGrid() {
 
 let grid = createEmptyGrid();
 let piece = null, score = 0, isPlaying = false, lastAttackerId = null, pendingGarbage = 0;
+let visX = 3, visY = 0;
 let dangerLevel = 0, dangerBlinkTimer = 0, dangerFlashOn = false;
 let dropC = 0, syncC = 0, uiC = 0, lT = 0;
 let lastRealTimeSyncMs = 0;
@@ -1990,7 +1992,7 @@ function checkVsBotMatchEnd() {
     const aliveBots = localBots.filter(b => b.alive);
     if (!isPlaying) {
         document.getElementById('bot-spectator-panel').style.display = 'block';
-        renderBotSpectatorGrid();
+        renderBotSpectatorGrid(0.016);
         return;
     }
     if (aliveBots.length === 0 && isPlaying) {
@@ -2101,7 +2103,7 @@ function stepLocalBots() {
 
     renderLocalSideList();
     if (document.getElementById('bot-spectator-panel').style.display !== 'none') {
-        renderBotSpectatorGrid();
+        renderBotSpectatorGrid(0.22);
     }
 }
 
@@ -2141,18 +2143,20 @@ function localAddBot() {
     addLog('player-log', `🤖 ${escapeHtml(b.name)} ditambahkan.`);
     renderLocalSideList();
     if (document.getElementById('bot-spectator-panel').style.display !== 'none') {
-        renderBotSpectatorGrid();
+        renderBotSpectatorGrid(0.016);
     }
 }
 
 function localRemoveBot() {
     if (gameMode !== 'vsbot' || localBots.length === 0) return;
     const removed = localBots.pop();
+    delete adminSmoothPos[`bot_mini_${removed.id}`];
+    delete adminSmoothPos[`bot_zoom_${removed.id}`];
     if (focusedBotId === removed.id) clearBotZoom();
     addLog('player-log', `🤖 ${escapeHtml(removed.name)} dihapus.`);
     renderLocalSideList();
     if (document.getElementById('bot-spectator-panel').style.display !== 'none') {
-        renderBotSpectatorGrid();
+        renderBotSpectatorGrid(0.016);
     }
     checkVsBotMatchEnd();
 }
@@ -2202,35 +2206,47 @@ function renderLocalSideList() {
     }
 }
 
-function renderBotSpectatorGrid() {
+function renderBotSpectatorGrid(dt = 0.016) {
     const gridEl = document.getElementById('bot-spectator-grid');
     if (!gridEl || gameMode !== 'vsbot') return;
-    gridEl.innerHTML = '';
+    if (gridEl.children.length !== localBots.length) {
+        gridEl.innerHTML = '';
+        for (const bot of localBots) {
+            const card = document.createElement('div');
+            card.id = `bot-spec-${bot.id}`;
+            card.className = `bot-mini-card ${bot.alive ? 'alive' : 'dead'} ${focusedBotId === bot.id ? 'focused' : ''}`;
+            card.onclick = () => focusBotInSpectator(bot.id);
+
+            const title = document.createElement('div');
+            title.className = 'b-title';
+            title.style.fontSize = '11px';
+            title.style.fontWeight = '700';
+            title.innerText = `${bot.alive ? '🤖' : '💀'} ${bot.name}`;
+
+            const cMini = document.createElement('canvas');
+            cMini.width = 80;
+            cMini.height = 160;
+
+            const meta = document.createElement('div');
+            meta.className = 'b-meta';
+            meta.style.fontSize = '10px';
+            meta.style.color = '#cbd5e1';
+            meta.innerText = `Skor: ${bot.score} | KO: ${bot.ko}`;
+
+            card.appendChild(title);
+            card.appendChild(cMini);
+            card.appendChild(meta);
+            gridEl.appendChild(card);
+        }
+    }
 
     for (const bot of localBots) {
-        const card = document.createElement('div');
+        const card = document.getElementById(`bot-spec-${bot.id}`);
+        if (!card) continue;
         card.className = `bot-mini-card ${bot.alive ? 'alive' : 'dead'} ${focusedBotId === bot.id ? 'focused' : ''}`;
-        card.onclick = () => focusBotInSpectator(bot.id);
-
-        const title = document.createElement('div');
-        title.style.fontSize = '11px';
-        title.style.fontWeight = '700';
-        title.innerText = `${bot.alive ? '🤖' : '💀'} ${bot.name}`;
-
-        const cMini = document.createElement('canvas');
-        cMini.width = 80;
-        cMini.height = 160;
-        drawGrid(cMini, getLocalBotDisplayGrid(bot), 8);
-
-        const meta = document.createElement('div');
-        meta.style.fontSize = '10px';
-        meta.style.color = '#cbd5e1';
-        meta.innerText = `Skor: ${bot.score} | KO: ${bot.ko}`;
-
-        card.appendChild(title);
-        card.appendChild(cMini);
-        card.appendChild(meta);
-        gridEl.appendChild(card);
+        card.querySelector('.b-title').innerText = `${bot.alive ? '🤖' : '💀'} ${bot.name}`;
+        card.querySelector('.b-meta').innerText = `Skor: ${bot.score} | KO: ${bot.ko}`;
+        drawGridSmooth(card.querySelector('canvas'), bot.board, bot.alive ? bot.curPiece : null, 8, dt, `bot_mini_${bot.id}`);
     }
 
     if (focusedBotId) {
@@ -2241,26 +2257,26 @@ function renderBotSpectatorGrid() {
             document.getElementById('bot-zoom-status').innerText = fBot.alive ? '🟢 Aktif' : '💀 Tereliminasi';
             document.getElementById('bot-zoom-score').innerText = fBot.score;
             document.getElementById('bot-zoom-ko').innerText = fBot.ko;
-            drawGrid(document.getElementById('bot-zoom-canvas'), getLocalBotDisplayGrid(fBot), 16);
+            drawGridSmooth(document.getElementById('bot-zoom-canvas'), fBot.board, fBot.alive ? fBot.curPiece : null, 16, dt, `bot_zoom_${fBot.id}`);
         }
     }
 }
 
 function focusBotInSpectator(botId) {
     focusedBotId = botId;
-    renderBotSpectatorGrid();
+    renderBotSpectatorGrid(0.016);
 }
 
 function openBotSpectatorAndZoom(botId) {
     document.getElementById('bot-spectator-panel').style.display = 'block';
     focusedBotId = botId;
-    renderBotSpectatorGrid();
+    renderBotSpectatorGrid(0.016);
 }
 
 function clearBotZoom() {
     focusedBotId = null;
     document.getElementById('bot-zoom-panel').style.display = 'none';
-    renderBotSpectatorGrid();
+    renderBotSpectatorGrid(0.016);
 }
 
 function sendQuitSignal(useBeacon = false) {
@@ -2371,6 +2387,7 @@ function createAdminRoom() {
     pendingPlayerCreateRoom = false;
     focusedPlayerId = null;
     latestAdminPlayers = {};
+    adminSmoothPos = {};
     adminLasers = [];
     document.getElementById('admin-focus-panel').style.display = 'none';
     document.getElementById('admin-podium').style.display = 'none';
@@ -2704,6 +2721,7 @@ function handleServerMessage(data) {
                 score: newScore,
                 ko: data.ko !== undefined ? Number(data.ko) : (prev ? prev.ko : 0),
                 grid: data.grid || (prev && prev.grid),
+                active_piece: data.active_piece !== undefined ? data.active_piece : (prev && prev.active_piece),
                 armor_charges: data.armor_charges !== undefined ? data.armor_charges : (prev && prev.armor_charges),
                 double_active: data.double_active !== undefined ? data.double_active : (prev && prev.double_active),
                 quitter: data.quitter !== undefined ? data.quitter : (prev && prev.quitter),
@@ -2805,7 +2823,6 @@ function spawnAdminLaser(fromId, targetId, lines, isDouble) {
     const x2 = (r2.left + r2.right) / 2 - areaRect.left;
     const y2 = (r2.top + r2.bottom) / 2 - areaRect.top;
 
-    // Titik kontrol kurva melengkung ke atas/samping
     const dx = x2 - x1;
     const dy = y2 - y1;
     const dist = Math.hypot(dx, dy) || 1;
@@ -2839,7 +2856,6 @@ function renderAdminLasers(dt) {
         const progress = 1 - Math.max(0, l.life / l.maxLife);
         const alpha = Math.min(1, (l.life / l.maxLife) * 1.35);
 
-        // Titik ujung kepala serangan yang meluncur sepanjang kurva
         const t = Math.min(1, progress * 1.45);
         const invT = 1 - t;
         const headX = invT * invT * l.x1 + 2 * invT * t * l.ctrlX + t * t * l.x2;
@@ -2855,13 +2871,11 @@ function renderAdminLasers(dt) {
         adminLaserCtx.quadraticCurveTo(l.ctrlX, l.ctrlY, l.x2, l.y2);
         adminLaserCtx.stroke();
 
-        // Bola energi melengkung
         adminLaserCtx.fillStyle = l.isDouble ? '#fef08a' : '#fca5a5';
         adminLaserCtx.beginPath();
         adminLaserCtx.arc(headX, headY, l.isDouble ? 7 : 5.5, 0, Math.PI * 2);
         adminLaserCtx.fill();
 
-        // Label jumlah baris di puncak kurva
         adminLaserCtx.font = 'bold 11px system-ui, sans-serif';
         adminLaserCtx.textAlign = 'center';
         adminLaserCtx.fillStyle = l.isDouble ? '#facc15' : '#ffedd5';
@@ -2955,7 +2969,7 @@ function updateSingleAdminCard(pid, p, isScoreDrop = false) {
     if (koEl) koEl.innerText = p.ko || 0;
 
     const cMini = card.querySelector('canvas');
-    if (cMini) drawGrid(cMini, p.grid, 8);
+    if (cMini) drawGridSmooth(cMini, p.grid, p.active_piece, 8, 0.016, `adm_mini_${pid}`);
 
     if (isScoreDrop) {
         card.classList.remove('hit-shake');
@@ -2965,7 +2979,7 @@ function updateSingleAdminCard(pid, p, isScoreDrop = false) {
     }
 
     if (focusedPlayerId === pid) {
-        renderAdminFocusPanel();
+        renderAdminFocusPanel(0.016);
     }
 }
 
@@ -2979,7 +2993,11 @@ function renderAdminGrid(ps) {
     const currentIds = new Set(entries.map(([pid]) => pid));
     Array.from(g.children).forEach(child => {
         const cid = child.id.replace('admin-card-', '');
-        if (!currentIds.has(cid)) child.remove();
+        if (!currentIds.has(cid)) {
+            child.remove();
+            delete adminSmoothPos[`adm_mini_${cid}`];
+            delete adminSmoothPos[`adm_focus_${cid}`];
+        }
     });
 
     entries.forEach(([pid, p]) => {
@@ -2992,10 +3010,24 @@ function renderAdminGrid(ps) {
 
     if (focusedPlayerId) {
         if (latestAdminPlayers[focusedPlayerId]) {
-            renderAdminFocusPanel();
+            renderAdminFocusPanel(0.016);
         } else {
             clearAdminFocus();
         }
+    }
+}
+
+function renderAdminRealtime(dt) {
+    if (currentRole !== 'admin') return;
+    renderAdminLasers(dt);
+    for (const [pid, p] of Object.entries(latestAdminPlayers)) {
+        const card = document.getElementById(`admin-card-${pid}`);
+        if (card) {
+            drawGridSmooth(card.querySelector('canvas'), p.grid, p.active_piece, 8, dt, `adm_mini_${pid}`);
+        }
+    }
+    if (focusedPlayerId && latestAdminPlayers[focusedPlayerId]) {
+        renderAdminFocusPanel(dt);
     }
 }
 
@@ -3038,7 +3070,7 @@ function focusAdminPlayer(pid) {
     Array.from(document.querySelectorAll('.screen-card')).forEach(card => {
         card.classList.toggle('focused', card.id === `admin-card-${pid}`);
     });
-    renderAdminFocusPanel();
+    renderAdminFocusPanel(0.016);
 }
 
 function clearAdminFocus() {
@@ -3049,7 +3081,7 @@ function clearAdminFocus() {
     });
 }
 
-function renderAdminFocusPanel() {
+function renderAdminFocusPanel(dt = 0.016) {
     if (!focusedPlayerId || !latestAdminPlayers[focusedPlayerId]) return;
     const p = latestAdminPlayers[focusedPlayerId];
     const isQuitter = Boolean(p.quitter);
@@ -3061,7 +3093,7 @@ function renderAdminFocusPanel() {
     document.getElementById('focus-player-score').innerText = p.score || 0;
     document.getElementById('focus-player-ko').innerText = p.ko || 0;
     document.getElementById('focus-quitter-banner').style.display = isQuitter ? 'block' : 'none';
-    drawGrid(document.getElementById('admin-focus-canvas'), p.grid, 20);
+    drawGridSmooth(document.getElementById('admin-focus-canvas'), p.grid, p.active_piece, 20, dt, `adm_focus_${focusedPlayerId}`);
 }
 
 function newPiece() {
@@ -3069,11 +3101,15 @@ function newPiece() {
     nextPieceId = rollRandomPieceId();
     drawNextPiecePreview();
     const shape = SHAPES[id];
+    const x = Math.floor(COLS / 2) - Math.floor(shape[0].length / 2);
+    const y = 0;
+    visX = x;
+    visY = y;
     return {
         id,
         shape,
-        x: Math.floor(COLS / 2) - Math.floor(shape[0].length / 2),
-        y: 0
+        x,
+        y
     };
 }
 
@@ -3205,7 +3241,7 @@ function checkTopOut() {
             ];
             renderPodium('player-podium', podiumData, aliveBots[0] ? aliveBots[0].name : myUsername);
             document.getElementById('bot-spectator-panel').style.display = 'block';
-            renderBotSpectatorGrid();
+            renderBotSpectatorGrid(0.016);
         } else if (gameMode === 'solo') {
             addLog('player-log', `💀 Game Over! Skor akhir: <b>${score}</b> (Level ${soloLevel}, ${totalLinesCleared} baris).`);
         }
@@ -3219,7 +3255,7 @@ function moveLeft() {
     if (!collide(piece.x - 1, piece.y)) {
         piece.x--;
         SFX.move();
-        syncBoardNow(false);
+        syncBoardNow(true);
     }
 }
 
@@ -3228,7 +3264,7 @@ function moveRight() {
     if (!collide(piece.x + 1, piece.y)) {
         piece.x++;
         SFX.move();
-        syncBoardNow(false);
+        syncBoardNow(true);
     }
 }
 
@@ -3257,7 +3293,7 @@ function moveDown() {
             } else if (gameMode === 'vsbot') {
                 stopLocalBotLoop();
                 document.getElementById('bot-spectator-panel').style.display = 'block';
-                renderBotSpectatorGrid();
+                renderBotSpectatorGrid(0.016);
             }
         } else {
             syncBoardNow(true);
@@ -3272,6 +3308,7 @@ function hardDrop() {
         piece.y++;
         score += 2;
     }
+    visY = piece.y;
     document.getElementById('score').innerText = score;
     SFX.drop();
     moveDown();
@@ -3283,17 +3320,17 @@ function rotatePiece() {
     if (!collide(piece.x, piece.y, rot)) {
         piece.shape = rot;
         SFX.rotate();
-        syncBoardNow(false);
+        syncBoardNow(true);
     } else if (!collide(piece.x - 1, piece.y, rot)) {
         piece.x -= 1;
         piece.shape = rot;
         SFX.rotate();
-        syncBoardNow(false);
+        syncBoardNow(true);
     } else if (!collide(piece.x + 1, piece.y, rot)) {
         piece.x += 1;
         piece.shape = rot;
         SFX.rotate();
-        syncBoardNow(false);
+        syncBoardNow(true);
     }
 }
 
@@ -3333,11 +3370,12 @@ function buildCurrentDisplayGrid() {
 function syncBoardNow(force = false) {
     if (currentRole !== 'player' || gameMode !== 'online') return;
     const now = performance.now();
-    if (!force && (now - lastRealTimeSyncMs) < 35) return;
+    if (!force && (now - lastRealTimeSyncMs) < 30) return;
     lastRealTimeSyncMs = now;
     sendWS({
         type: 'update_board',
-        grid: buildCurrentDisplayGrid(),
+        grid: grid,
+        active_piece: piece && isPlaying ? { shape: piece.shape, x: piece.x, y: piece.y } : null,
         score,
         alive: isPlaying
     });
@@ -3401,14 +3439,61 @@ function drawGrid(targetCanvas, targetGrid, bs) {
     }
 }
 
-function drawPlayerBoard() {
+function drawGridSmooth(targetCanvas, targetGrid, activePieceObj, bs, dt, smoothKey) {
+    if (!targetCanvas) return;
+    drawGrid(targetCanvas, targetGrid, bs);
+    if (!activePieceObj || !activePieceObj.shape) return;
+
+    const tctx = targetCanvas.getContext('2d');
+    if (!adminSmoothPos[smoothKey]) {
+        adminSmoothPos[smoothKey] = { x: activePieceObj.x, y: activePieceObj.y };
+    }
+    const sp = adminSmoothPos[smoothKey];
+    const lerp = Math.min(1, dt * 18);
+    sp.x += (activePieceObj.x - sp.x) * lerp;
+    sp.y += (activePieceObj.y - sp.y) * lerp;
+
+    for (let r = 0; r < activePieceObj.shape.length; r++) {
+        for (let c = 0; c < activePieceObj.shape[r].length; c++) {
+            const v = activePieceObj.shape[r][c];
+            if (v) {
+                const px = (sp.x + c) * bs;
+                const py = (sp.y + r) * bs;
+                if (py >= -bs && py < ROWS * bs && px >= -bs && px < COLS * bs) {
+                    tctx.fillStyle = COLORS[v] || '#38bdf8';
+                    tctx.fillRect(px, py, bs - 1, bs - 1);
+                }
+            }
+        }
+    }
+}
+
+function drawPlayerBoard(dt = 0.016) {
     ctx.save();
     if (shakeTimer > 0) {
         const mag = shakeTimer * 24;
         ctx.translate((Math.random() - 0.5) * mag, (Math.random() - 0.5) * mag);
     }
 
-    drawGrid(canvas, buildCurrentDisplayGrid(), BLOCK_SIZE);
+    drawGrid(canvas, grid, BLOCK_SIZE);
+
+    if (piece && isPlaying) {
+        const lerp = Math.min(1, dt * 24);
+        visX += (piece.x - visX) * lerp;
+        visY += (piece.y - visY) * lerp;
+
+        for (let r = 0; r < piece.shape.length; r++) {
+            for (let c = 0; c < piece.shape[r].length; c++) {
+                const v = piece.shape[r][c];
+                if (v) {
+                    const px = (visX + c) * BLOCK_SIZE;
+                    const py = (visY + r) * BLOCK_SIZE;
+                    ctx.fillStyle = COLORS[v] || '#38bdf8';
+                    ctx.fillRect(px, py, BLOCK_SIZE - 1, BLOCK_SIZE - 1);
+                }
+            }
+        }
+    }
 
     for (const lf of lineFlashRows) {
         const alpha = Math.max(0, lf.life / lf.maxLife) * 0.75;
@@ -3468,7 +3553,7 @@ function update(time = 0) {
     updateEffects(dt);
 
     if (currentRole === 'admin') {
-        renderAdminLasers(dt);
+        renderAdminRealtime(dt);
     }
 
     if (isPlaying) {
@@ -3480,7 +3565,7 @@ function update(time = 0) {
         }
 
         syncC += dt;
-        if (syncC > 0.08) {
+        if (syncC > 0.04) {
             syncC = 0;
             syncBoardNow(false);
         }
@@ -3527,7 +3612,10 @@ function update(time = 0) {
     }
 
     if (document.getElementById('player-view').style.display !== 'none') {
-        drawPlayerBoard();
+        drawPlayerBoard(dt);
+        if (gameMode === 'vsbot' && document.getElementById('bot-spectator-panel').style.display !== 'none') {
+            renderBotSpectatorGrid(dt);
+        }
     }
 
     requestAnimationFrame(update);
