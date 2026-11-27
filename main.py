@@ -13,7 +13,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(BASE_DIR, "tetris_br.db")
 BARCODE_PATH = os.path.join(BASE_DIR, "KepoTetris.jpeg")
 ROWS, COLS = 20, 10
-DOUBLE_DURATION_SEC = 5.0
+DOUBLE_DURATION_SEC = 10.0
 
 SHAPES = [
     [[1, 1, 1, 1]],
