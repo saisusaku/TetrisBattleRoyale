@@ -302,7 +302,45 @@
             cursor: pointer;
         }
 
-        /* RESPONSIVE UNTUK HP, TABLET/IPAD, DAN DESKTOP */
+        .br-split-box {
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 9px;
+            padding: 9px 10px;
+            margin-bottom: 10px;
+        }
+        .br-split-title {
+            font-size: 11px;
+            font-weight: 800;
+            color: #38bdf8;
+            margin-bottom: 6px;
+        }
+        .br-row-inline {
+            display: flex;
+            gap: 6px;
+            align-items: stretch;
+        }
+        .br-row-inline input {
+            margin-bottom: 0;
+            flex: 1;
+            min-width: 0;
+            padding: 8px 10px;
+            font-size: 13px;
+        }
+        .host-room-tag {
+            background: #0f172a;
+            border: 1px dashed #38bdf8;
+            color: #38bdf8;
+            border-radius: 6px;
+            padding: 4px 8px;
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 1px;
+            display: inline-flex;
+            align-items: center;
+            cursor: pointer;
+        }
+
         .player-layout {
             display: flex;
             flex-direction: column;
@@ -398,7 +436,6 @@
             line-height: 1.1;
         }
 
-        /* STAGE: PAPAN TETRIS LEBIH BESAR, LOG & RANK RAMPING DI SAMPING */
         .main-stage {
             display: flex;
             justify-content: center;
@@ -425,6 +462,35 @@
             border-radius: 6px;
             box-shadow: 0 0 12px rgba(0, 0, 0, 0.5);
             display: block;
+        }
+
+        .next-piece-overlay {
+            position: absolute;
+            top: 6px;
+            left: 6px;
+            z-index: 15;
+            background: rgba(15, 23, 42, 0.84);
+            border: 1px solid #475569;
+            border-radius: 6px;
+            padding: 3px 5px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+            pointer-events: none;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.55);
+        }
+        .next-piece-label {
+            font-size: 7px;
+            font-weight: 800;
+            letter-spacing: 0.6px;
+            color: #94a3b8;
+            line-height: 1;
+        }
+        canvas#next-canvas {
+            display: block;
+            width: 40px;
+            height: 30px;
         }
 
         .side-charge-column {
@@ -538,7 +604,6 @@
             border-radius: 2px;
         }
 
-        /* KOLOM RANK & LOG DIBUAT LEBIH RAMPING AGAR TIDAK MENGALAHKAN LAYAR GAME */
         .side-info {
             flex: 1 1 130px;
             max-width: 240px;
@@ -617,7 +682,6 @@
         }
         @keyframes blink { 50% { opacity: 0.25; } }
 
-        /* PODIUM & BANNER EMAS CHICKEN DINNER */
         .podium-box {
             background: linear-gradient(180deg, #27200c, #1e293b 45%);
             border: 2px solid #facc15;
@@ -650,7 +714,6 @@
             100% { background-position: 200% 50%; }
         }
 
-        /* LAYER CONFETTI */
         .confetti-layer {
             position: fixed;
             inset: 0;
@@ -735,7 +798,6 @@
             gap: 6px;
         }
 
-        /* KONTROL: SELALU TERLIHAT UTUH DI BAWAH LAYAR */
         .mobile-controls {
             display: flex;
             justify-content: space-between;
@@ -823,7 +885,6 @@
         }
         .btn-rotate-main .rot-icon { font-size: 20px; line-height: 1; }
 
-        /* DESKTOP / TABLET LEBAR (>= 769px): ARAH BESAR & DROP DI SAMPING PUTAR */
         @media (min-width: 769px) {
             .mobile-controls {
                 align-items: center;
@@ -877,21 +938,60 @@
         .close-focus-btn { background: #0f172a; color: #cbd5e1; border: 1px solid #475569; border-radius: 6px; padding: 2px 7px; font-size: 10px; cursor: pointer; }
         canvas#admin-focus-canvas { background: #020617; border: 2px solid #475569; border-radius: 6px; }
         .focus-stats { width: 100%; display: flex; justify-content: space-between; font-size: 12px; background: #0f172a; padding: 6px 8px; border-radius: 8px; border: 1px solid #334155; }
-        .admin-center-area { flex: 1; min-width: 280px; }
+        .admin-center-area { flex: 1; min-width: 280px; position: relative; }
+        canvas#admin-laser-canvas {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 35;
+        }
         .admin-right-panel { width: 260px; flex-shrink: 0; display: flex; flex-direction: column; gap: 10px; }
         .admin-scoreboard-box { background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 10px; }
         .admin-scoreboard-list { display: flex; flex-direction: column; gap: 5px; max-height: 260px; overflow-y: auto; }
         .admin-score-row { background: #0f172a; border: 1px solid #334155; border-radius: 6px; padding: 6px 8px; font-size: 11px; display: flex; flex-direction: column; gap: 2px; }
         .admin-score-row.quitter { border-color: #eab308; }
-        .monitor-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 10px; }
+        .monitor-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 10px; position: relative; z-index: 10; }
         .screen-card {
             background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 8px;
             display: flex; flex-direction: column; align-items: center; cursor: pointer;
+            transition: transform 0.14s ease, box-shadow 0.2s ease, border-color 0.2s ease;
         }
         .screen-card.alive { border-color: #22c55e; }
         .screen-card.dead { border-color: #ef4444; opacity: 0.72; }
         .screen-card.quitter { border-color: #eab308; opacity: 0.92; }
         .screen-card.focused { border: 2px solid #38bdf8 !important; box-shadow: 0 0 12px rgba(56, 189, 248, 0.35); }
+        .screen-card.armor-active {
+            border-color: #22c55e !important;
+            box-shadow: 0 0 14px rgba(34, 197, 94, 0.72), inset 0 0 8px rgba(74, 222, 128, 0.25);
+            animation: armorGreenPulse 1.1s infinite alternate;
+        }
+        @keyframes armorGreenPulse {
+            from { box-shadow: 0 0 9px rgba(34, 197, 94, 0.55), inset 0 0 5px rgba(74, 222, 128, 0.18); }
+            to { box-shadow: 0 0 18px rgba(74, 222, 128, 0.95), inset 0 0 10px rgba(74, 222, 128, 0.35); }
+        }
+        .screen-card.hit-shake {
+            animation: adminCardShake 0.28s linear;
+            border-color: #f87171 !important;
+        }
+        @keyframes adminCardShake {
+            0% { transform: translate(0, 0) rotate(0deg); }
+            25% { transform: translate(-5px, 2px) rotate(-1.5deg); }
+            50% { transform: translate(5px, -2px) rotate(1.5deg); }
+            75% { transform: translate(-4px, -1px) rotate(-1deg); }
+            100% { transform: translate(0, 0) rotate(0deg); }
+        }
+        .armor-pill-admin {
+            margin-top: 3px;
+            background: rgba(22, 163, 74, 0.25);
+            border: 1px solid #4ade80;
+            color: #bbf7d0;
+            font-size: 9px;
+            font-weight: 800;
+            padding: 1px 6px;
+            border-radius: 999px;
+        }
         .screen-card canvas { background: #020617; border: 1px solid #475569; border-radius: 3px; margin: 4px 0; }
         .screen-meta { width: 100%; display: flex; justify-content: space-between; font-size: 11px; color: #cbd5e1; }
     </style>
@@ -939,8 +1039,22 @@
 
         <div id="form-player" style="display:none;">
             <input type="text" id="player-name" placeholder="Nama Anda (Wajib diisi)..." maxlength="15" required>
-            <input type="text" id="join-room-code" placeholder="Kode Room (misal: AB12C)" maxlength="8" style="text-transform:uppercase;">
-            <button class="primary" onclick="joinAsPlayer()">Masuk Arena</button>
+
+            <div class="br-split-box">
+                <div class="br-split-title">🆕 Buat Room Server & Main Bareng Teman</div>
+                <div class="br-row-inline">
+                    <input type="text" id="player-create-code" placeholder="Kode Room baru (opsional)" maxlength="8" style="text-transform:uppercase;">
+                    <button type="button" class="success" style="padding:8px 12px; font-size:12px;" onclick="createPlayerRoom()">+ Buat Room</button>
+                </div>
+            </div>
+
+            <div class="br-split-box">
+                <div class="br-split-title">🚪 Gabung ke Room Teman</div>
+                <div class="br-row-inline">
+                    <input type="text" id="join-room-code" placeholder="Kode Room (misal: AB12C)" maxlength="8" style="text-transform:uppercase;">
+                    <button type="button" class="primary" style="width:auto; padding:8px 14px; font-size:12px;" onclick="joinAsPlayer()">Masuk</button>
+                </div>
+            </div>
 
             <div class="lobby-list-box">
                 <div class="lobby-list-header">
@@ -980,9 +1094,11 @@
 
         <!-- TOMBOL AKSI DI BAGIAN ATAS -->
         <div id="top-local-actions" class="top-action-row" style="display:none;">
+            <span id="host-room-badge" class="host-room-tag" style="display:none;" onclick="copyActiveRoomCode()" title="Klik salin kode room"></span>
+            <button type="button" class="success" id="btn-host-start" style="display:none;" onclick="hostStartOnlineMatch()">▶ Mulai Match</button>
             <button type="button" class="success" style="flex:1;" onclick="restartLocalMode()">↻ Main Lagi</button>
-            <button type="button" class="bot-btn" id="btn-local-addbot" style="display:none;" onclick="localAddBot()">🤖 +Bot</button>
-            <button type="button" class="remove-bot-btn" id="btn-local-removebot" style="display:none;" onclick="localRemoveBot()">🤖 -Bot</button>
+            <button type="button" class="bot-btn" id="btn-local-addbot" style="display:none;" onclick="handleAddBotAction()">🤖 +Bot</button>
+            <button type="button" class="remove-bot-btn" id="btn-local-removebot" style="display:none;" onclick="handleRemoveBotAction()">🤖 -Bot</button>
             <button type="button" class="danger" onclick="exitToLobby()">🏠 Menu Utama</button>
         </div>
 
@@ -993,6 +1109,10 @@
             <div id="board-column" class="board-column">
                 <div class="board-wrap">
                     <canvas id="board" width="160" height="320"></canvas>
+                    <div id="next-piece-box" class="next-piece-overlay">
+                        <span class="next-piece-label">NEXT</span>
+                        <canvas id="next-canvas" width="44" height="34"></canvas>
+                    </div>
                     <div id="ko-banner" class="ko-banner-overlay">
                         <div class="ko-banner-ribbon">ELIMINATED</div>
                     </div>
@@ -1122,6 +1242,7 @@
             </div>
 
             <div class="admin-center-area">
+                <canvas id="admin-laser-canvas"></canvas>
                 <h4 style="margin:0 0 8px 0; font-size:14px;">Monitor Peserta & Bot</h4>
                 <div id="monitor-grid" class="monitor-grid"></div>
             </div>
@@ -1238,6 +1359,8 @@ function clearConfetti() {
 
 const canvas = document.getElementById('board');
 const ctx = canvas.getContext('2d');
+const nextCanvas = document.getElementById('next-canvas');
+const nextCtx = nextCanvas ? nextCanvas.getContext('2d') : null;
 const COLS = 10, ROWS = 20;
 let BLOCK_SIZE = 16;
 const DANGER_ROW_THRESHOLD = 4;
@@ -1252,11 +1375,9 @@ function resizeBoardForScreen() {
     const w = window.innerWidth || 360;
     const h = window.innerHeight || 640;
 
-    // 1) Batas berdasarkan LEBAR layar: papan dibuat lebih besar dari kolom rank & log
     const sideReserveW = w >= 769 ? 255 : (w >= 540 ? 210 : 152);
     const maxWByWidth = Math.max(140, Math.min(340, w - sideReserveW));
 
-    // 2) Batas berdasarkan TINGGI layar agar tombol di bawah selalu muat utuh
     const dockExtraH = hasPowerupsInCurrentMode() ? 48 : 0;
     const topAndControlsReserveH = w >= 769
         ? (225 + dockExtraH)
@@ -1280,6 +1401,8 @@ function resizeBoardForScreen() {
         const totalLeftH = boardCol ? boardCol.offsetHeight : canvas.height;
         sideInfo.style.height = `${Math.max(canvas.height, totalLeftH)}px`;
     }
+
+    resizeAdminLaserCanvas();
 }
 window.addEventListener('resize', resizeBoardForScreen);
 resizeBoardForScreen();
@@ -1295,6 +1418,33 @@ const SHAPES = [
     [[0,6,0],[6,6,6]],
     [[7,7,0],[0,7,7]]
 ];
+
+function rollRandomPieceId() {
+    return Math.floor(Math.random() * 7) + 1;
+}
+
+let nextPieceId = rollRandomPieceId();
+
+function drawNextPiecePreview() {
+    if (!nextCtx || !nextCanvas) return;
+    nextCtx.clearRect(0, 0, nextCanvas.width, nextCanvas.height);
+    const shape = SHAPES[nextPieceId] || SHAPES[1];
+    const color = COLORS[nextPieceId] || '#38bdf8';
+    const rows = shape.length;
+    const cols = shape[0].length;
+    const cell = 6;
+    const offsetX = Math.floor((nextCanvas.width - cols * cell) / 2);
+    const offsetY = Math.floor((nextCanvas.height - rows * cell) / 2);
+
+    for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+            if (shape[r][c]) {
+                nextCtx.fillStyle = color;
+                nextCtx.fillRect(offsetX + c * cell, offsetY + r * cell, cell - 1, cell - 1);
+            }
+        }
+    }
+}
 
 function createEmptyGrid() {
     return Array.from({ length: ROWS }, () => Array(COLS).fill(0));
@@ -1327,6 +1477,8 @@ let currentRole = null;
 let activeRoomCode = '';
 let myUsername = '';
 let hasLeftArena = false;
+let isOnlineRoomHost = false;
+let pendingPlayerCreateRoom = false;
 
 function getDropIntervalMs() {
     if (gameMode === 'solo') {
@@ -1344,9 +1496,16 @@ function applyModeVisibilityToPlayerView() {
     const showPowerups = hasPowerupsInCurrentMode();
     document.getElementById('item-dock').style.display = showPowerups ? 'flex' : 'none';
     document.getElementById('side-charge-col').style.display = showPowerups ? 'flex' : 'none';
-    document.getElementById('top-local-actions').style.display = (gameMode === 'solo' || gameMode === 'vsbot') ? 'flex' : 'none';
-    document.getElementById('btn-local-addbot').style.display = gameMode === 'vsbot' ? 'inline-block' : 'none';
-    document.getElementById('btn-local-removebot').style.display = gameMode === 'vsbot' ? 'inline-block' : 'none';
+    const canHostOnline = gameMode === 'online' && isOnlineRoomHost;
+    document.getElementById('top-local-actions').style.display = (gameMode === 'solo' || gameMode === 'vsbot' || canHostOnline) ? 'flex' : 'none';
+    document.getElementById('btn-local-addbot').style.display = (gameMode === 'vsbot' || canHostOnline) ? 'inline-block' : 'none';
+    document.getElementById('btn-local-removebot').style.display = (gameMode === 'vsbot' || canHostOnline) ? 'inline-block' : 'none';
+    document.getElementById('btn-host-start').style.display = canHostOnline ? 'inline-block' : 'none';
+    const roomBadge = document.getElementById('host-room-badge');
+    if (roomBadge) {
+        roomBadge.style.display = canHostOnline && activeRoomCode ? 'inline-flex' : 'none';
+        roomBadge.innerText = activeRoomCode ? `ROOM: ${activeRoomCode} 📋` : '';
+    }
     document.getElementById('side-list-title').innerText = gameMode === 'solo'
         ? 'Info Level'
         : (gameMode === 'vsbot' ? 'Papan Bot & Skor' : 'Skor Peserta');
@@ -1356,7 +1515,40 @@ function applyModeVisibilityToPlayerView() {
     } else if (gameMode === 'vsbot') {
         document.getElementById('p-mode-label').innerText = '🤖 Vs Bot';
     } else {
-        document.getElementById('p-mode-label').innerText = '🌐 BR';
+        document.getElementById('p-mode-label').innerText = isOnlineRoomHost ? '👑 Host BR' : '🌐 BR';
+    }
+}
+
+function copyActiveRoomCode() {
+    if (!activeRoomCode) return;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(activeRoomCode).catch(() => {});
+    }
+    addLog('player-log', `📋 Kode room <b>${escapeHtml(activeRoomCode)}</b> disalin!`);
+}
+
+function handleAddBotAction() {
+    ensureAudio();
+    if (gameMode === 'vsbot') {
+        localAddBot();
+    } else if (gameMode === 'online' && isOnlineRoomHost) {
+        sendWS({ type: 'admin_add_bot' });
+    }
+}
+
+function handleRemoveBotAction() {
+    ensureAudio();
+    if (gameMode === 'vsbot') {
+        localRemoveBot();
+    } else if (gameMode === 'online' && isOnlineRoomHost) {
+        sendWS({ type: 'admin_remove_bot' });
+    }
+}
+
+function hostStartOnlineMatch() {
+    ensureAudio();
+    if (gameMode === 'online' && isOnlineRoomHost) {
+        sendWS({ type: 'admin_start_match' });
     }
 }
 
@@ -1472,7 +1664,10 @@ function activateItem(itemType) {
         armorCharges = 3;
         SFX.block();
         addLog('player-log', '🛡️ ARMOR aktif! Menahan 3 serangan masuk.');
-        if (gameMode === 'online') sendWS({ type: 'use_item', item: 'armor' });
+        if (gameMode === 'online') {
+            sendWS({ type: 'use_item', item: 'armor' });
+            sendWS({ type: 'item_state_sync', armor_charges: armorCharges });
+        }
     } else if (itemType === 'double') {
         doubleExpiresAt = performance.now() + DOUBLE_DURATION_MS;
         SFX.clear(3);
@@ -1717,7 +1912,9 @@ function handlePlayerKO() {
 }
 
 function spawnPiece() {
-    const id = Math.floor(Math.random() * 7) + 1;
+    const id = nextPieceId || rollRandomPieceId();
+    nextPieceId = rollRandomPieceId();
+    drawNextPiecePreview();
     const shape = SHAPES[id];
     piece = { shape, x: Math.floor(COLS / 2) - Math.floor(shape[0].length / 2), y: 0 };
     if (collide(grid, piece)) {
@@ -1830,6 +2027,9 @@ function updateAnimations(dtSec) {
     });
     if (shakeTimer > 0) shakeTimer = Math.max(0, shakeTimer - dtSec);
     if (attackFlashTimer > 0) attackFlashTimer = Math.max(0, attackFlashTimer - dtSec);
+    if (currentRole === 'admin') {
+        renderAdminLasers(dtSec);
+    }
 }
 
 function computeDangerLevel(g) {
@@ -2586,6 +2786,8 @@ function renderBotSpectatorPanel() {
 function resetBoardStateForMatch() {
     grid = createEmptyGrid();
     piece = null;
+    nextPieceId = rollRandomPieceId();
+    drawNextPiecePreview();
     score = 0;
     soloLevel = 1;
     totalLinesCleared = 0;
@@ -2618,6 +2820,7 @@ function startSoloMode() {
     ensureAudio();
     gameMode = 'solo';
     hasLeftArena = true;
+    isOnlineRoomHost = false;
     stopLobbyPolling();
     stopLocalBotLoop();
     myUsername = document.getElementById('solo-name').value.trim() || 'Pemain Solo';
@@ -2650,6 +2853,7 @@ function startVsBotMode() {
     ensureAudio();
     gameMode = 'vsbot';
     hasLeftArena = true;
+    isOnlineRoomHost = false;
     stopLobbyPolling();
     myUsername = document.getElementById('vsbot-name').value.trim() || 'Anda';
     focusedBotId = null;
@@ -2680,8 +2884,13 @@ function restartLocalMode() {
 }
 
 function exitToLobby() {
+    if (gameMode === 'online' && currentRole === 'player') {
+        notifyPlayerQuit();
+    }
     stopLocalBotLoop();
     isPlaying = false;
+    isOnlineRoomHost = false;
+    pendingPlayerCreateRoom = false;
     dangerLevel = 0;
     dangerFlashOn = false;
     setKoBanner(false);
@@ -2777,11 +2986,45 @@ function sendWS(payload) {
 function createAdminRoom() {
     ensureAudio();
     gameMode = 'admin';
+    isOnlineRoomHost = false;
+    pendingPlayerCreateRoom = false;
     const customCode = document.getElementById('custom-room-code').value.trim().toUpperCase();
     connectWS(() => {
         currentRole = 'admin';
         stopLobbyPolling();
         sendWS({ type: 'create_room', room_code: customCode });
+    });
+}
+
+function createPlayerRoom() {
+    ensureAudio();
+    const nameInput = document.getElementById('player-name');
+    const createCodeInput = document.getElementById('player-create-code');
+    const name = nameInput.value.trim();
+    const customCode = createCodeInput.value.trim().toUpperCase();
+
+    if (!name) {
+        alert('Nama wajib diisi sebelum membuat room!');
+        nameInput.focus();
+        return;
+    }
+
+    gameMode = 'online';
+    hasLeftArena = false;
+    isOnlineRoomHost = true;
+    pendingPlayerCreateRoom = true;
+    myUsername = name;
+    activeRoomCode = customCode;
+
+    connectWS(() => {
+        currentRole = 'player';
+        stopLobbyPolling();
+        sendWS({
+            type: 'create_room',
+            room_code: customCode,
+            as_player: true,
+            username: name
+        });
     });
 }
 
@@ -2805,10 +3048,13 @@ function joinAsPlayer() {
 
     gameMode = 'online';
     hasLeftArena = false;
+    isOnlineRoomHost = false;
+    pendingPlayerCreateRoom = false;
     myUsername = name;
     activeRoomCode = roomCode;
     connectWS(() => {
         currentRole = 'player';
+        stopLobbyPolling();
         sendWS({ type: 'join_game', room_code: roomCode, username: name });
     });
 }
@@ -2820,6 +3066,153 @@ function adminResetRoom() { ensureAudio(); sendWS({ type: 'admin_reset_room' });
 
 let latestAdminPlayers = {};
 let focusedPlayerId = null;
+
+// --- ADMIN LASER & CARD HIT ANIMATION ---
+const adminLaserCanvas = document.getElementById('admin-laser-canvas');
+const adminLaserCtx = adminLaserCanvas ? adminLaserCanvas.getContext('2d') : null;
+let adminLasers = [];
+
+function resizeAdminLaserCanvas() {
+    if (!adminLaserCanvas) return;
+    const area = adminLaserCanvas.parentElement;
+    if (!area) return;
+    adminLaserCanvas.width = Math.max(1, area.clientWidth);
+    adminLaserCanvas.height = Math.max(1, area.clientHeight);
+}
+
+function getCardCenterInAdminArea(pid) {
+    if (!pid || !adminLaserCanvas) return null;
+    const card = document.querySelector(`.screen-card[data-pid="${pid}"]`);
+    const area = adminLaserCanvas.parentElement;
+    if (!card || !area) return null;
+    const cRect = card.getBoundingClientRect();
+    const aRect = area.getBoundingClientRect();
+    if (cRect.width === 0 || cRect.height === 0) return null;
+    return {
+        x: (cRect.left - aRect.left) + (cRect.width / 2),
+        y: (cRect.top - aRect.top) + (cRect.height / 2)
+    };
+}
+
+function triggerAdminCardShake(pid) {
+    if (!pid) return;
+    const card = document.querySelector(`.screen-card[data-pid="${pid}"]`);
+    if (!card) return;
+    card.classList.remove('hit-shake');
+    void card.offsetWidth;
+    card.classList.add('hit-shake');
+    setTimeout(() => {
+        card.classList.remove('hit-shake');
+    }, 320);
+}
+
+function findAdminPlayerIdByName(name) {
+    if (!name || !latestAdminPlayers) return null;
+    const lower = String(name).toLowerCase();
+    for (const [pid, p] of Object.entries(latestAdminPlayers)) {
+        if (String(p.name || '').toLowerCase() === lower) return pid;
+    }
+    return null;
+}
+
+function launchAdminAttackLasers(fromId, targetIds, isDouble = false) {
+    resizeAdminLaserCanvas();
+    const targets = Array.isArray(targetIds) ? targetIds.filter(Boolean) : [];
+    if (!fromId || targets.length === 0) return;
+
+    targets.forEach((tid, idx) => {
+        adminLasers.push({
+            fromId,
+            toId: tid,
+            isDouble: !!isDouble,
+            progress: 0,
+            duration: 0.42 + idx * 0.05,
+            curveSign: (idx % 2 === 0 ? 1 : -1) * (0.22 + Math.random() * 0.14),
+            shaken: false
+        });
+    });
+}
+
+function renderAdminLasers(dtSec) {
+    if (!adminLaserCanvas || !adminLaserCtx) return;
+    adminLaserCtx.clearRect(0, 0, adminLaserCanvas.width, adminLaserCanvas.height);
+    if (adminLasers.length === 0) return;
+
+    const nextList = [];
+    for (const beam of adminLasers) {
+        beam.progress += dtSec / beam.duration;
+        const start = getCardCenterInAdminArea(beam.fromId);
+        const end = getCardCenterInAdminArea(beam.toId);
+
+        if (start && end) {
+            const t = Math.min(1, beam.progress);
+            const dx = end.x - start.x;
+            const dy = end.y - start.y;
+            const dist = Math.hypot(dx, dy) || 1;
+            const nx = -dy / dist;
+            const ny = dx / dist;
+            const arch = dist * beam.curveSign;
+            const ctrlX = (start.x + end.x) / 2 + nx * arch;
+            const ctrlY = (start.y + end.y) / 2 + ny * arch;
+
+            const drawEndT = Math.min(1, t * 1.25);
+            const drawStartT = Math.max(0, t - 0.35);
+
+            const sampleQuad = (u) => {
+                const inv = 1 - u;
+                return {
+                    x: inv * inv * start.x + 2 * inv * u * ctrlX + u * u * end.x,
+                    y: inv * inv * start.y + 2 * inv * u * ctrlY + u * u * end.y
+                };
+            };
+
+            const steps = 16;
+            adminLaserCtx.save();
+            adminLaserCtx.lineCap = 'round';
+            const alpha = t < 0.8 ? 1 : Math.max(0, (1 - t) / 0.2);
+            adminLaserCtx.globalAlpha = alpha;
+
+            adminLaserCtx.beginPath();
+            for (let s = 0; s <= steps; s++) {
+                const u = drawStartT + (drawEndT - drawStartT) * (s / steps);
+                const pt = sampleQuad(u);
+                if (s === 0) adminLaserCtx.moveTo(pt.x, pt.y);
+                else adminLaserCtx.lineTo(pt.x, pt.y);
+            }
+            adminLaserCtx.strokeStyle = beam.isDouble ? 'rgba(250, 204, 21, 0.45)' : 'rgba(248, 113, 113, 0.45)';
+            adminLaserCtx.lineWidth = beam.isDouble ? 9 : 7;
+            adminLaserCtx.stroke();
+
+            adminLaserCtx.beginPath();
+            for (let s = 0; s <= steps; s++) {
+                const u = drawStartT + (drawEndT - drawStartT) * (s / steps);
+                const pt = sampleQuad(u);
+                if (s === 0) adminLaserCtx.moveTo(pt.x, pt.y);
+                else adminLaserCtx.lineTo(pt.x, pt.y);
+            }
+            adminLaserCtx.strokeStyle = beam.isDouble ? '#fef08a' : '#fca5a5';
+            adminLaserCtx.lineWidth = beam.isDouble ? 3.5 : 2.5;
+            adminLaserCtx.stroke();
+
+            const tip = sampleQuad(drawEndT);
+            adminLaserCtx.beginPath();
+            adminLaserCtx.arc(tip.x, tip.y, beam.isDouble ? 6 : 4.5, 0, Math.PI * 2);
+            adminLaserCtx.fillStyle = beam.isDouble ? '#facc15' : '#ef4444';
+            adminLaserCtx.fill();
+
+            if (!beam.shaken && t >= 0.85) {
+                beam.shaken = true;
+                triggerAdminCardShake(beam.toId);
+            }
+            adminLaserCtx.restore();
+        }
+
+        if (beam.progress < 1) {
+            nextList.push(beam);
+        }
+    }
+    adminLasers = nextList;
+}
 
 function selectAdminFocus(pid) {
     if (!latestAdminPlayers[pid]) return;
@@ -2954,13 +3347,18 @@ function renderAdminGrid(ps) {
     keys.forEach(pid => {
         const p = latestAdminPlayers[pid];
         const quitter = isPlayerQuitter(p);
+        const armorCount = p.armor_charges || 0;
+        const hasArmor = !quitter && p.alive && armorCount > 0;
         const card = document.createElement('div');
         card.dataset.pid = pid;
-        card.className = 'screen-card ' + (quitter ? 'quitter' : (p.alive ? 'alive' : 'dead')) + (pid === focusedPlayerId ? ' focused' : '');
+        card.className = 'screen-card ' + (quitter ? 'quitter' : (p.alive ? 'alive' : 'dead')) + (hasArmor ? ' armor-active' : '') + (pid === focusedPlayerId ? ' focused' : '');
         card.onclick = () => selectAdminFocus(pid);
 
         const stText = quitter ? '🟨 Quitter' : (p.alive ? '🟢 Main' : '💀 KO');
         const stColor = quitter ? '#facc15' : (p.alive ? '#22c55e' : '#ef4444');
+        const armorBadge = hasArmor
+            ? `<div class="armor-pill-admin">🛡️ ARMOR ${armorCount}x</div>`
+            : '';
         const delBtn = p.is_bot
             ? `<button type="button" class="mini-del-btn" onclick="event.stopPropagation(); adminRemoveBot('${pid}')">✕ Hapus Bot</button>`
             : '';
@@ -2971,6 +3369,7 @@ function renderAdminGrid(ps) {
         card.innerHTML = `
             <div style="font-size:12px; font-weight:bold; width:100%; text-align:center; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${p.is_bot ? '🤖 ' : ''}${escapeHtml(p.name)}</div>
             <div style="font-size:10px; color:${stColor}; font-weight:bold;">${stText}</div>
+            ${armorBadge}
             <canvas id="m-${pid}" width="100" height="200"></canvas>
             <div class="screen-meta"><span>Skor: <b>${p.score || 0}</b></span><span>KO: <b>${p.ko || 0}</b></span></div>
             ${qBanner}
@@ -2982,15 +3381,23 @@ function renderAdminGrid(ps) {
 
     renderAdminScoreboard(latestAdminPlayers);
     renderAdminFocusPanel();
+    resizeAdminLaserCanvas();
 }
 
 function handleServerEvent(data) {
     if (data.type === 'error') {
         alert(data.message);
+        pendingPlayerCreateRoom = false;
         return;
     }
     if (data.type === 'room_created') {
         activeRoomCode = data.room_code;
+        if (pendingPlayerCreateRoom && currentRole === 'player') {
+            pendingPlayerCreateRoom = false;
+            isOnlineRoomHost = true;
+            sendWS({ type: 'join_game', room_code: activeRoomCode, username: myUsername });
+            return;
+        }
         document.getElementById('lobby-card').style.display = 'none';
         document.getElementById('player-view').style.display = 'none';
         document.getElementById('admin-view').style.display = 'block';
@@ -3001,6 +3408,7 @@ function handleServerEvent(data) {
     if (data.type === 'joined_room') {
         activeRoomCode = data.room_code;
         hasLeftArena = false;
+        isOnlineRoomHost = Boolean(data.is_host === true || data.host_id === clientId);
         document.getElementById('lobby-card').style.display = 'none';
         document.getElementById('admin-view').style.display = 'none';
         document.getElementById('player-view').style.display = 'flex';
@@ -3018,6 +3426,9 @@ function handleServerEvent(data) {
             syncBoard();
         }
         renderOpponents(data.players);
+        if (isOnlineRoomHost) {
+            addLog('player-log', `👑 Anda adalah Host Room <b>${escapeHtml(activeRoomCode)}</b>! Bisa tambah bot & klik <b>▶ Mulai Match</b>.`);
+        }
         return;
     }
     if (data.type === 'room_state') {
@@ -3029,6 +3440,10 @@ function handleServerEvent(data) {
         }
         renderAdminGrid(data.players);
         if (currentRole === 'player' && !hasLeftArena) {
+            if (data.host_id === clientId && !isOnlineRoomHost) {
+                isOnlineRoomHost = true;
+                applyModeVisibilityToPlayerView();
+            }
             renderOpponents(data.players);
         }
         return;
@@ -3088,6 +3503,19 @@ function handleServerEvent(data) {
         const msg = `⚡ <b>${escapeHtml(data.from_name)}</b> kirim <b>${data.lines}</b> baris${data.double_active ? ' (2x)' : ''}`;
         addLog('player-log', msg);
         addLog('admin-log', msg);
+        if (currentRole === 'admin') {
+            const attackerId = data.from_id || findAdminPlayerIdByName(data.from_name);
+            let targetList = Array.isArray(data.target_ids)
+                ? data.target_ids
+                : (data.target_id ? [data.target_id] : []);
+            if (targetList.length === 0 && attackerId && latestAdminPlayers) {
+                targetList = Object.keys(latestAdminPlayers).filter(pid => {
+                    const p = latestAdminPlayers[pid];
+                    return pid !== attackerId && p && p.alive && !isPlayerQuitter(p);
+                });
+            }
+            launchAdminAttackLasers(attackerId, targetList, !!data.double_active);
+        }
         return;
     }
     if (data.type === 'player_ko') {
