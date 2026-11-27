@@ -3602,6 +3602,84 @@ function drawPlayerBoard() {
     ctx.restore();
 }
 
+function advanceGameTick(dt) {
+    if (!isPlaying) {
+        dangerLevel = 0;
+        dangerFlashOn = false;
+        return;
+    }
+
+    dropC += dt * 1000;
+    const intervalMs = getDropIntervalMs();
+    while (isPlaying && dropC >= intervalMs) {
+        dropC -= intervalMs;
+        moveDown();
+    }
+
+    if (!isPlaying) return;
+
+    if (hasPowerupsInCurrentMode() && (gameMode === 'vsbot' || gameMode === 'online')) {
+        chargeTickC += dt;
+        if (chargeTickC >= 0.5) {
+            const steps = Math.floor(chargeTickC / 0.5);
+            chargeTickC -= steps * 0.5;
+            addItemCharge(0.5 * steps);
+        }
+    }
+
+    syncC += dt;
+    if (syncC > 0.05) {
+        syncC = 0;
+        syncBoardNow(true);
+    }
+
+    dangerLevel = computeDangerLevel();
+    if (dangerLevel > 0) {
+        dangerBlinkTimer += dt;
+        const blinkSpeed = dangerLevel === 3 ? 0.16 : (dangerLevel === 2 ? 0.28 : 0.45);
+        if (dangerBlinkTimer >= blinkSpeed) {
+            dangerBlinkTimer = 0;
+            dangerFlashOn = !dangerFlashOn;
+            if (dangerFlashOn) SFX.danger(dangerLevel);
+        }
+    } else {
+        dangerLevel = 0;
+        dangerBlinkTimer = 0;
+        dangerFlashOn = false;
+    }
+}
+
+let lastOnlineTickAt = Date.now();
+
+setInterval(() => {
+    const nowMs = Date.now();
+    const elapsedSec = Math.min(2.0, Math.max(0, (nowMs - lastOnlineTickAt) / 1000));
+    lastOnlineTickAt = nowMs;
+
+    if (!isPlaying || gameMode !== 'online' || elapsedSec <= 0) return;
+
+    advanceGameTick(elapsedSec);
+    if (hasPowerupsInCurrentMode()) {
+        refreshItemUI();
+    }
+}, 100);
+
+document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) {
+        lT = performance.now();
+        lastOnlineTickAt = Date.now();
+        if (gameMode === 'online') {
+            syncBoardNow(true);
+        }
+        if (hasPowerupsInCurrentMode()) {
+            refreshItemUI();
+        }
+        if (document.getElementById('player-view').style.display !== 'none') {
+            drawPlayerBoard();
+        }
+    }
+});
+
 function update(time = 0) {
     let dt = Math.min(0.1, (time - lT) / 1000 || 0);
     lT = time;
@@ -3612,46 +3690,8 @@ function update(time = 0) {
         renderAdminRealtime(dt);
     }
 
-    if (isPlaying) {
-        dropC += dt * 1000;
-        const intervalMs = getDropIntervalMs();
-        if (dropC > intervalMs) {
-            dropC = 0;
-            moveDown();
-        }
-
-        if (hasPowerupsInCurrentMode() && (gameMode === 'vsbot' || gameMode === 'online')) {
-            chargeTickC += dt;
-            if (chargeTickC >= 0.5) {
-                const steps = Math.floor(chargeTickC / 0.5);
-                chargeTickC -= steps * 0.5;
-                addItemCharge(0.5 * steps);
-            }
-        }
-
-        syncC += dt;
-        if (syncC > 0.05) {
-            syncC = 0;
-            syncBoardNow(true);
-        }
-
-        dangerLevel = computeDangerLevel();
-        if (dangerLevel > 0) {
-            dangerBlinkTimer += dt;
-            const blinkSpeed = dangerLevel === 3 ? 0.16 : (dangerLevel === 2 ? 0.28 : 0.45);
-            if (dangerBlinkTimer >= blinkSpeed) {
-                dangerBlinkTimer = 0;
-                dangerFlashOn = !dangerFlashOn;
-                if (dangerFlashOn) SFX.danger(dangerLevel);
-            }
-        } else {
-            dangerLevel = 0;
-            dangerBlinkTimer = 0;
-            dangerFlashOn = false;
-        }
-    } else {
-        dangerLevel = 0;
-        dangerFlashOn = false;
+    if (gameMode !== 'online') {
+        advanceGameTick(dt);
     }
 
     uiC += dt;
