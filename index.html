@@ -679,7 +679,6 @@
             gap: 6px;
         }
 
-        /* KONTROL ARAH DIPERBESAR + DROP KECIL DI SEBELAH KIRI PUTAR */
         .mobile-controls {
             display: flex;
             justify-content: space-between;
@@ -2581,8 +2580,13 @@ function handleServerMessage(data) {
     if (data.type === 'charge_update') {
         if (currentRole === 'player' && hasPowerupsInCurrentMode()) {
             const wasFull = itemTokens > 0 || itemCharge >= 100;
-            itemCharge = Math.max(0, Math.min(100, Number(data.charge ?? itemCharge)));
+            const serverCharge = Math.max(0, Math.min(100, Number(data.charge ?? itemCharge)));
+            itemCharge = Math.max(itemCharge, serverCharge);
             itemTokens = Number(data.item_tokens ?? (itemCharge >= 100 ? 1 : 0));
+            if (itemCharge >= 100) {
+                itemCharge = 100;
+                itemTokens = 1;
+            }
             if ((itemTokens > 0 || itemCharge >= 100) && (!wasFull || data.full_now)) {
                 SFX.block();
                 addLog('player-log', '✨ CHARGE 100%! Pilih power-up yang menyala!');
@@ -3616,7 +3620,7 @@ function update(time = 0) {
             moveDown();
         }
 
-        if (hasPowerupsInCurrentMode() && gameMode === 'vsbot') {
+        if (hasPowerupsInCurrentMode() && (gameMode === 'vsbot' || gameMode === 'online')) {
             chargeTickC += dt;
             if (chargeTickC >= 0.5) {
                 const steps = Math.floor(chargeTickC / 0.5);
