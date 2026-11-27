@@ -528,7 +528,6 @@ async def broadcast_room_state(room_code: str):
         state_str = "waiting"
 
     players_with_grid = get_room_players_summary(room_code, include_grid=True)
-    players_no_grid = get_room_players_summary(room_code, include_grid=False)
 
     await send_to_admins(room_code, {
         "type": "room_state",
@@ -547,7 +546,7 @@ async def broadcast_room_state(room_code: str):
         "state": state_str,
         "active": room.get("active", False),
         "countdown": room.get("countdown"),
-        "players": players_no_grid,
+        "players": players_with_grid,
     })
     for pid, p in list(room["players"].items()):
         if p.get("is_bot") or not p.get("connected") or not p.get("ws"):
@@ -590,6 +589,26 @@ async def send_to_admins(room_code: str, message: dict):
             dead_admins.append(aid)
     for aid in dead_admins:
         room["admins"].pop(aid, None)
+
+
+async def send_spectator_frame_to_room(room_code: str, message: dict):
+    room = rooms.get(room_code)
+    if not room:
+        return
+    await send_to_admins(room_code, message)
+    payload = json.dumps(message)
+    for pid, p in list(room["players"].items()):
+        if p.get("is_bot") or not p.get("connected") or not p.get("ws"):
+            continue
+        # Kirim frame pantau ke pemain yang sudah KO / tidak aktif main
+        if not p.get("alive") or not room.get("active"):
+            try:
+                await p["ws"].send_text(payload)
+            except Exception:
+                p["connected"] = False
+                p["quitter"] = True
+                p["alive"] = False
+                p["ws"] = None
 
 
 def reassign_host_if_needed(room: dict, leaving_id: str):
@@ -723,7 +742,7 @@ async def perform_attack(room_code: str, attacker_id: str, lines: int, client_do
             if bot_collide(target_player["board"], cur["shape"], cur["x"], cur["y"]):
                 target_player["cur_piece"] = None
 
-        await send_to_admins(room_code, {
+        await send_spectator_frame_to_room(room_code, {
             "type": "admin_screen_update",
             "pid": target_id,
             "name": target_player["name"],
@@ -946,8 +965,8 @@ async def game_loop():
                     "grid": compute_bot_view_grid(p),
                 })
 
-            if admin_frames and loop_idx % 3 == 0:
-                await send_to_admins(room_code, {
+            if admin_frames and loop_idx % 2 == 0:
+                await send_spectator_frame_to_room(room_code, {
                     "type": "admin_batch_update",
                     "frames": admin_frames,
                 })
@@ -1083,7 +1102,7 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                         "alive": True,
                         "is_host": True,
                         "host_id": client_id,
-                        "players": get_room_players_summary(room_code, include_grid=False),
+                        "players": get_room_players_summary(room_code, include_grid=True),
                     }))
                     await broadcast_room_state(room_code)
                 else:
@@ -1297,7 +1316,7 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                     "alive": can_play_now,
                     "is_host": room.get("host_id") == client_id,
                     "host_id": room.get("host_id"),
-                    "players": get_room_players_summary(room_code, include_grid=False),
+                    "players": get_room_players_summary(room_code, include_grid=True),
                 }))
                 await broadcast_room_state(room_code)
 
@@ -1363,7 +1382,7 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                     if isinstance(data.get("grid"), list) and len(data["grid"]) == ROWS:
                         p["grid"] = data["grid"]
 
-                    await send_to_admins(current_room, {
+                    await send_spectator_frame_to_room(current_room, {
                         "type": "admin_screen_update",
                         "pid": client_id,
                         "name": p["name"],
