@@ -113,6 +113,15 @@ def bot_is_critical(board: List[List[int]]) -> bool:
     return False
 
 
+def is_room_controller(room: dict, client_id: str) -> bool:
+    return client_id in room.get("admins", {}) or client_id == room.get("host_id")
+
+
+def is_double_active_now(player: dict, now_ts: Optional[float] = None) -> bool:
+    ts = time.time() if now_ts is None else now_ts
+    return float(player.get("double_until", 0.0)) > ts
+
+
 async def bot_use_powerup(room_code: str, bot_id: str, bot: dict):
     room = rooms.get(room_code)
     if not room or not room.get("active") or not bot.get("alive"):
@@ -130,23 +139,32 @@ async def bot_use_powerup(room_code: str, bot_id: str, bot: dict):
 
     if choice == "armor":
         bot["armor_charges"] = 3
+        msg = f"🛡️ {bot['name']} mengaktifkan ARMOR (tahan 3 serangan)!"
         await broadcast_to_room(room_code, {
             "type": "attack_log",
-            "msg": f"🛡️ {bot['name']} mengaktifkan ARMOR (tahan 3 serangan)!",
+            "msg": msg,
+            "from_id": bot_id,
+            "from_name": bot["name"],
             "target_id": bot_id,
+            "target_ids": [bot_id],
+            "lines": 0,
+            "double_active": False,
         })
     else:
         bot["double_until"] = time.time() + DOUBLE_DURATION_SEC
+        msg = f"⚡ {bot['name']} mengaktifkan DOUBLE ATTACK selama {int(DOUBLE_DURATION_SEC)} detik!"
         await broadcast_to_room(room_code, {
             "type": "attack_log",
-            "msg": f"⚡ {bot['name']} mengaktifkan DOUBLE ATTACK selama {int(DOUBLE_DURATION_SEC)} detik!",
+            "msg": msg,
+            "from_id": bot_id,
+            "from_name": bot["name"],
             "target_id": bot_id,
+            "target_ids": [bot_id],
+            "lines": 0,
+            "double_active": True,
         })
 
-    await broadcast_to_room(room_code, {
-        "type": "lobby_update",
-        "players": get_room_players_summary(room_code, include_grid=False),
-    })
+    await broadcast_room_state(room_code)
 
 
 def evaluate_board(board: List[List[int]], lines_cleared: int) -> float:
@@ -262,11 +280,6 @@ def pick_smart_human_target(bot: dict):
     }
 
 
-def is_double_active_now(player: dict, now_ts: Optional[float] = None) -> bool:
-    ts = time.time() if now_ts is None else now_ts
-    return float(player.get("double_until", 0.0)) > ts
-
-
 def get_room_players_summary(room_code: str, include_grid: bool = False):
     room = rooms.get(room_code)
     if not room:
@@ -285,6 +298,7 @@ def get_room_players_summary(room_code: str, include_grid: bool = False):
             "ko": p["ko"],
             "score": p["score"],
             "armor_charges": p.get("armor_charges", 0),
+            "double_active": rem_dbl > 0,
             "double_remaining": round(rem_dbl, 1),
             "charge": round(float(p.get("charge", 0.0)), 1),
         }
@@ -299,7 +313,8 @@ def get_lobby_list():
     for code, room in rooms.items():
         has_admin = len(room.get("admins", {})) > 0
         has_players = len(room.get("players", {})) > 0
-        if not has_admin and not has_players:
+        has_host = bool(room.get("host_id"))
+        if not has_admin and not has_players and not has_host:
             continue
 
         if room.get("active"):
@@ -354,6 +369,7 @@ def compute_podium(room: dict, winner_id: Optional[str]):
         w = room["players"][winner_id]
         podium.append({
             "rank": 1,
+            "id": winner_id,
             "pid": winner_id,
             "name": w["name"],
             "is_bot": w.get("is_bot", False),
@@ -371,6 +387,7 @@ def compute_podium(room: dict, winner_id: Optional[str]):
             break
         podium.append({
             "rank": next_rank,
+            "id": pid,
             "pid": pid,
             "name": p["name"],
             "is_bot": p.get("is_bot", False),
@@ -414,6 +431,43 @@ async def broadcast_to_room(room_code: str, message: dict, exclude_id: Optional[
             room["admins"].pop(aid, None)
 
 
+async def broadcast_room_state(room_code: str):
+    room = rooms.get(room_code)
+    if not room:
+        return
+    state_str = "playing" if room.get("active") else ("finished" if room.get("last_winner") else "waiting")
+    players_with_grid = get_room_players_summary(room_code, include_grid=True)
+    players_no_grid = get_room_players_summary(room_code, include_grid=False)
+
+    await send_to_admins(room_code, {
+        "type": "room_state",
+        "room_code": room_code,
+        "host_id": room.get("host_id"),
+        "state": state_str,
+        "active": room.get("active", False),
+        "players": players_with_grid,
+    })
+
+    payload = json.dumps({
+        "type": "room_state",
+        "room_code": room_code,
+        "host_id": room.get("host_id"),
+        "state": state_str,
+        "active": room.get("active", False),
+        "players": players_no_grid,
+    })
+    for pid, p in list(room["players"].items()):
+        if p.get("is_bot") or not p.get("connected") or not p.get("ws"):
+            continue
+        try:
+            await p["ws"].send_text(payload)
+        except Exception:
+            p["connected"] = False
+            p["quitter"] = True
+            p["alive"] = False
+            p["ws"] = None
+
+
 async def send_to_player(room_code: str, player_id: str, message: dict):
     room = rooms.get(room_code)
     if not room or player_id not in room["players"]:
@@ -445,6 +499,18 @@ async def send_to_admins(room_code: str, message: dict):
         room["admins"].pop(aid, None)
 
 
+def reassign_host_if_needed(room: dict, leaving_id: str):
+    if room.get("host_id") == leaving_id:
+        next_host = next(
+            (
+                pid for pid, p in room.get("players", {}).items()
+                if pid != leaving_id and not p.get("is_bot") and p.get("connected", True) and not p.get("quitter", False)
+            ),
+            None,
+        )
+        room["host_id"] = next_host
+
+
 async def mark_player_quit(room_code: str, player_id: str, reason_msg: Optional[str] = None):
     room = rooms.get(room_code)
     if not room or player_id not in room["players"]:
@@ -462,6 +528,7 @@ async def mark_player_quit(room_code: str, player_id: str, reason_msg: Optional[
     p["quitter"] = True
     p["alive"] = False
     p["ws"] = None
+    reassign_host_if_needed(room, player_id)
 
     if already_quitter:
         if room.get("active"):
@@ -475,14 +542,7 @@ async def mark_player_quit(room_code: str, player_id: str, reason_msg: Optional[
         "type": "attack_log",
         "msg": reason_msg or f"🟨 {left_name} keluar arena (QUITTER - tampil sampai ronde selesai/reset).",
     })
-    await broadcast_to_room(room_code, {
-        "type": "lobby_update",
-        "players": get_room_players_summary(room_code, include_grid=False),
-    })
-    await send_to_admins(room_code, {
-        "type": "admin_players_sync",
-        "players": get_room_players_summary(room_code, include_grid=True),
-    })
+    await broadcast_room_state(room_code)
 
     if room.get("active"):
         await check_winner(room_code)
@@ -544,12 +604,14 @@ async def perform_attack(room_code: str, attacker_id: str, lines: int, client_do
         await broadcast_to_room(room_code, {
             "type": "attack_log",
             "msg": f"🛡️ Armor {target_name} menangkis {garbage_count} baris{dbl_tag} dari {attacker_name}! (Sisa {rem}x)",
+            "from_id": attacker_id,
+            "from_name": attacker_name,
             "target_id": target_id,
+            "target_ids": [target_id],
+            "lines": garbage_count,
+            "double_active": dbl_active,
         })
-        await broadcast_to_room(room_code, {
-            "type": "lobby_update",
-            "players": get_room_players_summary(room_code, include_grid=False),
-        })
+        await broadcast_room_state(room_code)
         return
 
     await send_to_player(room_code, target_id, {
@@ -581,7 +643,12 @@ async def perform_attack(room_code: str, attacker_id: str, lines: int, client_do
     await broadcast_to_room(room_code, {
         "type": "attack_log",
         "msg": f"⚡ {attacker_name} mengirim {garbage_count} baris sampah{dbl_tag} ke {target_name}!",
+        "from_id": attacker_id,
+        "from_name": attacker_name,
         "target_id": target_id,
+        "target_ids": [target_id],
+        "lines": garbage_count,
+        "double_active": dbl_active,
     })
 
 
@@ -611,17 +678,7 @@ async def eliminate_player(room_code: str, victim_id: str, killer_id: Optional[s
         })
 
     record_stat(victim_name, win=0, ko=victim["ko"], score=victim["score"])
-
-    await broadcast_to_room(room_code, {
-        "type": "lobby_update",
-        "players": get_room_players_summary(room_code, include_grid=False),
-    })
-
-    await send_to_admins(room_code, {
-        "type": "admin_players_sync",
-        "players": get_room_players_summary(room_code, include_grid=True),
-    })
-
+    await broadcast_room_state(room_code)
     await check_winner(room_code)
 
 
@@ -794,12 +851,14 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
             if event == "create_room":
                 custom_code = str(data.get("room_code", "")).strip().upper()[:8]
                 room_code = custom_code if custom_code else generate_room_code()
+                as_player = bool(data.get("as_player", False))
+                host_username = str(data.get("username", "")).strip()[:15] or f"Host_{client_id[:4]}"
 
                 if room_code in rooms:
                     old_room = rooms[room_code]
                     old_payload = json.dumps({
                         "type": "room_closed",
-                        "msg": f"Room '{room_code}' di-reset oleh Admin baru.",
+                        "msg": f"Room '{room_code}' di-reset oleh Admin/Host baru.",
                     })
                     for _, p in list(old_room.get("players", {}).items()):
                         if not p.get("is_bot") and p.get("ws"):
@@ -814,26 +873,70 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                             except Exception:
                                 pass
 
-                rooms[room_code] = {
-                    "active": False,
-                    "last_winner": None,
-                    "admins": {client_id: websocket},
-                    "players": {},
-                }
-                current_room = room_code
-                role = "admin"
+                if as_player:
+                    rooms[room_code] = {
+                        "active": False,
+                        "last_winner": None,
+                        "host_id": client_id,
+                        "admins": {},
+                        "players": {
+                            client_id: {
+                                "ws": websocket,
+                                "is_bot": False,
+                                "connected": True,
+                                "quitter": False,
+                                "name": host_username,
+                                "alive": True,
+                                "score": 0,
+                                "ko": 0,
+                                "grid": empty_grid(),
+                                "last_attacker_id": None,
+                                "last_target_id": None,
+                                "double_until": 0.0,
+                                "armor_charges": 0,
+                                "charge": 0.0,
+                            }
+                        },
+                    }
+                    current_room = room_code
+                    role = "player"
 
-                await websocket.send_text(json.dumps({
-                    "type": "room_created",
-                    "room_code": room_code,
-                    "active": False,
-                    "players": {},
-                }))
+                    await websocket.send_text(json.dumps({
+                        "type": "joined_room",
+                        "room_code": room_code,
+                        "state": "waiting",
+                        "active": False,
+                        "alive": True,
+                        "is_host": True,
+                        "host_id": client_id,
+                        "players": get_room_players_summary(room_code, include_grid=False),
+                    }))
+                    await broadcast_room_state(room_code)
+                else:
+                    rooms[room_code] = {
+                        "active": False,
+                        "last_winner": None,
+                        "host_id": None,
+                        "admins": {client_id: websocket},
+                        "players": {},
+                    }
+                    current_room = room_code
+                    role = "admin"
+
+                    await websocket.send_text(json.dumps({
+                        "type": "room_created",
+                        "room_code": room_code,
+                        "active": False,
+                        "players": {},
+                    }))
 
             elif event == "admin_add_bot":
-                if role != "admin" or not current_room or current_room not in rooms:
+                if not current_room or current_room not in rooms:
                     continue
                 room = rooms[current_room]
+                if not is_room_controller(room, client_id):
+                    continue
+
                 bot_id = f"bot_{bot_counter}"
                 bot_name = f"Bot_{bot_counter}"
                 bot_counter += 1
@@ -858,22 +961,16 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                     "charge": 0.0,
                 }
 
-                await broadcast_to_room(current_room, {
-                    "type": "lobby_update",
-                    "players": get_room_players_summary(current_room, include_grid=False),
-                })
-
-                await send_to_admins(current_room, {
-                    "type": "admin_players_sync",
-                    "players": get_room_players_summary(current_room, include_grid=True),
-                })
+                await broadcast_room_state(current_room)
 
             elif event == "admin_remove_bot":
-                if role != "admin" or not current_room or current_room not in rooms:
+                if not current_room or current_room not in rooms:
                     continue
                 room = rooms[current_room]
-                target_bot_id = data.get("bot_id")
+                if not is_room_controller(room, client_id):
+                    continue
 
+                target_bot_id = data.get("bot_id")
                 if not target_bot_id:
                     bot_ids = [pid for pid, p in room["players"].items() if p.get("is_bot")]
                     target_bot_id = bot_ids[-1] if bot_ids else None
@@ -882,32 +979,28 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                     removed_name = room["players"][target_bot_id]["name"]
                     del room["players"][target_bot_id]
 
-                    await send_to_admins(current_room, {
+                    await broadcast_to_room(current_room, {
                         "type": "attack_log",
                         "msg": f"🤖 {removed_name} dihapus dari room.",
                     })
-                    await broadcast_to_room(current_room, {
-                        "type": "lobby_update",
-                        "players": get_room_players_summary(current_room, include_grid=False),
-                    })
-                    await send_to_admins(current_room, {
-                        "type": "admin_players_sync",
-                        "players": get_room_players_summary(current_room, include_grid=True),
-                    })
+                    await broadcast_room_state(current_room)
                     await check_winner(current_room)
 
             elif event == "admin_start_match":
-                if role != "admin" or not current_room or current_room not in rooms:
+                if not current_room or current_room not in rooms:
                     continue
                 room = rooms[current_room]
+                if not is_room_controller(room, client_id):
+                    continue
+
                 active_participants = [
                     pid for pid, p in room["players"].items()
                     if p.get("is_bot") or (p.get("connected", True) and not p.get("quitter", False))
                 ]
                 if len(active_participants) < 2:
                     await websocket.send_text(json.dumps({
-                        "type": "system_msg",
-                        "msg": "Minimal butuh 2 peserta aktif (pemain atau bot) untuk mulai Battle Royale!",
+                        "type": "error",
+                        "message": "Minimal butuh 2 peserta aktif (pemain atau bot) untuk mulai Battle Royale!",
                     }))
                     continue
 
@@ -936,11 +1029,15 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                     "type": "match_started",
                     "players": get_room_players_summary(current_room, include_grid=True),
                 })
+                await broadcast_room_state(current_room)
 
             elif event == "admin_reset_room":
-                if role != "admin" or not current_room or current_room not in rooms:
+                if not current_room or current_room not in rooms:
                     continue
                 room = rooms[current_room]
+                if not is_room_controller(room, client_id):
+                    continue
+
                 room["active"] = False
                 room["last_winner"] = None
                 for pid, p in list(room["players"].items()):
@@ -965,6 +1062,7 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                     "type": "room_reset",
                     "players": get_room_players_summary(current_room, include_grid=True),
                 })
+                await broadcast_room_state(current_room)
 
             elif event == "join_game":
                 room_code = str(data.get("room_code", "")).strip().upper()
@@ -972,21 +1070,23 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
 
                 if room_code not in rooms:
                     await websocket.send_text(json.dumps({
-                        "type": "join_error",
-                        "msg": f"Room '{room_code}' tidak ditemukan! Pilih room yang tersedia atau minta kode ke Admin.",
+                        "type": "error",
+                        "message": f"Room '{room_code}' tidak ditemukan! Pilih room yang tersedia atau buat room baru.",
                     }))
                     continue
 
                 room = rooms[room_code]
 
                 duplicate_name = any(
-                    pid != client_id and p["name"].lower() == username.lower() and (p.get("is_bot") or (p.get("connected", True) and not p.get("quitter", False)))
+                    pid != client_id
+                    and p["name"].lower() == username.lower()
+                    and (p.get("is_bot") or (p.get("connected", True) and not p.get("quitter", False)))
                     for pid, p in room["players"].items()
                 )
                 if duplicate_name:
                     await websocket.send_text(json.dumps({
-                        "type": "join_error",
-                        "msg": f"Nama '{username}' sudah dipakai peserta lain di room ini. Gunakan nama lain!",
+                        "type": "error",
+                        "message": f"Nama '{username}' sudah dipakai peserta lain di room ini. Gunakan nama lain!",
                     }))
                     continue
 
@@ -1018,25 +1118,25 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                     }
                     can_play_now = not is_mid_game
 
+                if not room.get("host_id") and not room.get("admins"):
+                    room["host_id"] = client_id
+
                 current_room = room_code
                 role = "player"
+                state_str = "playing" if room["active"] else ("finished" if room.get("last_winner") else "waiting")
 
                 await websocket.send_text(json.dumps({
-                    "type": "joined_success",
+                    "type": "joined_room",
                     "room_code": room_code,
+                    "state": state_str,
                     "active": room["active"],
                     "alive": can_play_now,
+                    "is_host": room.get("host_id") == client_id,
+                    "host_id": room.get("host_id"),
+                    "players": get_room_players_summary(room_code, include_grid=False),
                 }))
 
-                await broadcast_to_room(room_code, {
-                    "type": "lobby_update",
-                    "players": get_room_players_summary(room_code, include_grid=False),
-                })
-
-                await send_to_admins(room_code, {
-                    "type": "admin_players_sync",
-                    "players": get_room_players_summary(room_code, include_grid=True),
-                })
+                await broadcast_room_state(room_code)
 
             elif event == "player_quit":
                 if role == "player" and current_room and current_room in rooms:
@@ -1062,10 +1162,7 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                         "type": "attack_log",
                         "msg": f"🛡️ {p['name']} mengaktifkan ARMOR (tahan 3 serangan)!",
                     })
-                    await broadcast_to_room(current_room, {
-                        "type": "lobby_update",
-                        "players": get_room_players_summary(current_room, include_grid=False),
-                    })
+                    await broadcast_room_state(current_room)
                 elif item_type == "double":
                     p["double_until"] = time.time() + DOUBLE_DURATION_SEC
                     p["charge"] = 0.0
@@ -1078,12 +1175,14 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                         "type": "attack_log",
                         "msg": f"⚡ {p['name']} mengaktifkan DOUBLE ATTACK selama {int(DOUBLE_DURATION_SEC)} detik!",
                     })
+                    await broadcast_room_state(current_room)
                 elif item_type == "breaker":
                     p["charge"] = 0.0
                     await broadcast_to_room(current_room, {
                         "type": "attack_log",
                         "msg": f"💥 {p['name']} mengaktifkan BREAKER (menghapus baris tumpukan)!",
                     })
+                    await broadcast_room_state(current_room)
 
             elif event == "update_board":
                 if role != "player" or not current_room or current_room not in rooms:
@@ -1103,6 +1202,7 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                         "ko": p["ko"],
                         "grid": p["grid"],
                     })
+                    await broadcast_room_state(current_room)
 
             elif event == "line_cleared":
                 if role != "player" or not current_room or current_room not in rooms:
@@ -1154,7 +1254,7 @@ async def check_winner(room_code: str):
         podium = compute_podium(room, winner_id)
 
         await broadcast_to_room(room_code, {
-            "type": "match_over",
+            "type": "match_finished",
             "winner": winner["name"],
             "ko": winner["ko"],
             "score": winner["score"],
@@ -1183,7 +1283,7 @@ async def check_winner(room_code: str):
             record_stat(w["name"], win=1, ko=w["ko"], score=w["score"])
 
         await broadcast_to_room(room_code, {
-            "type": "match_over",
+            "type": "match_finished",
             "winner": winner_name,
             "ko": ranked[0][1]["ko"] if ranked else 0,
             "score": ranked[0][1]["score"] if ranked else 0,
