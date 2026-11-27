@@ -1350,6 +1350,9 @@ const COLS = 10, ROWS = 20;
 let BLOCK_SIZE = 16;
 const DANGER_ROW_THRESHOLD = 4;
 
+const AWAY_QUIT_TIMEOUT_MS = 30000;
+let awaySinceMs = null;
+
 let gameMode = 'solo';
 let isOnlineRoomHost = false;
 let pendingPlayerCreateRoom = false;
@@ -1789,6 +1792,7 @@ function dedupPlayerMap(playersObj) {
             } else {
                 byName.set(key, [prevPid, {
                     ...prevP,
+                    ...p,
                     score: Math.max(curScore, prevScore),
                     ko: Math.max(curKo, prevKo),
                 }]);
@@ -1892,6 +1896,7 @@ function stopLocalBotLoop() {
 
 function resetPlayerStateForNewMatch(keepBots = false) {
     stopLocalBotLoop();
+    awaySinceMs = null;
     grid = createEmptyGrid();
     nextPieceId = rollRandomPieceId();
     score = 0;
@@ -2353,11 +2358,26 @@ function sendQuitSignal(useBeacon = false) {
     }
 }
 
+function markLeftArenaByAwayTimeout() {
+    if (currentRole !== 'player' || gameMode !== 'online' || hasLeftArena) return;
+    isPlaying = false;
+    piece = null;
+    awaySinceMs = null;
+    sendQuitSignal(true);
+    const stEl = document.getElementById('p-status');
+    if (stEl) {
+        stEl.innerText = '🟨 Keluar (>30s)';
+        stEl.style.color = '#facc15';
+    }
+    addLog('player-log', '🟨 Meninggalkan game lebih dari 30 detik — dianggap keluar dari permainan.');
+}
+
 window.addEventListener('pagehide', () => sendQuitSignal(true));
 window.addEventListener('beforeunload', () => sendQuitSignal(true));
 
 function exitToLobby() {
     stopLocalBotLoop();
+    awaySinceMs = null;
     if (currentRole === 'player') {
         sendQuitSignal(true);
     } else if (socket) {
@@ -2648,6 +2668,7 @@ function handleServerMessage(data) {
             score = 0; soloLevel = 1; totalLinesCleared = 0; playerKoCount = 0;
             updateLevelDisplay();
             pendingGarbage = 0; armorCharges = 0; doubleExpiresAt = 0; itemTokens = 0; itemCharge = 0;
+            awaySinceMs = null;
             resetVisualEffects();
             isPlaying = true;
             piece = newPiece();
@@ -2720,6 +2741,7 @@ function handleServerMessage(data) {
             score = 0; soloLevel = 1; totalLinesCleared = 0; playerKoCount = 0;
             updateLevelDisplay();
             pendingGarbage = 0; lastAttackerId = null; armorCharges = 0; doubleExpiresAt = 0; itemTokens = 0; itemCharge = 0;
+            awaySinceMs = document.hidden ? Date.now() : null;
             resetVisualEffects();
             if (canPlay) {
                 isPlaying = true;
@@ -2756,6 +2778,7 @@ function handleServerMessage(data) {
         if (currentRole === 'player') {
             isPlaying = false;
             piece = null;
+            awaySinceMs = null;
             grid = createEmptyGrid();
             nextPieceId = rollRandomPieceId();
             drawNextPiecePreview();
@@ -2845,6 +2868,7 @@ function handleServerMessage(data) {
 
     if (data.type === 'match_finished') {
         countdownLabelText = '';
+        awaySinceMs = null;
         SFX.win();
         launchConfetti(85);
         if (currentRole === 'player') {
@@ -3331,6 +3355,7 @@ function checkTopOut() {
     if (grid[0].some(v => v !== 0)) {
         isPlaying = false;
         piece = null;
+        awaySinceMs = null;
         setKoOverlay(true);
         SFX.ko();
         vibrate(80);
@@ -3392,6 +3417,7 @@ function moveDown() {
         if (collide(piece.x, piece.y)) {
             isPlaying = false;
             piece = null;
+            awaySinceMs = null;
             setKoOverlay(true);
             SFX.ko();
             document.getElementById('p-status').innerText = '💀 Eliminasi';
@@ -3459,7 +3485,7 @@ document.addEventListener('keydown', e => {
 });
 
 function syncBoardNow(force = true) {
-    if (currentRole !== 'player' || gameMode !== 'online') return;
+    if (currentRole !== 'player' || gameMode !== 'online' || hasLeftArena) return;
     sendWS({
         type: 'update_board',
         grid: grid,
@@ -3640,7 +3666,7 @@ function advanceGameTick(dt) {
         if (dangerBlinkTimer >= blinkSpeed) {
             dangerBlinkTimer = 0;
             dangerFlashOn = !dangerFlashOn;
-            if (dangerFlashOn) SFX.danger(dangerLevel);
+            if (!document.hidden && dangerFlashOn) SFX.danger(dangerLevel);
         }
     } else {
         dangerLevel = 0;
@@ -3656,7 +3682,23 @@ setInterval(() => {
     const elapsedSec = Math.min(2.0, Math.max(0, (nowMs - lastOnlineTickAt) / 1000));
     lastOnlineTickAt = nowMs;
 
-    if (!isPlaying || gameMode !== 'online' || elapsedSec <= 0) return;
+    if (currentRole !== 'player' || gameMode !== 'online' || hasLeftArena) {
+        awaySinceMs = null;
+        return;
+    }
+
+    if (document.hidden && isPlaying) {
+        if (awaySinceMs === null) {
+            awaySinceMs = nowMs;
+        } else if (nowMs - awaySinceMs >= AWAY_QUIT_TIMEOUT_MS) {
+            markLeftArenaByAwayTimeout();
+            return;
+        }
+    } else if (!document.hidden) {
+        awaySinceMs = null;
+    }
+
+    if (!isPlaying || elapsedSec <= 0) return;
 
     advanceGameTick(elapsedSec);
     if (hasPowerupsInCurrentMode()) {
@@ -3665,10 +3707,22 @@ setInterval(() => {
 }, 100);
 
 document.addEventListener('visibilitychange', () => {
-    if (!document.hidden) {
+    const nowMs = Date.now();
+    if (document.hidden) {
+        if (currentRole === 'player' && gameMode === 'online' && isPlaying && !hasLeftArena && awaySinceMs === null) {
+            awaySinceMs = nowMs;
+        }
+    } else {
+        if (currentRole === 'player' && gameMode === 'online' && isPlaying && !hasLeftArena && awaySinceMs !== null) {
+            if (nowMs - awaySinceMs >= AWAY_QUIT_TIMEOUT_MS) {
+                markLeftArenaByAwayTimeout();
+                return;
+            }
+        }
+        awaySinceMs = null;
         lT = performance.now();
-        lastOnlineTickAt = Date.now();
-        if (gameMode === 'online') {
+        lastOnlineTickAt = nowMs;
+        if (gameMode === 'online' && !hasLeftArena) {
             syncBoardNow(true);
         }
         if (hasPowerupsInCurrentMode()) {
