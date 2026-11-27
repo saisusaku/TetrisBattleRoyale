@@ -5,237 +5,209 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Tetris Battle Royale</title>
     <style>
-        * {
-            box-sizing: border-box;
-            -webkit-tap-highlight-color: transparent;
-        }
-        html, body {
-            width: 100%;
-            max-width: 100%;
-            overflow-x: hidden;
-        }
+        * { box-sizing: border-box; user-select: none; -webkit-user-select: none; }
         body {
+            margin: 0;
+            padding: 8px;
             background: #0f172a;
             color: #f8fafc;
-            font-family: system-ui, -apple-system, sans-serif;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             display: flex;
             flex-direction: column;
             align-items: center;
-            margin: 0;
-            padding: 6px 8px 10px 8px;
-            min-height: 100dvh;
-            touch-action: manipulation;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        .confetti-layer {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 999;
+            overflow: hidden;
+        }
+        .confetti-piece {
+            position: fixed;
+            top: -16px;
+            border-radius: 2px;
+            animation: confettiFall linear forwards;
+        }
+        @keyframes confettiFall {
+            0% {
+                transform: translate3d(0, -10px, 0) rotate(0deg);
+                opacity: 1;
+            }
+            100% {
+                transform: translate3d(var(--drift, 0px), 105vh, 0) rotate(var(--spin, 720deg));
+                opacity: 0;
+            }
         }
         .header-bar {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 8px;
-            margin: 0 0 6px 0;
             width: 100%;
-            max-width: 780px;
-            flex-shrink: 0;
+            max-width: 1420px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            gap: 8px;
         }
-        h2 {
+        .header-bar h2 {
             margin: 0;
-            font-size: 15px;
+            font-size: 18px;
+            letter-spacing: 0.5px;
         }
         .mute-btn {
             background: #1e293b;
             color: #f8fafc;
             border: 1px solid #475569;
+            padding: 6px 12px;
             border-radius: 8px;
-            padding: 4px 10px;
-            font-size: 11px;
+            font-size: 12px;
+            font-weight: 700;
             cursor: pointer;
-            flex-shrink: 0;
         }
-        .mute-btn:hover { background: #334155; }
-
         .card {
-            background: #1e293b;
-            padding: 16px;
-            border-radius: 12px;
             width: 100%;
-            max-width: 520px;
+            max-width: 440px;
+            background: #1e293b;
             border: 1px solid #334155;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+            border-radius: 12px;
+            padding: 14px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.35);
         }
         .tabs {
-            display: flex;
-            flex-wrap: wrap;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
             gap: 6px;
             margin-bottom: 12px;
         }
         .tab-btn {
-            flex: 1 1 46%;
             background: #0f172a;
             color: #94a3b8;
             border: 1px solid #334155;
-            padding: 8px 6px;
             border-radius: 8px;
+            padding: 8px 4px;
+            font-size: 11px;
+            font-weight: 700;
             cursor: pointer;
-            font-weight: bold;
-            font-size: 12px;
         }
         .tab-btn.active {
-            background: #2563eb;
-            color: white;
-            border-color: #3b82f6;
+            background: #0284c7;
+            color: #ffffff;
+            border-color: #38bdf8;
         }
-        input, select {
-            width: 100%;
-            padding: 10px;
-            border-radius: 8px;
-            border: 1px solid #475569;
-            background: #0f172a;
-            color: white;
-            font-size: 14px;
-            margin-bottom: 10px;
-        }
-        button.primary {
-            background: #2563eb;
-            color: white;
-            border: none;
-            padding: 11px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: bold;
-            font-size: 14px;
-            width: 100%;
-        }
-        button.primary:hover { background: #1d4ed8; }
-        button.success {
-            background: #16a34a;
-            color: white;
-            border: none;
-            padding: 5px 9px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: bold;
-            font-size: 11px;
-        }
-        button.bot-btn {
-            background: #7c3aed;
-            color: white;
-            border: none;
-            padding: 5px 9px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: bold;
-            font-size: 11px;
-        }
-        button.remove-bot-btn {
-            background: #9f1239;
-            color: white;
-            border: none;
-            padding: 5px 9px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: bold;
-            font-size: 11px;
-        }
-        button.danger {
-            background: #dc2626;
-            color: white;
-            border: none;
-            padding: 5px 9px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: bold;
-            font-size: 11px;
-        }
-        .mini-del-btn {
-            background: #7f1d1d;
-            color: #fecaca;
-            border: 1px solid #ef4444;
-            border-radius: 5px;
-            padding: 2px 6px;
-            font-size: 10px;
-            cursor: pointer;
-            margin-top: 4px;
-        }
-
         .mode-info-box {
             background: #0f172a;
             border: 1px solid #334155;
             border-radius: 8px;
-            padding: 8px 10px;
-            font-size: 11px;
+            padding: 10px;
+            font-size: 12px;
             color: #cbd5e1;
             margin-bottom: 10px;
             line-height: 1.45;
         }
+        input[type="text"] {
+            width: 100%;
+            background: #0f172a;
+            color: #f8fafc;
+            border: 1px solid #475569;
+            border-radius: 8px;
+            padding: 9px 11px;
+            font-size: 13px;
+            margin-bottom: 10px;
+            outline: none;
+        }
+        input[type="text"]:focus {
+            border-color: #38bdf8;
+        }
+        button.primary, button.success, button.danger, button.bot-btn, button.remove-bot-btn {
+            border: none;
+            border-radius: 8px;
+            padding: 9px 12px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            color: #ffffff;
+        }
+        button.primary {
+            width: 100%;
+            background: #0284c7;
+        }
+        button.primary:hover { background: #0369a1; }
+        button.success { background: #16a34a; }
+        button.success:hover { background: #15803d; }
+        button.danger { background: #dc2626; }
+        button.danger:hover { background: #b91c1c; }
+        button.bot-btn { background: #7c3aed; }
+        button.bot-btn:hover { background: #6d28d9; }
+        button.remove-bot-btn { background: #b45309; }
+        button.remove-bot-btn:hover { background: #92400e; }
+
         .bot-count-row {
             display: flex;
-            align-items: center;
             justify-content: space-between;
-            gap: 8px;
+            align-items: center;
             background: #0f172a;
             border: 1px solid #334155;
             border-radius: 8px;
-            padding: 8px 10px;
+            padding: 8px 12px;
             margin-bottom: 10px;
             font-size: 12px;
         }
         .bot-stepper {
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 10px;
         }
         .step-btn {
-            background: #1e293b;
-            color: #f8fafc;
-            border: 1px solid #475569;
-            border-radius: 6px;
             width: 28px;
             height: 28px;
-            font-weight: bold;
+            border-radius: 6px;
+            border: 1px solid #475569;
+            background: #1e293b;
+            color: #f8fafc;
+            font-weight: 800;
             cursor: pointer;
         }
-
-        .barcode-box {
-            margin-top: 12px;
-            padding-top: 10px;
-            border-top: 1px solid #334155;
-            text-align: center;
-        }
-        .barcode-img {
-            width: 120px;
-            height: 120px;
-            object-fit: contain;
+        .br-split-box {
             background: #0f172a;
-            padding: 6px;
-            border-radius: 10px;
-            border: 1px solid #475569;
-        }
-        .admin-barcode-img {
-            width: 64px;
-            height: 64px;
-            object-fit: contain;
-            background: #0f172a;
-            padding: 4px;
+            border: 1px solid #334155;
             border-radius: 8px;
-            border: 1px solid #475569;
+            padding: 10px;
+            margin-bottom: 10px;
         }
-
+        .br-split-title {
+            font-size: 12px;
+            font-weight: 700;
+            margin-bottom: 6px;
+            color: #e2e8f0;
+        }
+        .br-row-inline {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+        .br-row-inline input {
+            margin-bottom: 0;
+            flex: 1;
+        }
         .lobby-list-box {
-            margin-top: 12px;
-            padding-top: 10px;
-            border-top: 1px solid #334155;
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 10px;
         }
         .lobby-list-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 8px;
             font-size: 12px;
-            font-weight: bold;
-            color: #cbd5e1;
+            font-weight: 700;
+            margin-bottom: 8px;
         }
         .refresh-btn {
-            background: #0f172a;
-            color: #93c5fd;
+            background: #1e293b;
+            color: #38bdf8;
             border: 1px solid #334155;
             border-radius: 6px;
             padding: 3px 8px;
@@ -245,274 +217,280 @@
         .lobby-rooms {
             display: flex;
             flex-direction: column;
-            gap: 8px;
-            max-height: 200px;
+            gap: 6px;
+            max-height: 170px;
             overflow-y: auto;
         }
         .lobby-room-item {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 7px;
+            padding: 7px 9px;
+            cursor: pointer;
             display: flex;
             flex-direction: column;
-            gap: 6px;
-            background: #0f172a;
-            border: 1px solid #334155;
-            border-radius: 8px;
-            padding: 8px 10px;
-            cursor: pointer;
+            gap: 4px;
         }
         .lobby-room-top {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            gap: 8px;
         }
         .lobby-room-code {
             font-weight: 800;
             color: #38bdf8;
-            font-size: 13px;
+            font-size: 12px;
         }
         .lobby-room-meta {
             font-size: 11px;
             color: #94a3b8;
         }
+        .badge-playing { color: #4ade80; font-weight: 700; }
+        .badge-finished { color: #facc15; font-weight: 700; }
+        .badge-waiting { color: #fbbf24; font-weight: 700; }
+        .join-mini-btn {
+            background: #0284c7;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            padding: 3px 8px;
+            font-size: 11px;
+            font-weight: 700;
+            cursor: pointer;
+        }
         .lobby-scores {
-            border-top: 1px dashed #1e293b;
-            padding-top: 4px;
             display: flex;
             flex-direction: column;
             gap: 2px;
+            font-size: 10px;
+            color: #cbd5e1;
         }
         .lobby-score-row {
             display: flex;
             justify-content: space-between;
-            font-size: 11px;
-            color: #cbd5e1;
         }
         .lobby-score-row.left { color: #facc15; }
-        .badge-waiting { color: #fbbf24; font-weight: bold; }
-        .badge-playing { color: #4ade80; font-weight: bold; }
-        .badge-finished { color: #facc15; font-weight: bold; }
-        .join-mini-btn {
-            background: #16a34a;
-            color: white;
-            border: none;
+
+        .barcode-box {
+            text-align: center;
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid #334155;
+        }
+        .barcode-img {
+            width: 84px;
+            height: 84px;
+            object-fit: cover;
+            border-radius: 8px;
+            border: 1px solid #475569;
+        }
+        .admin-barcode-img {
+            width: 44px;
+            height: 44px;
+            object-fit: cover;
             border-radius: 6px;
-            padding: 5px 9px;
-            font-size: 11px;
-            font-weight: bold;
-            cursor: pointer;
+            border: 1px solid #475569;
         }
 
-        .br-split-box {
-            background: #0f172a;
-            border: 1px solid #334155;
-            border-radius: 9px;
-            padding: 9px 10px;
-            margin-bottom: 10px;
-        }
-        .br-split-title {
-            font-size: 11px;
-            font-weight: 800;
-            color: #38bdf8;
-            margin-bottom: 6px;
-        }
-        .br-row-inline {
+        .player-layout {
+            width: 100%;
+            max-width: 780px;
             display: flex;
+            flex-direction: column;
+            align-items: center;
             gap: 6px;
-            align-items: stretch;
         }
-        .br-row-inline input {
-            margin-bottom: 0;
-            flex: 1;
-            min-width: 0;
-            padding: 8px 10px;
-            font-size: 13px;
+        .top-hud {
+            width: 100%;
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 10px;
+            padding: 6px 10px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+        }
+        .top-action-row {
+            width: 100%;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            align-items: center;
         }
         .host-room-tag {
             background: #0f172a;
             border: 1px dashed #38bdf8;
             color: #38bdf8;
-            border-radius: 6px;
-            padding: 4px 8px;
+            padding: 6px 10px;
+            border-radius: 8px;
             font-size: 11px;
             font-weight: 800;
-            letter-spacing: 1px;
+            cursor: pointer;
             display: inline-flex;
             align-items: center;
-            cursor: pointer;
         }
-
-        .player-layout {
-            display: flex;
-            flex-direction: column;
-            align-items: stretch;
-            width: 100%;
-            max-width: 780px;
-            gap: 5px;
-            position: relative;
-        }
-        .top-hud {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 4px 10px;
-            width: 100%;
-            background: #1e293b;
-            padding: 5px 10px;
-            border-radius: 9px;
+        .warning {
+            color: #fca5a5;
+            background: rgba(220, 38, 38, 0.25);
+            border: 1px solid #ef4444;
+            padding: 2px 8px;
+            border-radius: 999px;
             font-size: 11px;
-            border: 1px solid #334155;
-        }
-
-        .top-action-row {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 5px;
-            width: 100%;
-            background: #1e293b;
-            padding: 4px 6px;
-            border-radius: 8px;
-            border: 1px solid #334155;
-        }
-
-        .item-dock {
-            display: flex;
-            gap: 4px;
-            width: 100%;
-            background: #1e293b;
-            padding: 4px;
-            border-radius: 8px;
-            border: 1px solid #334155;
-            transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
-        }
-        .item-dock.ready-to-pick {
-            border-color: #facc15;
-            box-shadow: 0 0 14px rgba(250, 204, 21, 0.45);
-            transform: translateY(-2px);
-        }
-        .item-btn {
-            flex: 1;
-            min-width: 0;
-            background: #0f172a;
-            color: #f8fafc;
-            border: 1px solid #475569;
-            border-radius: 6px;
-            padding: 5px 3px;
-            font-size: 10px;
             font-weight: 700;
-            cursor: pointer;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 1px;
-            transition: transform 0.14s ease, box-shadow 0.14s ease, border-color 0.14s ease, background 0.14s ease;
+            display: inline-block;
         }
-        .item-btn:disabled {
-            opacity: 0.45;
-            cursor: not-allowed;
+        .podium-box {
+            width: 100%;
+            max-width: 480px;
+            background: #1e293b;
+            border: 2px solid #facc15;
+            border-radius: 12px;
+            padding: 10px;
         }
-        .item-btn.ready-glow {
-            opacity: 1;
-            border-color: #fde047;
-            background: linear-gradient(180deg, rgba(250, 204, 21, 0.28), rgba(249, 115, 22, 0.22));
-            box-shadow: 0 0 12px rgba(250, 204, 21, 0.8);
-            transform: translateY(-2px) scale(1.02);
-            animation: pulseGlow 0.9s infinite alternate;
-        }
-        @keyframes pulseGlow {
-            from { box-shadow: 0 0 8px rgba(250, 204, 21, 0.65); }
-            to { box-shadow: 0 0 16px rgba(250, 204, 21, 1); }
-        }
-        .item-btn.active-buff {
-            border-color: #38bdf8;
-            background: rgba(56, 189, 248, 0.16);
-        }
-        .item-sub {
-            font-size: 8px;
-            color: #94a3b8;
-            font-weight: 500;
+        .chicken-dinner-banner {
             text-align: center;
-            line-height: 1.1;
+            background: linear-gradient(90deg, #ca8a04, #facc15, #ca8a04);
+            color: #0f172a;
+            font-weight: 900;
+            font-size: 11px;
+            padding: 4px 8px;
+            border-radius: 6px;
+            margin-bottom: 6px;
+            letter-spacing: 0.4px;
         }
 
         .main-stage {
+            width: 100%;
             display: flex;
             justify-content: center;
-            align-items: stretch;
+            align-items: flex-start;
             gap: 8px;
-            width: 100%;
         }
         .board-column {
             display: flex;
             flex-direction: column;
-            align-items: stretch;
-            gap: 5px;
+            align-items: center;
+            gap: 6px;
             flex-shrink: 0;
         }
         .board-wrap {
             position: relative;
-            flex-shrink: 0;
-            display: flex;
-            align-items: flex-start;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 2px solid #475569;
+            background: #020617;
         }
         canvas#board {
-            background: #020617;
-            border: 2px solid #475569;
-            border-radius: 6px;
-            box-shadow: 0 0 12px rgba(0, 0, 0, 0.5);
             display: block;
+            background: #020617;
         }
-
         .next-piece-overlay {
             position: absolute;
             top: 6px;
-            left: 6px;
-            z-index: 15;
-            background: rgba(15, 23, 42, 0.84);
+            right: 6px;
+            background: rgba(15, 23, 42, 0.85);
             border: 1px solid #475569;
             border-radius: 6px;
             padding: 3px 5px;
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 2px;
             pointer-events: none;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.55);
         }
         .next-piece-label {
-            font-size: 7px;
+            font-size: 9px;
             font-weight: 800;
-            letter-spacing: 0.6px;
             color: #94a3b8;
             line-height: 1;
+            margin-bottom: 2px;
         }
-        canvas#next-canvas {
-            display: block;
-            width: 40px;
-            height: 30px;
+        .ko-banner-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(2, 6, 23, 0.72);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+            z-index: 15;
+        }
+        .ko-banner-overlay.active { display: flex; }
+        .ko-banner-ribbon {
+            background: #dc2626;
+            color: #ffffff;
+            font-weight: 900;
+            font-size: 13px;
+            letter-spacing: 1.5px;
+            padding: 6px 14px;
+            border-radius: 6px;
+            border: 2px solid #fca5a5;
+            transform: rotate(-8deg);
+        }
+
+        .item-dock {
+            width: 100%;
+            display: flex;
+            gap: 4px;
+            justify-content: space-between;
+        }
+        .item-dock.ready-to-pick .item-btn:not(:disabled) {
+            border-color: #facc15;
+        }
+        .item-btn {
+            flex: 1;
+            background: #1e293b;
+            color: #f8fafc;
+            border: 1px solid #475569;
+            border-radius: 7px;
+            padding: 4px 3px;
+            font-size: 10px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1px;
+        }
+        .item-btn:disabled {
+            opacity: 0.42;
+            cursor: not-allowed;
+        }
+        .item-btn.ready-glow {
+            box-shadow: 0 0 10px rgba(250, 204, 21, 0.55);
+            background: #273549;
+        }
+        .item-btn.active-buff {
+            border-color: #22c55e;
+            background: rgba(22, 163, 74, 0.25);
+        }
+        .item-sub {
+            font-size: 9px;
+            color: #94a3b8;
+            font-weight: 500;
         }
 
         .side-charge-column {
-            width: 24px;
+            width: 34px;
             flex-shrink: 0;
             display: flex;
             flex-direction: column;
             align-items: center;
             gap: 4px;
-            padding-top: 2px;
+        }
+        .side-charge-column.full-glow .side-charge-track {
+            border-color: #facc15;
+            box-shadow: 0 0 10px rgba(250, 204, 21, 0.45);
         }
         .side-charge-pct {
-            font-size: 9px;
+            font-size: 10px;
             font-weight: 800;
             color: #38bdf8;
-            line-height: 1;
-            transition: transform 0.2s ease, color 0.2s ease;
         }
         .side-charge-track {
-            position: relative;
-            width: 12px;
-            flex: 1;
+            width: 14px;
             min-height: 160px;
             background: #0f172a;
             border: 1px solid #475569;
@@ -520,251 +498,114 @@
             overflow: hidden;
             display: flex;
             align-items: flex-end;
-            transition: box-shadow 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+            padding: 2px;
         }
         .side-charge-fill {
             width: 100%;
             height: 0%;
-            background: linear-gradient(0deg, #2563eb, #38bdf8, #a855f7);
-            transition: height 0.12s linear;
-            border-radius: 0 0 999px 999px;
+            background: linear-gradient(180deg, #38bdf8, #22c55e);
+            border-radius: 999px;
+            transition: height 0.12s ease;
         }
         .side-charge-fill.critical {
-            background: linear-gradient(0deg, #dc2626, #f97316, #facc15);
-        }
-        .side-charge-column.full-glow .side-charge-track {
-            border-color: #fde047;
-            box-shadow: 0 0 14px rgba(250, 204, 21, 0.9), inset 0 0 6px rgba(255, 255, 255, 0.6);
-            transform: translateY(-4px);
-        }
-        .side-charge-column.full-glow .side-charge-pct {
-            color: #facc15;
-            transform: translateY(-4px) scale(1.1);
+            background: linear-gradient(180deg, #f87171, #dc2626);
         }
         .side-charge-tag {
-            writing-mode: vertical-rl;
-            transform: rotate(180deg);
             font-size: 8px;
             font-weight: 800;
-            letter-spacing: 0.5px;
             color: #94a3b8;
-        }
-        .side-charge-column.full-glow .side-charge-tag {
-            color: #facc15;
-        }
-
-        .ko-banner-overlay {
-            position: absolute;
-            inset: 0;
-            background: rgba(15, 23, 42, 0.55);
-            border-radius: 6px;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
-            pointer-events: none;
-            z-index: 20;
-        }
-        .ko-banner-overlay.active { display: flex; }
-        .ko-banner-ribbon {
-            width: 140%;
-            background: linear-gradient(90deg, #991b1b, #ef4444, #dc2626, #ef4444, #991b1b);
-            color: #ffffff;
-            font-weight: 900;
-            font-size: 14px;
-            letter-spacing: 2px;
-            text-align: center;
-            padding: 7px 0;
-            transform: rotate(-18deg);
-            border-top: 2px solid #fca5a5;
-            border-bottom: 2px solid #fca5a5;
-        }
-
-        .police-line-banner {
-            width: 100%;
-            margin-top: 3px;
-            padding: 2px 4px;
-            border-radius: 4px;
-            font-size: 8px;
-            font-weight: 900;
-            letter-spacing: 1px;
-            text-align: center;
-            color: #0f172a;
-            background: repeating-linear-gradient(
-                -45deg,
-                #facc15,
-                #facc15 6px,
-                #1e293b 6px,
-                #1e293b 12px
-            );
-        }
-        .police-line-banner span {
-            background: #facc15;
-            padding: 0 4px;
-            border-radius: 2px;
+            letter-spacing: 0.2px;
         }
 
         .side-info {
-            flex: 1 1 130px;
+            flex: 1;
+            min-width: 118px;
             max-width: 240px;
-            min-width: 112px;
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 10px;
+            padding: 8px;
             display: flex;
             flex-direction: column;
-            gap: 4px;
+            gap: 6px;
+            overflow: hidden;
         }
         .opponents-list {
             display: flex;
             flex-direction: column;
-            gap: 3px;
-            max-height: 120px;
+            gap: 4px;
+            max-height: 150px;
             overflow-y: auto;
-            flex-shrink: 0;
         }
         .opp-badge {
             background: #0f172a;
-            padding: 4px 6px;
-            border-radius: 6px;
-            font-size: 10px;
             border: 1px solid #334155;
+            border-radius: 6px;
+            padding: 5px 6px;
+            font-size: 10px;
             display: flex;
             flex-direction: column;
-            gap: 1px;
+            gap: 2px;
         }
-        .opp-badge.clickable-bot {
-            cursor: pointer;
-        }
-        .opp-badge.clickable-bot:hover {
-            border-color: #38bdf8;
-        }
+        .opp-badge.dead { opacity: 0.65; border-color: #7f1d1d; }
+        .opp-badge.quitter { border-color: #eab308; }
+        .opp-badge.clickable-bot { cursor: pointer; }
+        .opp-badge.clickable-bot:hover { border-color: #38bdf8; }
         .opp-badge-row {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            gap: 3px;
+            gap: 4px;
         }
-        .opp-name {
-            font-weight: 700;
-            color: #f8fafc;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-        .opp-stats {
-            color: #cbd5e1;
-            font-size: 9px;
-            white-space: nowrap;
-        }
-        .opp-badge.dead { border-color: #ef4444; background: rgba(127, 29, 29, 0.25); }
-        .opp-badge.quitter { border-color: #eab308; background: rgba(113, 63, 18, 0.28); }
+        .opp-name { font-weight: 700; color: #f1f5f9; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .opp-stats { color: #94a3b8; }
         .log-section {
             flex: 1;
             display: flex;
             flex-direction: column;
-            min-height: 0;
+            min-height: 70px;
         }
         .log-box {
             flex: 1;
-            min-height: 60px;
-            overflow-y: auto;
-            font-size: 10px;
-            background: #0f172a;
-            padding: 5px;
-            border-radius: 6px;
+            background: #020617;
             border: 1px solid #334155;
-            word-break: break-word;
-        }
-
-        .warning {
-            color: #f87171;
-            font-weight: bold;
-            animation: blink 0.4s infinite;
-            font-size: 11px;
-        }
-        @keyframes blink { 50% { opacity: 0.25; } }
-
-        .podium-box {
-            background: linear-gradient(180deg, #27200c, #1e293b 45%);
-            border: 2px solid #facc15;
-            border-radius: 12px;
-            padding: 12px;
-            width: 100%;
-            box-shadow: 0 0 24px rgba(250, 204, 21, 0.35), 0 12px 30px rgba(0, 0, 0, 0.75);
-            position: relative;
-            z-index: 50;
-            overflow: hidden;
-        }
-        .chicken-dinner-banner {
-            background: linear-gradient(90deg, #b45309, #facc15, #fef08a, #facc15, #b45309);
-            background-size: 200% 100%;
-            animation: goldShine 2.2s linear infinite;
-            color: #1e1b08;
-            font-weight: 900;
-            font-size: 14px;
-            letter-spacing: 1.5px;
-            text-align: center;
-            padding: 7px 10px;
-            border-radius: 8px;
-            border: 1px solid #fef9c3;
-            box-shadow: 0 0 16px rgba(250, 204, 21, 0.75);
-            margin-bottom: 8px;
-            text-transform: uppercase;
-        }
-        @keyframes goldShine {
-            0% { background-position: 0% 50%; }
-            100% { background-position: 200% 50%; }
-        }
-
-        .confetti-layer {
-            position: fixed;
-            inset: 0;
-            pointer-events: none;
-            overflow: hidden;
-            z-index: 999;
-        }
-        .confetti-piece {
-            position: fixed;
-            top: -16px;
-            width: 8px;
-            height: 14px;
-            border-radius: 2px;
-            opacity: 0.95;
-            animation: confettiFall linear forwards;
-        }
-        @keyframes confettiFall {
-            0% {
-                transform: translate3d(0, -10px, 0) rotate(0deg);
-                opacity: 1;
-            }
-            85% {
-                opacity: 1;
-            }
-            100% {
-                transform: translate3d(var(--drift, 0px), 105vh, 0) rotate(var(--spin, 720deg));
-                opacity: 0;
-            }
+            border-radius: 6px;
+            padding: 6px;
+            font-size: 10px;
+            color: #cbd5e1;
+            overflow-y: auto;
+            max-height: 130px;
         }
 
         .bot-spectator-box {
             width: 100%;
             background: #1e293b;
-            border: 1px solid #38bdf8;
-            border-radius: 12px;
+            border: 1px solid #334155;
+            border-radius: 10px;
             padding: 10px;
-            margin-top: 4px;
         }
         .bot-spectator-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            gap: 8px;
-            margin-bottom: 8px;
             font-size: 12px;
-            font-weight: 800;
-            color: #38bdf8;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+        .bot-zoom-panel {
+            background: #0f172a;
+            border: 1px solid #38bdf8;
+            border-radius: 8px;
+            padding: 8px;
+            margin-bottom: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
         }
         .bot-spectator-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
             gap: 8px;
         }
         .bot-mini-card {
@@ -775,110 +616,74 @@
             display: flex;
             flex-direction: column;
             align-items: center;
+            gap: 4px;
             cursor: pointer;
         }
         .bot-mini-card.alive { border-color: #22c55e; }
-        .bot-mini-card.dead { border-color: #ef4444; opacity: 0.72; }
-        .bot-mini-card.focused { border: 2px solid #38bdf8; box-shadow: 0 0 10px rgba(56,189,248,0.35); }
-        .bot-mini-card canvas {
-            background: #020617;
-            border: 1px solid #475569;
-            border-radius: 3px;
-            margin: 4px 0;
-        }
-        .bot-zoom-panel {
-            background: #0f172a;
-            border: 1px solid #38bdf8;
-            border-radius: 10px;
-            padding: 8px;
-            margin-bottom: 8px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 6px;
-        }
+        .bot-mini-card.dead { border-color: #ef4444; opacity: 0.7; }
+        .bot-mini-card.focused { border: 2px solid #38bdf8; }
 
         .mobile-controls {
+            width: 100%;
             display: flex;
             justify-content: space-between;
             align-items: flex-end;
-            width: 100%;
-            padding: 6px 10px;
-            margin-top: 2px;
-            background: rgba(30, 41, 59, 0.9);
-            border: 1px solid #334155;
-            border-radius: 12px;
-            user-select: none;
-            -webkit-user-select: none;
-            touch-action: none;
-            flex-shrink: 0;
+            padding: 4px 2px;
+            gap: 8px;
         }
         .left-cluster {
             display: flex;
             flex-direction: column;
-            align-items: center;
-            gap: 4px;
+            gap: 6px;
         }
         .dpad-row {
             display: flex;
             gap: 6px;
         }
         .ctrl-btn {
+            width: 52px;
+            height: 46px;
             background: #1e293b;
             color: #f8fafc;
-            border: 2px solid #475569;
+            border: 1px solid #475569;
             border-radius: 10px;
-            font-size: 17px;
-            font-weight: bold;
-            width: 48px;
-            height: 44px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            cursor: pointer;
-            touch-action: none;
-            box-shadow: 0 2px 0 #020617;
-        }
-        .ctrl-btn:active {
-            background: #2563eb;
-            border-color: #60a5fa;
-            transform: translateY(2px);
-        }
-        .right-cluster {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: flex-end;
-            gap: 4px;
-        }
-        .small-drop-btn {
-            background: #7f1d1d;
-            color: #fef2f2;
-            border: 1px solid #ef4444;
-            border-radius: 6px;
-            height: 22px;
-            min-width: 60px;
-            padding: 0 8px;
-            font-size: 9px;
+            font-size: 18px;
             font-weight: 800;
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            touch-action: none;
-            box-shadow: 0 2px 0 #450a0a;
+            touch-action: manipulation;
         }
-        .small-drop-btn:active {
-            background: #991b1b;
-            transform: translateY(1px);
+        .ctrl-btn:active {
+            background: #334155;
+            transform: scale(0.97);
+        }
+        .right-cluster {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 6px;
+        }
+        .small-drop-btn {
+            height: 30px;
+            min-width: 64px;
+            padding: 0 10px;
+            background: #0284c7;
+            color: #ffffff;
+            border: none;
+            border-radius: 7px;
+            font-size: 10px;
+            font-weight: 800;
+            cursor: pointer;
+            touch-action: manipulation;
         }
         .btn-rotate-main {
-            background: #065f46;
-            border: 2px solid #10b981;
-            width: 74px;
-            height: 74px;
-            border-radius: 50%;
+            width: 66px;
+            height: 66px;
+            background: #059669;
+            border-color: #34d399;
+            flex-direction: column;
             font-size: 11px;
             gap: 1px;
             box-shadow: 0 3px 10px rgba(16, 185, 129, 0.25), 0 2px 0 #022c22;
@@ -890,9 +695,7 @@
                 align-items: center;
                 padding: 8px 16px;
             }
-            .dpad-row {
-                gap: 10px;
-            }
+            .dpad-row { gap: 10px; }
             .ctrl-btn {
                 width: 64px;
                 height: 54px;
@@ -921,24 +724,101 @@
 
         .admin-layout { width: 100%; max-width: 1420px; }
         .admin-header {
-            display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px;
-            background: #1e293b; padding: 12px; border-radius: 10px; border: 1px solid #334155; margin-bottom: 12px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            background: #1e293b;
+            padding: 12px;
+            border-radius: 10px;
+            border: 1px solid #334155;
+            margin-bottom: 12px;
         }
         .room-code-badge {
-            background: #0f172a; border: 2px dashed #38bdf8; color: #38bdf8;
-            padding: 4px 10px; border-radius: 8px; font-size: 18px; font-weight: 800; letter-spacing: 2px;
+            background: #0f172a;
+            border: 2px dashed #38bdf8;
+            color: #38bdf8;
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: 800;
+            letter-spacing: 2px;
         }
-        .admin-body { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 14px; width: 100%; }
+        .admin-body {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: flex-start;
+            gap: 14px;
+            width: 100%;
+        }
         .admin-focus-panel {
-            width: 236px; flex-shrink: 0; background: #1e293b; border: 2px solid #38bdf8;
-            border-radius: 12px; padding: 12px; display: flex; flex-direction: column; align-items: center; gap: 8px;
+            width: 236px;
+            flex-shrink: 0;
+            background: #1e293b;
+            border: 2px solid #38bdf8;
+            border-radius: 12px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
         }
-        .focus-header { width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 6px; }
-        .focus-title { font-size: 13px; font-weight: 800; color: #38bdf8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .close-focus-btn { background: #0f172a; color: #cbd5e1; border: 1px solid #475569; border-radius: 6px; padding: 2px 7px; font-size: 10px; cursor: pointer; }
-        canvas#admin-focus-canvas { background: #020617; border: 2px solid #475569; border-radius: 6px; }
-        .focus-stats { width: 100%; display: flex; justify-content: space-between; font-size: 12px; background: #0f172a; padding: 6px 8px; border-radius: 8px; border: 1px solid #334155; }
-        .admin-center-area { flex: 1; min-width: 280px; position: relative; }
+        .focus-header {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 6px;
+        }
+        .focus-title {
+            font-size: 13px;
+            font-weight: 800;
+            color: #38bdf8;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .close-focus-btn {
+            background: #0f172a;
+            color: #cbd5e1;
+            border: 1px solid #475569;
+            border-radius: 6px;
+            padding: 2px 7px;
+            font-size: 10px;
+            cursor: pointer;
+        }
+        canvas#admin-focus-canvas {
+            background: #020617;
+            border: 2px solid #475569;
+            border-radius: 6px;
+        }
+        .focus-stats {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            background: #0f172a;
+            padding: 6px 8px;
+            border-radius: 8px;
+            border: 1px solid #334155;
+        }
+        .police-line-banner {
+            width: 100%;
+            background: #eab308;
+            color: #0f172a;
+            font-weight: 900;
+            font-size: 11px;
+            text-align: center;
+            padding: 4px;
+            border-radius: 6px;
+            letter-spacing: 1px;
+        }
+        .admin-center-area {
+            flex: 1;
+            min-width: 280px;
+            position: relative;
+        }
         canvas#admin-laser-canvas {
             position: absolute;
             inset: 0;
@@ -947,21 +827,62 @@
             pointer-events: none;
             z-index: 35;
         }
-        .admin-right-panel { width: 260px; flex-shrink: 0; display: flex; flex-direction: column; gap: 10px; }
-        .admin-scoreboard-box { background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 10px; }
-        .admin-scoreboard-list { display: flex; flex-direction: column; gap: 5px; max-height: 260px; overflow-y: auto; }
-        .admin-score-row { background: #0f172a; border: 1px solid #334155; border-radius: 6px; padding: 6px 8px; font-size: 11px; display: flex; flex-direction: column; gap: 2px; }
+        .admin-right-panel {
+            width: 260px;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .admin-scoreboard-box {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 10px;
+            padding: 10px;
+        }
+        .admin-scoreboard-list {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            max-height: 260px;
+            overflow-y: auto;
+        }
+        .admin-score-row {
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 6px;
+            padding: 6px 8px;
+            font-size: 11px;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
         .admin-score-row.quitter { border-color: #eab308; }
-        .monitor-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 10px; position: relative; z-index: 10; }
+        .monitor-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+            gap: 10px;
+            position: relative;
+            z-index: 10;
+        }
         .screen-card {
-            background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 8px;
-            display: flex; flex-direction: column; align-items: center; cursor: pointer;
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            cursor: pointer;
             transition: transform 0.14s ease, box-shadow 0.2s ease, border-color 0.2s ease;
         }
         .screen-card.alive { border-color: #22c55e; }
         .screen-card.dead { border-color: #ef4444; opacity: 0.72; }
         .screen-card.quitter { border-color: #eab308; opacity: 0.92; }
-        .screen-card.focused { border: 2px solid #38bdf8 !important; box-shadow: 0 0 12px rgba(56, 189, 248, 0.35); }
+        .screen-card.focused {
+            border: 2px solid #38bdf8 !important;
+            box-shadow: 0 0 12px rgba(56, 189, 248, 0.35);
+        }
         .screen-card.armor-active {
             border-color: #22c55e !important;
             box-shadow: 0 0 14px rgba(34, 197, 94, 0.72), inset 0 0 8px rgba(74, 222, 128, 0.25);
@@ -992,8 +913,30 @@
             padding: 1px 6px;
             border-radius: 999px;
         }
-        .screen-card canvas { background: #020617; border: 1px solid #475569; border-radius: 3px; margin: 4px 0; }
-        .screen-meta { width: 100%; display: flex; justify-content: space-between; font-size: 11px; color: #cbd5e1; }
+        .mini-del-btn {
+            margin-top: 5px;
+            background: #7f1d1d;
+            color: #fecaca;
+            border: 1px solid #ef4444;
+            border-radius: 5px;
+            padding: 2px 7px;
+            font-size: 10px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        .screen-card canvas {
+            background: #020617;
+            border: 1px solid #475569;
+            border-radius: 3px;
+            margin: 4px 0;
+        }
+        .screen-meta {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            color: #cbd5e1;
+        }
     </style>
 </head>
 <body>
@@ -1092,7 +1035,6 @@
             <div id="p-status" style="color:#22c55e; font-weight:bold;">🟢 Main</div>
         </div>
 
-        <!-- TOMBOL AKSI DI BAGIAN ATAS -->
         <div id="top-local-actions" class="top-action-row" style="display:none;">
             <span id="host-room-badge" class="host-room-tag" style="display:none;" onclick="copyActiveRoomCode()" title="Klik salin kode room"></span>
             <button type="button" class="success" id="btn-host-start" style="display:none;" onclick="hostStartOnlineMatch()">▶ Mulai Match</button>
@@ -1118,7 +1060,6 @@
                     </div>
                 </div>
 
-                <!-- DOCK TOMBOL SUPER DI BAWAH MAP TETRIS -->
                 <div id="item-dock" class="item-dock">
                     <button type="button" id="btn-item-armor" class="item-btn" onclick="activateItem('armor')" disabled>
                         <span>🛡️ Armor (<b id="armor-count">0</b>x)</span>
@@ -1174,7 +1115,6 @@
             <div id="bot-spectator-grid" class="bot-spectator-grid"></div>
         </div>
 
-        <!-- KONTROL LAYAR: RESPONSIF HP, TABLET, DAN DESKTOP -->
         <div id="mobile-controls-bar" class="mobile-controls">
             <div class="left-cluster">
                 <div class="dpad-row">
@@ -1299,10 +1239,10 @@ const SFX = {
     move: () => playTone(240, 0.03, 'triangle', 0.05),
     rotate: () => playTone(380, 0.05, 'sine', 0.08),
     drop: () => playTone(150, 0.08, 'sawtooth', 0.1),
-    clear: (l) => { playTone(440+l*70, 0.1, 'triangle', 0.14); playTone(500+l*70, 0.1, 'triangle', 0.14, 0.05); },
+    clear: (l) => { playTone(440 + l * 70, 0.1, 'triangle', 0.14); playTone(500 + l * 70, 0.1, 'triangle', 0.14, 0.05); },
     block: () => { playTone(520, 0.08, 'sine', 0.1); playTone(780, 0.12, 'sine', 0.1, 0.06); },
     attack: () => { playTone(170, 0.14, 'sawtooth', 0.12); playTone(130, 0.16, 'sawtooth', 0.12, 0.1); },
-    danger: (lvl) => { if(ensureAudio()&&!isMuted)playTone(580+lvl*60, 0.05, 'square', 0.04); },
+    danger: (lvl) => { if (ensureAudio() && !isMuted) playTone(580 + lvl * 60, 0.05, 'square', 0.04); },
     ko: () => { playTone(260, 0.14, 'sawtooth', 0.12); playTone(140, 0.25, 'sawtooth', 0.12, 0.12); },
     win: () => { playTone(523, 0.12, 'triangle', 0.15); playTone(659, 0.12, 'triangle', 0.15, 0.11); playTone(783, 0.22, 'triangle', 0.16, 0.22); }
 };
@@ -1311,7 +1251,6 @@ function vibrate(ms = 15) {
     if (navigator.vibrate) navigator.vibrate(ms);
 }
 
-// --- CONFETTI CELEBRATION ---
 let confettiCleanupTimer = null;
 
 function launchConfetti(count = 75) {
@@ -1386,9 +1325,7 @@ function resizeBoardForScreen() {
     const maxWByWidth = Math.max(140, Math.min(340, w - sideReserveW));
 
     const dockExtraH = hasPowerupsInCurrentMode() ? 48 : 0;
-    const topAndControlsReserveH = w >= 769
-        ? (225 + dockExtraH)
-        : (235 + dockExtraH);
+    const topAndControlsReserveH = w >= 769 ? (225 + dockExtraH) : (235 + dockExtraH);
     const availableBoardH = Math.max(220, h - topAndControlsReserveH);
     const maxWByHeight = Math.floor(availableBoardH / 2);
 
@@ -1673,7 +1610,6 @@ function activateItem(itemType) {
         addLog('player-log', '🛡️ ARMOR aktif! Menahan 3 serangan masuk.');
         if (gameMode === 'online') {
             sendWS({ type: 'use_item', item: 'armor' });
-            sendWS({ type: 'item_state_sync', armor_charges: armorCharges });
         }
     } else if (itemType === 'double') {
         doubleExpiresAt = performance.now() + DOUBLE_DURATION_MS;
@@ -1715,63 +1651,118 @@ function breakTwoRandomRows() {
     grid = filtered;
 
     floatingTexts.push({
-        text: `💥 BREAKER -${toRemove.length} ROW`,
+        text: `💥 -${toRemove.length} ROW`,
         x: canvas.width / 2,
         y: canvas.height * 0.5,
-        vy: -30,
-        color: '#facc15',
-        life: 0.9,
-        maxLife: 0.9
+        vy: -32,
+        life: 0.85,
+        maxLife: 0.85,
+        color: '#fb923c',
     });
 
     return toRemove.length;
 }
 
-function setKoBanner(show) {
-    const el = document.getElementById('ko-banner');
-    if (el) el.classList.toggle('active', !!show);
+function spawnParticles(gridX, gridY, color, count = 7) {
+    const cx = (gridX + 0.5) * BLOCK_SIZE;
+    const cy = (gridY + 0.5) * BLOCK_SIZE;
+    for (let i = 0; i < count; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 28 + Math.random() * 75;
+        particles.push({
+            x: cx,
+            y: cy,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed - 20,
+            size: 2.5 + Math.random() * 3,
+            color: color || '#38bdf8',
+            life: 0.35 + Math.random() * 0.25,
+            maxLife: 0.6,
+        });
+    }
 }
 
-function isPlayerQuitter(p) {
-    return !p.is_bot && (p.quitter === true || p.connected === false);
+function addFloatingText(text, x, y, color = '#facc15') {
+    floatingTexts.push({
+        text,
+        x,
+        y,
+        vy: -28,
+        life: 0.9,
+        maxLife: 0.9,
+        color,
+    });
+}
+
+function getServerUrl() {
+    const host = window.location.hostname;
+    if (!host || host === 'localhost' || host === '127.0.0.1' || window.location.protocol === 'file:') {
+        return 'http://localhost:8000';
+    }
+    if (host.includes('kepotekno.com') || host.includes('kepogame')) {
+        return 'https://tetrisbattleroyale-rjm5.onrender.com';
+    }
+    return window.location.origin;
+}
+
+function getWsUrl(id) {
+    const base = getServerUrl();
+    return base.replace(/^http/i, 'ws') + `/ws/${id}`;
 }
 
 function escapeHtml(str) {
-    return String(str)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
+    return String(str || '').replace(/[&<>"']/g, s => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[s]));
 }
 
-let lobbyPollInterval = null;
+function setKoOverlay(active) {
+    const el = document.getElementById('ko-banner');
+    if (el) el.classList.toggle('active', Boolean(active));
+}
+
+function resetVisualEffects() {
+    particles = [];
+    floatingTexts = [];
+    lineFlashRows = [];
+    shakeTimer = 0;
+    attackFlashTimer = 0;
+    setKoOverlay(false);
+    clearConfetti();
+}
+
+function switchTab(tab) {
+    ['solo', 'vsbot', 'player', 'admin'].forEach(t => {
+        document.getElementById(`tab-${t}`).classList.toggle('active', t === tab);
+        document.getElementById(`form-${t}`).style.display = t === tab ? 'block' : 'none';
+    });
+    if (tab === 'player') {
+        fetchLobbyRooms();
+    }
+}
 
 async function fetchLobbyRooms() {
-    const container = document.getElementById('lobby-rooms-list');
-    if (!container) return;
+    const listEl = document.getElementById('lobby-rooms-list');
+    if (!listEl) return;
     try {
-        const res = await fetch('/api/rooms', { cache: 'no-store' });
-        if (!res.ok) throw new Error('HTTP');
+        const res = await fetch(`${getServerUrl()}/api/rooms`, { cache: 'no-store' });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
         const data = await res.json();
-        const list = data.rooms || [];
+        const roomsArr = Array.isArray(data.rooms) ? data.rooms : [];
 
-        if (list.length === 0) {
-            container.innerHTML = `<div style="font-size:11px; color:#94a3b8; padding:6px 2px;">Belum ada room aktif.</div>`;
+        if (roomsArr.length === 0) {
+            listEl.innerHTML = `<div style="font-size:11px; color:#94a3b8;">Belum ada room aktif. Buat room baru atau masuk lewat Admin!</div>`;
             return;
         }
 
-        container.innerHTML = list.map(r => {
-            const badgeClass = r.state === 'playing'
-                ? 'badge-playing'
-                : (r.state === 'finished' ? 'badge-finished' : 'badge-waiting');
-            const scores = (r.scoreboard || []).slice(0, 4);
-            const scoresHtml = scores.length > 0
-                ? `<div class="lobby-scores">${scores.map((s, idx) => {
-                    const leftTag = (!s.is_bot && (s.quitter || s.connected === false)) ? ' [QUITTER]' : '';
-                    return `<div class="lobby-score-row ${(!s.is_bot && (s.quitter || s.connected === false)) ? 'left' : ''}">
-                        <span>#${idx + 1} ${s.is_bot ? '🤖 ' : ''}${escapeHtml(s.name)}${escapeHtml(leftTag)}</span>
-                        <span><b>${s.score}</b>p • KO:${s.ko}</span>
+        listEl.innerHTML = roomsArr.map(r => {
+            const badgeClass = r.state === 'playing' ? 'badge-playing' : (r.state === 'finished' ? 'badge-finished' : 'badge-waiting');
+            const scoresHtml = (Array.isArray(r.scoreboard) && r.scoreboard.length > 0)
+                ? `<div class="lobby-scores">${r.scoreboard.slice(0, 4).map((sc, idx) => {
+                    const tag = sc.quitter ? ' 🟨' : (sc.is_bot ? ' 🤖' : '');
+                    return `<div class="lobby-score-row ${sc.quitter ? 'left' : ''}">
+                        <span>#${idx + 1} ${escapeHtml(sc.name)}${tag}</span>
+                        <span>Skor: <b>${sc.score}</b> | KO: <b>${sc.ko}</b></span>
                     </div>`;
                 }).join('')}</div>`
                 : '';
@@ -1780,411 +1771,1495 @@ async function fetchLobbyRooms() {
                 <div class="lobby-room-item" onclick="selectRoomFromLobby('${escapeHtml(r.room_code)}')">
                     <div class="lobby-room-top">
                         <div>
-                            <div class="lobby-room-code">${escapeHtml(r.room_code)} <span class="${badgeClass}">• ${escapeHtml(r.status_label)}</span></div>
-                            <div class="lobby-room-meta">Peserta: <b>${r.players_count}</b></div>
+                            <span class="lobby-room-code">ROOM ${escapeHtml(r.room_code)}</span>
+                            <span class="lobby-room-meta"> • ${r.players_count} peserta</span>
                         </div>
+                        <span class="${badgeClass}" style="font-size:11px;">${escapeHtml(r.status_label)}</span>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <span class="lobby-room-meta">${r.last_winner ? `Juara: ${escapeHtml(r.last_winner)}` : 'Klik untuk pilih kode'}</span>
                         <button type="button" class="join-mini-btn" onclick="event.stopPropagation(); quickJoinRoom('${escapeHtml(r.room_code)}')">Gabung</button>
                     </div>
                     ${scoresHtml}
                 </div>
             `;
         }).join('');
-    } catch (_) {
-        container.innerHTML = `<div style="font-size:11px; color:#94a3b8;">Mode lokal tersedia (Main Sendiri & Lawan Bot).</div>`;
+    } catch (e) {
+        listEl.innerHTML = `<div style="font-size:11px; color:#f87171;">Gagal memuat daftar room. Klik Refresh.</div>`;
     }
 }
 
 function selectRoomFromLobby(code) {
-    document.getElementById('join-room-code').value = code;
-    const nameInput = document.getElementById('player-name');
-    if (!nameInput.value.trim()) nameInput.focus();
+    const inp = document.getElementById('join-room-code');
+    if (inp) inp.value = code;
 }
 
 function quickJoinRoom(code) {
-    document.getElementById('join-room-code').value = code;
+    const inp = document.getElementById('join-room-code');
+    if (inp) inp.value = code;
     joinAsPlayer();
 }
 
-function startLobbyPolling() {
-    fetchLobbyRooms();
-    clearInterval(lobbyPollInterval);
-    lobbyPollInterval = setInterval(() => {
-        const lobbyVisible = document.getElementById('lobby-card').style.display !== 'none';
-        if (lobbyVisible) fetchLobbyRooms();
-    }, 3000);
-}
-
-function stopLobbyPolling() {
-    clearInterval(lobbyPollInterval);
-}
-
-function addLog(id, txt) {
-    const log = document.getElementById(id);
-    if (log) log.innerHTML = `<div style="margin-bottom:3px;">${txt}</div>` + log.innerHTML;
-}
-
-function updateAlert() {
-    const el = document.getElementById('incoming-alert');
-    if (el) el.innerHTML = pendingGarbage > 0 ? `<span class="warning">⚠️ GARBAGE: +${pendingGarbage} BARIS</span>` : '';
-}
-
-function renderPodium(id, list, withChickenDinner = false) {
-    const box = document.getElementById(id);
-    if (!box || !list || list.length === 0) return;
-    const medals = { 1: '🥇', 2: '🥈', 3: '🥉' };
-    const topWinner = list.find(i => i.rank === 1) || list[0];
-
-    let h = '';
-    if (withChickenDinner) {
-        h += `<div class="chicken-dinner-banner">🍗👑 CHICKEN DINNER! ${escapeHtml(topWinner.name)} 👑🍗</div>`;
-        launchConfetti(85);
-    } else {
-        h += `<div style="font-weight:bold; font-size:14px; color:#facc15; margin-bottom:6px;">🏆 HASIL JUARA</div>`;
+function stopLocalBotLoop() {
+    if (botLoopTimer) {
+        clearInterval(botLoopTimer);
+        botLoopTimer = null;
     }
-
-    list.forEach(i => {
-        const m = medals[i.rank] || `#${i.rank}`;
-        const b = i.is_bot ? ' 🤖' : '';
-        h += `<div style="display:flex; justify-content:space-between; padding:6px 8px; margin-bottom:4px; background:#0f172a; border-radius:6px; border-left:4px solid ${i.rank===1?'#facc15':'#64748b'}">
-            <div style="font-size:12px;"><b>${m} ${escapeHtml(i.name)}${b}</b><div style="font-size:10px; color:#94a3b8;">${escapeHtml(i.reason||'')}</div></div>
-            <div style="font-size:11px; text-align:right;">Skor: <b>${i.score}</b><br>KO: <b>${i.ko}</b></div>
-        </div>`;
-    });
-    box.innerHTML = h;
-    box.style.display = 'block';
 }
 
-function hidePodiums() {
-    clearConfetti();
-    const pPod = document.getElementById('player-podium');
-    const aPod = document.getElementById('admin-podium');
-    if (pPod) pPod.style.display = 'none';
-    if (aPod) aPod.style.display = 'none';
+function resetPlayerStateForNewMatch(keepBots = false) {
+    stopLocalBotLoop();
+    grid = createEmptyGrid();
+    nextPieceId = rollRandomPieceId();
+    score = 0;
+    soloLevel = 1;
+    totalLinesCleared = 0;
+    playerKoCount = 0;
+    pendingGarbage = 0;
+    lastAttackerId = null;
+    dangerLevel = 0;
+    dangerBlinkTimer = 0;
+    dangerFlashOn = false;
+    itemTokens = 0;
+    itemCharge = 0;
+    armorCharges = 0;
+    doubleExpiresAt = 0;
+    focusedBotId = null;
+    if (!keepBots) {
+        localBots = [];
+    }
+    resetVisualEffects();
+    document.getElementById('score').innerText = '0';
+    document.getElementById('ko').innerText = '0';
+    updateLevelDisplay();
+    document.getElementById('incoming-alert').innerHTML = '';
+    document.getElementById('player-log').innerHTML = '';
+    document.getElementById('player-podium').style.display = 'none';
+    document.getElementById('player-podium').innerHTML = '';
+    document.getElementById('bot-zoom-panel').style.display = 'none';
+    drawNextPiecePreview();
+    refreshItemUI();
 }
 
-function rotateMatrix(m) {
-    return m[0].map((_, i) => m.map(r => r[i]).reverse());
+function startSoloMode() {
+    ensureAudio();
+    gameMode = 'solo';
+    isOnlineRoomHost = false;
+    currentRole = 'local_solo';
+    hasLeftArena = false;
+    myUsername = document.getElementById('solo-name').value.trim() || 'Pemain Solo';
+
+    resetPlayerStateForNewMatch(false);
+    isPlaying = true;
+    piece = newPiece();
+    applyModeVisibilityToPlayerView();
+    resizeBoardForScreen();
+    document.getElementById('p-status').innerText = '🟢 Main';
+    document.getElementById('p-status').style.color = '#22c55e';
+    document.getElementById('bot-spectator-panel').style.display = 'none';
+
+    document.getElementById('lobby-card').style.display = 'none';
+    document.getElementById('admin-view').style.display = 'none';
+    document.getElementById('player-view').style.display = 'flex';
+    addLog('player-log', '🎯 Mode Main Sendiri dimulai! Naik level tiap 4 baris.');
+    renderLocalSideList();
 }
 
-function collide(g, p) {
-    for (let y = 0; y < p.shape.length; y++) {
-        for (let x = 0; x < p.shape[y].length; x++) {
-            if (p.shape[y][x] !== 0) {
-                const nr = p.y + y, nc = p.x + x;
-                if (nr >= ROWS || nc < 0 || nc >= COLS || (nr >= 0 && g[nr][nc] !== 0)) return true;
+function createLocalBotEntity() {
+    const idx = vsBotSerial++;
+    const name = `Bot_${idx}`;
+    return {
+        id: `local_bot_${idx}`,
+        name,
+        is_bot: true,
+        alive: true,
+        score: 0,
+        ko: 0,
+        board: createEmptyGrid(),
+        curPiece: null,
+        armorCharges: 0,
+        doubleUntil: 0,
+        charge: 0,
+        lastAttackerId: null,
+    };
+}
+
+function localBotCollide(board, shape, px, py) {
+    for (let r = 0; r < shape.length; r++) {
+        for (let c = 0; c < shape[r].length; c++) {
+            if (shape[r][c]) {
+                const nr = py + r;
+                const nc = px + c;
+                if (nc < 0 || nc >= COLS || nr >= ROWS) return true;
+                if (nr >= 0 && board[nr][nc] !== 0) return true;
             }
         }
     }
     return false;
 }
 
-function getBoardSnap() {
-    const c = grid.map(r => [...r]);
-    if (piece && isPlaying) {
-        piece.shape.forEach((r, y) => r.forEach((v, x) => {
-            if (v) {
-                const nr = piece.y + y, nc = piece.x + x;
-                if (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS) c[nr][nc] = v;
+function rotateMatrixJS(mat) {
+    return mat[0].map((_, idx) => mat.map(row => row[idx]).reverse());
+}
+
+function pickBotPiece(bot) {
+    const shapeId = rollRandomPieceId();
+    const baseShape = SHAPES[shapeId];
+    const rotations = [];
+    let curr = baseShape.map(r => [...r]);
+    for (let i = 0; i < 4; i++) {
+        const key = JSON.stringify(curr);
+        if (!rotations.some(item => JSON.stringify(item) === key)) {
+            rotations.push(curr.map(r => [...r]));
+        }
+        curr = rotateMatrixJS(curr);
+    }
+
+    let bestChoice = { shape: baseShape.map(r => [...r]), targetX: Math.floor((COLS - baseShape[0].length) / 2), scoreVal: -999999 };
+    for (const rot of rotations) {
+        const w = rot[0].length;
+        for (let x = 0; x <= COLS - w; x++) {
+            if (localBotCollide(bot.board, rot, x, 0)) continue;
+            let y = 0;
+            while (!localBotCollide(bot.board, rot, x, y + 1)) y++;
+            const temp = bot.board.map(r => [...r]);
+            for (let r = 0; r < rot.length; r++) {
+                for (let c = 0; c < rot[r].length; c++) {
+                    if (rot[r][c] && y + r >= 0 && y + r < ROWS && x + c >= 0 && x + c < COLS) {
+                        temp[y + r][x + c] = rot[r][c];
+                    }
+                }
             }
-        }));
+            let cleared = 0;
+            const kept = [];
+            for (const row of temp) {
+                if (row.every(v => v !== 0)) cleared++;
+                else kept.push(row);
+            }
+            while (kept.length < ROWS) kept.unshift(Array(COLS).fill(0));
+            const holes = kept.reduce((acc, row, rIdx) => acc + row.filter((v, cIdx) => v === 0 && kept.slice(0, rIdx).some(up => up[cIdx] !== 0)).length, 0);
+            const firstFilled = kept.findIndex(r => r.some(v => v !== 0));
+            const maxH = firstFilled === -1 ? 0 : (ROWS - firstFilled);
+            const hVal = cleared * 12 - holes * 5 - maxH;
+            if (hVal > bestChoice.scoreVal) {
+                bestChoice = { shape: rot, targetX: x, scoreVal: hVal };
+            }
+        }
     }
-    return c;
+
+    const startX = Math.max(0, Math.min(COLS - bestChoice.shape[0].length, Math.floor((COLS - bestChoice.shape[0].length) / 2)));
+    return { shape: bestChoice.shape, x: startX, y: 0, targetX: bestChoice.targetX };
 }
 
-function syncBoard() {
-    if (gameMode !== 'online' || !isPlaying || hasLeftArena) return;
-    sendWS({ type: 'update_board', score, grid: getBoardSnap() });
+function getLocalBotDisplayGrid(bot) {
+    const snap = bot.board.map(r => [...r]);
+    if (bot.alive && bot.curPiece) {
+        const { shape, x, y } = bot.curPiece;
+        for (let r = 0; r < shape.length; r++) {
+            for (let c = 0; c < shape[r].length; c++) {
+                if (shape[r][c]) {
+                    const nr = y + r;
+                    const nc = x + c;
+                    if (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS) {
+                        snap[nr][nc] = shape[r][c];
+                    }
+                }
+            }
+        }
+    }
+    return snap;
 }
 
-function handlePlayerKO() {
-    isPlaying = false;
-    dangerLevel = 0;
-    dangerFlashOn = false;
-    if (hasPowerupsInCurrentMode()) refreshItemUI();
-    canvas.style.borderColor = '#ef4444';
-    canvas.style.boxShadow = '0 0 14px rgba(239,68,68,0.65)';
-    document.getElementById('p-status').innerText = '💀 KO';
-    document.getElementById('p-status').style.color = '#ef4444';
-    setKoBanner(true);
-    SFX.ko();
-    addLog('player-log', `❌ ELIMINATED! Skor akhir: ${score}`);
+function eliminateLocalBot(bot, killerName = null) {
+    if (!bot || !bot.alive) return;
+    bot.alive = false;
+    bot.curPiece = null;
+    if (killerName === myUsername) {
+        playerKoCount += 1;
+        document.getElementById('ko').innerText = playerKoCount;
+        addLog('player-log', `💀 Anda meng-KO <b>${escapeHtml(bot.name)}</b>!`);
+    } else {
+        addLog('player-log', `💀 <b>${escapeHtml(bot.name)}</b> tereliminasi!`);
+    }
+    checkVsBotMatchEnd();
+}
 
-    if (gameMode === 'online') {
-        sendWS({ type: 'update_board', score, grid: getBoardSnap() });
-        sendWS({ type: 'player_eliminated', last_attacker_id: lastAttackerId });
+function checkVsBotMatchEnd() {
+    if (gameMode !== 'vsbot') return;
+    const aliveBots = localBots.filter(b => b.alive);
+    if (!isPlaying) {
+        document.getElementById('bot-spectator-panel').style.display = 'block';
+        renderBotSpectatorGrid();
+        return;
+    }
+    if (aliveBots.length === 0 && isPlaying) {
+        isPlaying = false;
+        stopLocalBotLoop();
+        SFX.win();
+        launchConfetti(80);
+        document.getElementById('p-status').innerText = '🏆 Menang!';
+        document.getElementById('p-status').style.color = '#facc15';
+        const podiumData = [
+            { rank: 1, name: myUsername, score, ko: playerKoCount, reason: 'Mengalahkan Semua Bot' },
+            ...localBots.slice(0, 2).map((b, idx) => ({
+                rank: idx + 2,
+                name: b.name,
+                score: b.score,
+                ko: b.ko,
+                reason: 'Bot Lawan'
+            }))
+        ];
+        renderPodium('player-podium', podiumData, myUsername);
+        addLog('player-log', '🏆 Selamat! Anda mengalahkan semua bot!');
+    }
+}
+
+function localBotAttackPlayer(bot, lines) {
+    if (!isPlaying || gameMode !== 'vsbot') return;
+    const map = { 1: 1, 2: 2, 3: 3, 4: 5 };
+    let dmg = map[lines] || 1;
+    if (performance.now() < bot.doubleUntil) dmg *= 2;
+
+    if (armorCharges > 0) {
+        armorCharges -= 1;
+        refreshItemUI();
+        addLog('player-log', `🛡️ Armor Anda menangkis ${dmg} baris dari ${escapeHtml(bot.name)}! (Sisa ${armorCharges}x)`);
+        return;
+    }
+
+    pendingGarbage += dmg;
+    lastAttackerId = bot.id;
+    SFX.attack();
+    addLog('player-log', `⚡ ${escapeHtml(bot.name)} mengirim ${dmg} baris sampah!`);
+}
+
+function stepLocalBots() {
+    if (gameMode !== 'vsbot') return;
+    const now = performance.now();
+    for (const bot of localBots) {
+        if (!bot.alive) continue;
+        bot.charge = Math.min(100, bot.charge + 4.5);
+        if (bot.charge >= 100) {
+            bot.charge = 0;
+            if (Math.random() < 0.5) {
+                bot.armorCharges = 3;
+                addLog('player-log', `🛡️ ${escapeHtml(bot.name)} mengaktifkan ARMOR!`);
+            } else {
+                bot.doubleUntil = now + 5000;
+                addLog('player-log', `⚡ ${escapeHtml(bot.name)} mengaktifkan DOUBLE!`);
+            }
+        }
+
+        if (!bot.curPiece) {
+            const pNew = pickBotPiece(bot);
+            if (localBotCollide(bot.board, pNew.shape, pNew.x, pNew.y)) {
+                eliminateLocalBot(bot);
+                continue;
+            }
+            bot.curPiece = pNew;
+        }
+
+        const cp = bot.curPiece;
+        if (cp.x < cp.targetX && !localBotCollide(bot.board, cp.shape, cp.x + 1, cp.y)) {
+            cp.x += 1;
+        } else if (cp.x > cp.targetX && !localBotCollide(bot.board, cp.shape, cp.x - 1, cp.y)) {
+            cp.x -= 1;
+        } else if (!localBotCollide(bot.board, cp.shape, cp.x, cp.y + 1)) {
+            cp.y += 1;
+        } else {
+            for (let r = 0; r < cp.shape.length; r++) {
+                for (let c = 0; c < cp.shape[r].length; c++) {
+                    if (cp.shape[r][c]) {
+                        const nr = cp.y + r;
+                        const nc = cp.x + c;
+                        if (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS) {
+                            bot.board[nr][nc] = cp.shape[r][c];
+                        }
+                    }
+                }
+            }
+            bot.curPiece = null;
+            let cleared = 0;
+            const kept = [];
+            for (const row of bot.board) {
+                if (row.every(v => v !== 0)) cleared++;
+                else kept.push(row);
+            }
+            while (kept.length < ROWS) kept.unshift(Array(COLS).fill(0));
+            bot.board = kept;
+
+            if (cleared > 0) {
+                bot.score += cleared * 100;
+                localBotAttackPlayer(bot, cleared);
+            }
+            if (bot.board[0].some(v => v !== 0)) {
+                eliminateLocalBot(bot);
+            }
+        }
+    }
+
+    renderLocalSideList();
+    if (document.getElementById('bot-spectator-panel').style.display !== 'none') {
+        renderBotSpectatorGrid();
+    }
+}
+
+function startVsBotMode() {
+    ensureAudio();
+    gameMode = 'vsbot';
+    isOnlineRoomHost = false;
+    currentRole = 'local_vsbot';
+    hasLeftArena = false;
+    myUsername = document.getElementById('vsbot-name').value.trim() || 'Anda';
+
+    resetPlayerStateForNewMatch(false);
+    localBots = Array.from({ length: vsBotDesiredCount }, () => createLocalBotEntity());
+    isPlaying = true;
+    piece = newPiece();
+    applyModeVisibilityToPlayerView();
+    resizeBoardForScreen();
+    document.getElementById('p-status').innerText = '🟢 Main';
+    document.getElementById('p-status').style.color = '#22c55e';
+    document.getElementById('bot-spectator-panel').style.display = 'none';
+
+    document.getElementById('lobby-card').style.display = 'none';
+    document.getElementById('admin-view').style.display = 'none';
+    document.getElementById('player-view').style.display = 'flex';
+    addLog('player-log', `⚔️ Mode Lawan Bot dimulai (${localBots.length} bot)!`);
+    renderLocalSideList();
+
+    stopLocalBotLoop();
+    botLoopTimer = setInterval(stepLocalBots, 220);
+}
+
+function localAddBot() {
+    if (gameMode !== 'vsbot') return;
+    const b = createLocalBotEntity();
+    b.alive = isPlaying;
+    localBots.push(b);
+    addLog('player-log', `🤖 ${escapeHtml(b.name)} ditambahkan.`);
+    renderLocalSideList();
+    if (document.getElementById('bot-spectator-panel').style.display !== 'none') {
+        renderBotSpectatorGrid();
+    }
+}
+
+function localRemoveBot() {
+    if (gameMode !== 'vsbot' || localBots.length === 0) return;
+    const removed = localBots.pop();
+    if (focusedBotId === removed.id) clearBotZoom();
+    addLog('player-log', `🤖 ${escapeHtml(removed.name)} dihapus.`);
+    renderLocalSideList();
+    if (document.getElementById('bot-spectator-panel').style.display !== 'none') {
+        renderBotSpectatorGrid();
+    }
+    checkVsBotMatchEnd();
+}
+
+function restartLocalMode() {
+    if (gameMode === 'solo') {
+        startSoloMode();
     } else if (gameMode === 'vsbot') {
-        renderVsBotSideList();
-        checkVsBotMatchState();
+        startVsBotMode();
+    } else if (gameMode === 'online' && isOnlineRoomHost) {
+        hostStartOnlineMatch();
     }
 }
 
-function spawnPiece() {
+function renderLocalSideList() {
+    const oppEl = document.getElementById('opponents');
+    if (!oppEl) return;
+    if (gameMode === 'solo') {
+        const nextLvLines = soloLevel * 4;
+        oppEl.innerHTML = `
+            <div class="opp-badge">
+                <div class="opp-badge-row">
+                    <span class="opp-name">🎯 Level ${soloLevel}</span>
+                    <span class="opp-stats">${totalLinesCleared}/${nextLvLines} baris</span>
+                </div>
+                <div class="opp-stats">Kecepatan: ${getDropIntervalMs()}ms / drop</div>
+            </div>
+        `;
+        return;
+    }
+
+    if (gameMode === 'vsbot') {
+        const rows = [
+            { name: `${myUsername} (Anda)`, score, ko: playerKoCount, alive: isPlaying, isBot: false, id: 'me' },
+            ...localBots.map(b => ({ name: b.name, score: b.score, ko: b.ko, alive: b.alive, isBot: true, id: b.id }))
+        ].sort((a, b) => (b.score - a.score) || (b.ko - a.ko));
+
+        oppEl.innerHTML = rows.map((r, idx) => `
+            <div class="opp-badge ${r.alive ? '' : 'dead'} ${r.isBot ? 'clickable-bot' : ''}" ${r.isBot ? `onclick="openBotSpectatorAndZoom('${r.id}')"` : ''}>
+                <div class="opp-badge-row">
+                    <span class="opp-name">#${idx + 1} ${escapeHtml(r.name)}</span>
+                    <span class="opp-stats">${r.alive ? '🟢' : '💀'}</span>
+                </div>
+                <div class="opp-stats">Skor: <b>${r.score}</b> | KO: <b>${r.ko}</b></div>
+            </div>
+        `).join('');
+    }
+}
+
+function renderBotSpectatorGrid() {
+    const gridEl = document.getElementById('bot-spectator-grid');
+    if (!gridEl || gameMode !== 'vsbot') return;
+    gridEl.innerHTML = '';
+
+    for (const bot of localBots) {
+        const card = document.createElement('div');
+        card.className = `bot-mini-card ${bot.alive ? 'alive' : 'dead'} ${focusedBotId === bot.id ? 'focused' : ''}`;
+        card.onclick = () => focusBotInSpectator(bot.id);
+
+        const title = document.createElement('div');
+        title.style.fontSize = '11px';
+        title.style.fontWeight = '700';
+        title.innerText = `${bot.alive ? '🤖' : '💀'} ${bot.name}`;
+
+        const cMini = document.createElement('canvas');
+        cMini.width = 80;
+        cMini.height = 160;
+        drawGrid(cMini, getLocalBotDisplayGrid(bot), 8);
+
+        const meta = document.createElement('div');
+        meta.style.fontSize = '10px';
+        meta.style.color = '#cbd5e1';
+        meta.innerText = `Skor: ${bot.score} | KO: ${bot.ko}`;
+
+        card.appendChild(title);
+        card.appendChild(cMini);
+        card.appendChild(meta);
+        gridEl.appendChild(card);
+    }
+
+    if (focusedBotId) {
+        const fBot = localBots.find(b => b.id === focusedBotId);
+        if (fBot) {
+            document.getElementById('bot-zoom-panel').style.display = 'flex';
+            document.getElementById('bot-zoom-name').innerText = `🤖 ${fBot.name}`;
+            document.getElementById('bot-zoom-status').innerText = fBot.alive ? '🟢 Aktif' : '💀 Tereliminasi';
+            document.getElementById('bot-zoom-score').innerText = fBot.score;
+            document.getElementById('bot-zoom-ko').innerText = fBot.ko;
+            drawGrid(document.getElementById('bot-zoom-canvas'), getLocalBotDisplayGrid(fBot), 16);
+        }
+    }
+}
+
+function focusBotInSpectator(botId) {
+    focusedBotId = botId;
+    renderBotSpectatorGrid();
+}
+
+function openBotSpectatorAndZoom(botId) {
+    document.getElementById('bot-spectator-panel').style.display = 'block';
+    focusedBotId = botId;
+    renderBotSpectatorGrid();
+}
+
+function clearBotZoom() {
+    focusedBotId = null;
+    document.getElementById('bot-zoom-panel').style.display = 'none';
+    renderBotSpectatorGrid();
+}
+
+function sendQuitSignal(useBeacon = false) {
+    if (currentRole !== 'player' || !activeRoomCode || hasLeftArena) return;
+    hasLeftArena = true;
+
+    if (useBeacon && navigator.sendBeacon) {
+        const quitUrl = `${getServerUrl()}/api/quit/${encodeURIComponent(activeRoomCode)}/${encodeURIComponent(clientId)}`;
+        try { navigator.sendBeacon(quitUrl, ''); } catch (e) {}
+    }
+
+    if (socket && socket.readyState === WebSocket.OPEN) {
+        try { socket.send(JSON.stringify({ type: 'player_quit', room_code: activeRoomCode })); } catch (e) {}
+        try { socket.close(); } catch (e) {}
+    }
+}
+
+window.addEventListener('pagehide', () => sendQuitSignal(true));
+window.addEventListener('beforeunload', () => sendQuitSignal(true));
+
+function exitToLobby() {
+    stopLocalBotLoop();
+    if (currentRole === 'player') {
+        sendQuitSignal(true);
+    } else if (socket) {
+        try { socket.close(); } catch (e) {}
+    }
+    isPlaying = false;
+    isOnlineRoomHost = false;
+    pendingPlayerCreateRoom = false;
+    currentRole = null;
+    activeRoomCode = '';
+    setKoOverlay(false);
+    clearConfetti();
+    document.getElementById('player-view').style.display = 'none';
+    document.getElementById('admin-view').style.display = 'none';
+    document.getElementById('lobby-card').style.display = 'block';
+    fetchLobbyRooms();
+}
+
+function connectWS(onOpenCallback) {
+    if (pingInterval) { clearInterval(pingInterval); pingInterval = null; }
+    if (socket) {
+        socket.onclose = null;
+        socket.onerror = null;
+        try { socket.close(); } catch (e) {}
+    }
+    socket = new WebSocket(getWsUrl(clientId));
+    socket.onopen = () => {
+        pingInterval = setInterval(() => {
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                socket.send(JSON.stringify({ type: 'ping' }));
+            }
+        }, 15000);
+        if (onOpenCallback) onOpenCallback();
+    };
+    socket.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        handleServerMessage(data);
+    };
+    socket.onclose = () => {
+        if (pingInterval) { clearInterval(pingInterval); pingInterval = null; }
+        if (currentRole === 'player' && isPlaying && !hasLeftArena) {
+            document.getElementById('p-status').innerText = '⚠️ Terputus';
+            document.getElementById('p-status').style.color = '#facc15';
+        }
+    };
+}
+
+function sendWS(payload) {
+    if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify(payload));
+    }
+}
+
+function createPlayerRoom() {
+    ensureAudio();
+    const uname = document.getElementById('player-name').value.trim();
+    if (!uname) return alert('Nama wajib diisi untuk membuat room Battle Royale!');
+    const customCode = document.getElementById('player-create-code').value.trim().toUpperCase();
+
+    gameMode = 'online';
+    isOnlineRoomHost = true;
+    pendingPlayerCreateRoom = true;
+    currentRole = 'player';
+    hasLeftArena = false;
+    myUsername = uname;
+    resetPlayerStateForNewMatch(false);
+    isPlaying = false;
+    applyModeVisibilityToPlayerView();
+    resizeBoardForScreen();
+
+    connectWS(() => {
+        sendWS({
+            type: 'create_room',
+            room_code: customCode,
+            as_player: true,
+            username: uname
+        });
+    });
+}
+
+function createAdminRoom() {
+    ensureAudio();
+    const code = document.getElementById('custom-room-code').value.trim().toUpperCase();
+    currentRole = 'admin';
+    isOnlineRoomHost = false;
+    pendingPlayerCreateRoom = false;
+    focusedPlayerId = null;
+    latestAdminPlayers = {};
+    adminLasers = [];
+    document.getElementById('admin-focus-panel').style.display = 'none';
+    document.getElementById('admin-podium').style.display = 'none';
+    document.getElementById('admin-podium').innerHTML = '';
+    clearConfetti();
+    connectWS(() => {
+        sendWS({ type: 'create_room', room_code: code });
+    });
+}
+
+function joinAsPlayer() {
+    ensureAudio();
+    const uname = document.getElementById('player-name').value.trim();
+    const code = document.getElementById('join-room-code').value.trim().toUpperCase();
+    if (!uname) return alert('Nama wajib diisi!');
+    if (!code) return alert('Kode room wajib diisi!');
+
+    gameMode = 'online';
+    isOnlineRoomHost = false;
+    pendingPlayerCreateRoom = false;
+    currentRole = 'player';
+    hasLeftArena = false;
+    myUsername = uname;
+    resetPlayerStateForNewMatch(false);
+    isPlaying = false;
+    applyModeVisibilityToPlayerView();
+    resizeBoardForScreen();
+
+    connectWS(() => {
+        sendWS({ type: 'join_game', room_code: code, username: uname });
+    });
+}
+
+function adminAddBot() { ensureAudio(); sendWS({ type: 'admin_add_bot' }); }
+function adminRemoveBot(botId = null) {
+    ensureAudio();
+    if (botId && focusedPlayerId === botId) clearAdminFocus();
+    sendWS({ type: 'admin_remove_bot', bot_id: botId });
+}
+function adminStartMatch() {
+    ensureAudio();
+    document.getElementById('admin-podium').style.display = 'none';
+    document.getElementById('admin-podium').innerHTML = '';
+    clearConfetti();
+    sendWS({ type: 'admin_start_match' });
+}
+function adminResetRoom() {
+    ensureAudio();
+    document.getElementById('admin-podium').style.display = 'none';
+    document.getElementById('admin-podium').innerHTML = '';
+    clearConfetti();
+    sendWS({ type: 'admin_reset_room' });
+}
+
+function addLog(targetId, msg) {
+    const el = document.getElementById(targetId);
+    if (!el) return;
+    const div = document.createElement('div');
+    div.innerHTML = msg;
+    div.style.marginBottom = '3px';
+    el.prepend(div);
+}
+
+function renderPodium(containerId, podiumList, winnerName) {
+    const box = document.getElementById(containerId);
+    if (!box) return;
+    if (!Array.isArray(podiumList) || podiumList.length === 0) {
+        box.style.display = 'none';
+        return;
+    }
+    const medals = ['🥇', '🥈', '🥉'];
+    const rowsHtml = podiumList.slice(0, 3).map((item, idx) => {
+        const medal = medals[idx] || `#${item.rank || idx + 1}`;
+        const isFirst = idx === 0;
+        return `
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:7px 9px; border-radius:8px; margin-bottom:5px; background:${isFirst ? 'rgba(250,204,21,0.18)' : '#0f172a'}; border:1px solid ${isFirst ? '#facc15' : '#334155'}; font-size:12px;">
+                <div>
+                    <b>${medal} ${escapeHtml(item.name || '-')}</b>
+                    <div style="font-size:10px; color:#cbd5e1;">${escapeHtml(item.reason || '')}</div>
+                </div>
+                <div style="text-align:right; font-size:11px;">
+                    <div>Skor: <b>${item.score ?? 0}</b></div>
+                    <div>KO: <b>${item.ko ?? 0}</b></div>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    box.innerHTML = `
+        <div class="chicken-dinner-banner">🍗 WINNER WINNER CHICKEN DINNER! 🍗</div>
+        <div style="font-size:13px; font-weight:800; color:#facc15; margin-bottom:8px; text-align:center;">
+            🏆 Juara: ${escapeHtml(winnerName || podiumList[0].name || '-')}
+        </div>
+        ${rowsHtml}
+    `;
+    box.style.display = 'block';
+}
+
+function handleServerMessage(data) {
+    if (data.type === 'pong') return;
+
+    if (data.type === 'error') {
+        alert(data.message);
+        if (currentRole === 'player' && !isPlaying) {
+            exitToLobby();
+        }
+        return;
+    }
+
+    if (data.type === 'room_created') {
+        activeRoomCode = data.room_code;
+        document.getElementById('lobby-card').style.display = 'none';
+        document.getElementById('player-view').style.display = 'none';
+        document.getElementById('admin-view').style.display = 'block';
+        document.getElementById('admin-room-display').innerText = data.room_code;
+        document.getElementById('admin-match-status').innerText = 'Menunggu';
+        document.getElementById('admin-match-status').style.color = '#fbbf24';
+        resizeAdminLaserCanvas();
+        renderAdminGrid(data.players || {});
+        renderAdminScoreboard(data.players || {});
+        return;
+    }
+
+    if (data.type === 'joined_room') {
+        activeRoomCode = data.room_code;
+        isOnlineRoomHost = Boolean(data.is_host);
+        applyModeVisibilityToPlayerView();
+        resizeBoardForScreen();
+        document.getElementById('lobby-card').style.display = 'none';
+        document.getElementById('admin-view').style.display = 'none';
+        document.getElementById('player-view').style.display = 'flex';
+        document.getElementById('bot-spectator-panel').style.display = 'none';
+        document.getElementById('player-podium').style.display = 'none';
+        document.getElementById('player-podium').innerHTML = '';
+        clearConfetti();
+
+        if (pendingPlayerCreateRoom) {
+            pendingPlayerCreateRoom = false;
+            addLog('player-log', `🆕 Room <b>${escapeHtml(data.room_code)}</b> dibuat! Bagikan kode room ke teman.`);
+        }
+
+        if (data.active && data.alive) {
+            grid = createEmptyGrid();
+            nextPieceId = rollRandomPieceId();
+            drawNextPiecePreview();
+            score = 0; soloLevel = 1; totalLinesCleared = 0; playerKoCount = 0;
+            updateLevelDisplay();
+            pendingGarbage = 0; armorCharges = 0; doubleExpiresAt = 0; itemTokens = 0; itemCharge = 0;
+            resetVisualEffects();
+            isPlaying = true;
+            piece = newPiece();
+            document.getElementById('p-status').innerText = '🟢 Main';
+            document.getElementById('p-status').style.color = '#22c55e';
+            addLog('player-log', `🎮 Bergabung ke room <b>${escapeHtml(data.room_code)}</b>!`);
+        } else if (data.active && !data.alive) {
+            isPlaying = false;
+            piece = null;
+            document.getElementById('p-status').innerText = '⏳ Menonton Ronde';
+            document.getElementById('p-status').style.color = '#fbbf24';
+            addLog('player-log', '⏳ Ronde sedang berjalan. Tunggu ronde berikutnya.');
+        } else {
+            isPlaying = false;
+            piece = null;
+            document.getElementById('p-status').innerText = '⏳ Menunggu Mulai';
+            document.getElementById('p-status').style.color = '#fbbf24';
+            addLog('player-log', isOnlineRoomHost
+                ? `👑 Anda Host room <b>${escapeHtml(data.room_code)}</b>. Tambah bot/teman lalu klik Mulai Match.`
+                : `⏳ Terhubung ke room <b>${escapeHtml(data.room_code)}</b>. Menunggu match dimulai...`);
+        }
+        refreshItemUI();
+        renderOpponents(data.players || {});
+        return;
+    }
+
+    if (data.type === 'room_state') {
+        if (typeof data.host_id === 'string' || data.host_id === null) {
+            if (currentRole === 'player' && gameMode === 'online') {
+                isOnlineRoomHost = (data.host_id === clientId);
+                applyModeVisibilityToPlayerView();
+            }
+        }
+        if (currentRole === 'admin') {
+            document.getElementById('admin-match-status').innerText = data.active ? 'Berlangsung' : (data.state === 'finished' ? 'Selesai' : 'Menunggu');
+            document.getElementById('admin-match-status').style.color = data.active ? '#22c55e' : (data.state === 'finished' ? '#facc15' : '#fbbf24');
+            renderAdminGrid(data.players || {});
+            renderAdminScoreboard(data.players || {});
+        } else if (currentRole === 'player') {
+            renderOpponents(data.players || {});
+        }
+        return;
+    }
+
+    if (data.type === 'lobby_update') {
+        if (currentRole === 'player') {
+            renderOpponents(data.players || {});
+        } else if (currentRole === 'admin') {
+            renderAdminScoreboard(data.players || {});
+        }
+        return;
+    }
+
+    if (data.type === 'match_started') {
+        document.getElementById('player-podium').style.display = 'none';
+        document.getElementById('player-podium').innerHTML = '';
+        document.getElementById('admin-podium').style.display = 'none';
+        document.getElementById('admin-podium').innerHTML = '';
+        clearConfetti();
+        if (currentRole === 'player') {
+            const me = (data.players || {})[clientId];
+            const canPlay = me ? Boolean(me.alive) : true;
+            grid = createEmptyGrid();
+            nextPieceId = rollRandomPieceId();
+            drawNextPiecePreview();
+            score = 0; soloLevel = 1; totalLinesCleared = 0; playerKoCount = 0;
+            updateLevelDisplay();
+            pendingGarbage = 0; lastAttackerId = null; armorCharges = 0; doubleExpiresAt = 0; itemTokens = 0; itemCharge = 0;
+            resetVisualEffects();
+            if (canPlay) {
+                isPlaying = true;
+                piece = newPiece();
+                document.getElementById('p-status').innerText = '🟢 Main';
+                document.getElementById('p-status').style.color = '#22c55e';
+                syncBoard();
+            } else {
+                isPlaying = false;
+                piece = null;
+                document.getElementById('p-status').innerText = '💀 Eliminasi';
+                document.getElementById('p-status').style.color = '#ef4444';
+            }
+            refreshItemUI();
+            addLog('player-log', '🚀 Pertandingan dimulai!');
+            renderOpponents(data.players || {});
+        } else if (currentRole === 'admin') {
+            document.getElementById('admin-match-status').innerText = 'Berlangsung';
+            document.getElementById('admin-match-status').style.color = '#22c55e';
+            addLog('admin-log', '🚀 Pertandingan dimulai!');
+            renderAdminGrid(data.players || {});
+            renderAdminScoreboard(data.players || {});
+        }
+        return;
+    }
+
+    if (data.type === 'room_reset') {
+        document.getElementById('player-podium').style.display = 'none';
+        document.getElementById('player-podium').innerHTML = '';
+        document.getElementById('admin-podium').style.display = 'none';
+        document.getElementById('admin-podium').innerHTML = '';
+        clearConfetti();
+        if (currentRole === 'player') {
+            isPlaying = false;
+            piece = null;
+            grid = createEmptyGrid();
+            nextPieceId = rollRandomPieceId();
+            drawNextPiecePreview();
+            score = 0; soloLevel = 1; totalLinesCleared = 0; playerKoCount = 0;
+            updateLevelDisplay();
+            pendingGarbage = 0; armorCharges = 0; doubleExpiresAt = 0; itemTokens = 0; itemCharge = 0;
+            resetVisualEffects();
+            document.getElementById('p-status').innerText = '⏳ Menunggu Mulai';
+            document.getElementById('p-status').style.color = '#fbbf24';
+            refreshItemUI();
+            addLog('player-log', '🔄 Room di-reset.');
+            renderOpponents(data.players || {});
+        } else if (currentRole === 'admin') {
+            document.getElementById('admin-match-status').innerText = 'Menunggu';
+            document.getElementById('admin-match-status').style.color = '#fbbf24';
+            addLog('admin-log', '🔄 Room di-reset.');
+            renderAdminGrid(data.players || {});
+            renderAdminScoreboard(data.players || {});
+        }
+        return;
+    }
+
+    if (data.type === 'item_activated') {
+        if (currentRole === 'player' && data.item === 'double') {
+            const sec = Number(data.double_seconds || 5);
+            doubleExpiresAt = performance.now() + sec * 1000;
+            refreshItemUI();
+        }
+        return;
+    }
+
+    if (data.type === 'armor_blocked') {
+        if (currentRole === 'player' && isPlaying) {
+            armorCharges = Number(data.remaining_charges ?? Math.max(0, armorCharges - 1));
+            SFX.block();
+            vibrate(20);
+            addFloatingText(`🛡️ TANGKIS -${data.blocked_lines || 1}`, canvas.width / 2, canvas.height * 0.4, '#4ade80');
+            addLog('player-log', `🛡️ Armor menangkis ${data.blocked_lines} baris dari ${escapeHtml(data.from_name || 'lawan')}! (Sisa ${armorCharges}x)`);
+            refreshItemUI();
+        }
+        return;
+    }
+
+    if (data.type === 'receive_attack') {
+        if (currentRole === 'player' && isPlaying) {
+            const lines = Number(data.lines || 1);
+            pendingGarbage += lines;
+            lastAttackerId = data.from_id;
+            shakeTimer = 0.25;
+            attackFlashTimer = 0.3;
+            SFX.attack();
+            vibrate(40);
+            addFloatingText(`⚡ +${lines} GARBAGE`, canvas.width / 2, canvas.height * 0.45, '#f87171');
+            addLog('player-log', `⚡ Dapat <b>${lines}</b> baris sampah dari <b>${escapeHtml(data.from_name)}</b>!`);
+        }
+        return;
+    }
+
+    if (data.type === 'attack_log') {
+        if (currentRole === 'player') addLog('player-log', escapeHtml(data.msg));
+        else if (currentRole === 'admin') {
+            addLog('admin-log', escapeHtml(data.msg));
+            if (data.from_id && data.target_id && Number(data.lines || 0) > 0) {
+                spawnAdminLaser(data.from_id, data.target_id, Number(data.lines || 1), Boolean(data.double_active));
+            }
+        }
+        return;
+    }
+
+    if (data.type === 'admin_screen_update') {
+        if (currentRole === 'admin') {
+            const prev = latestAdminPlayers[data.pid];
+            const prevScore = prev ? Number(prev.score || 0) : 0;
+            const newScore = Number(data.score || 0);
+            latestAdminPlayers[data.pid] = {
+                ...(prev || {}),
+                name: data.name,
+                alive: data.alive,
+                score: newScore,
+                ko: data.ko,
+                grid: data.grid,
+            };
+            updateSingleAdminCard(data.pid, latestAdminPlayers[data.pid], newScore < prevScore);
+            renderAdminScoreboard(latestAdminPlayers);
+        }
+        return;
+    }
+
+    if (data.type === 'match_finished') {
+        SFX.win();
+        launchConfetti(85);
+        if (currentRole === 'player') {
+            isPlaying = false;
+            piece = null;
+            document.getElementById('p-status').innerText = '🏁 Selesai';
+            document.getElementById('p-status').style.color = '#facc15';
+            addLog('player-log', `🏆 Pemenang: <b>${escapeHtml(data.winner)}</b>!`);
+            renderPodium('player-podium', data.podium || [], data.winner);
+            if (data.players) renderOpponents(data.players);
+        } else if (currentRole === 'admin') {
+            document.getElementById('admin-match-status').innerText = 'Selesai';
+            document.getElementById('admin-match-status').style.color = '#facc15';
+            addLog('admin-log', `🏆 Pemenang: <b>${escapeHtml(data.winner)}</b> (KO: ${data.ko}, Skor: ${data.score})`);
+            renderPodium('admin-podium', data.podium || [], data.winner);
+            if (data.players) {
+                renderAdminGrid(data.players);
+                renderAdminScoreboard(data.players);
+            }
+        }
+        return;
+    }
+
+    if (data.type === 'room_closed') {
+        alert(data.msg || 'Room ditutup.');
+        exitToLobby();
+    }
+}
+
+function renderOpponents(playersObj) {
+    if (gameMode !== 'online') return;
+    const el = document.getElementById('opponents');
+    if (!el) return;
+    const entries = Object.entries(playersObj || {});
+    if (entries.length === 0) {
+        el.innerHTML = `<div style="font-size:10px; color:#94a3b8;">Belum ada peserta</div>`;
+        return;
+    }
+
+    const sorted = entries.sort((a, b) => (b[1].score || 0) - (a[1].score || 0));
+    el.innerHTML = sorted.map(([pid, p], idx) => {
+        const isMe = pid === clientId;
+        const isQuitter = Boolean(p.quitter);
+        const isAlive = Boolean(p.alive) && !isQuitter;
+        const statusIcon = isQuitter ? '🟨' : (isAlive ? '🟢' : '💀');
+        const badgeClass = isQuitter ? 'quitter' : (!isAlive ? 'dead' : '');
+        const buffs = [
+            p.armor_charges > 0 ? `🛡️${p.armor_charges}` : '',
+            p.double_active ? '⚡2x' : ''
+        ].filter(Boolean).join(' ');
+
+        return `
+            <div class="opp-badge ${badgeClass}">
+                <div class="opp-badge-row">
+                    <span class="opp-name">#${idx + 1} ${escapeHtml(p.name || pid)}${isMe ? ' (Anda)' : ''}</span>
+                    <span class="opp-stats">${statusIcon} ${buffs}</span>
+                </div>
+                <div class="opp-stats">Skor: <b>${p.score || 0}</b> | KO: <b>${p.ko || 0}</b></div>
+            </div>
+        `;
+    }).join('');
+}
+
+function resizeAdminLaserCanvas() {
+    if (!adminLaserCanvas) return;
+    const area = document.querySelector('.admin-center-area');
+    if (!area) return;
+    adminLaserCanvas.width = Math.max(10, area.clientWidth);
+    adminLaserCanvas.height = Math.max(10, area.clientHeight);
+}
+
+function spawnAdminLaser(fromId, targetId, lines, isDouble) {
+    if (!adminLaserCanvas) return;
+    const area = document.querySelector('.admin-center-area');
+    if (!area) return;
+    const areaRect = area.getBoundingClientRect();
+
+    const fromCard = document.getElementById(`admin-card-${fromId}`);
+    const targetCard = document.getElementById(`admin-card-${targetId}`);
+    if (!fromCard || !targetCard) return;
+
+    const r1 = fromCard.getBoundingClientRect();
+    const r2 = targetCard.getBoundingClientRect();
+
+    const x1 = (r1.left + r1.right) / 2 - areaRect.left;
+    const y1 = (r1.top + r1.bottom) / 2 - areaRect.top;
+    const x2 = (r2.left + r2.right) / 2 - areaRect.left;
+    const y2 = (r2.top + r2.bottom) / 2 - areaRect.top;
+
+    adminLasers.push({
+        x1, y1, x2, y2,
+        lines,
+        isDouble,
+        life: 0.45,
+        maxLife: 0.45,
+    });
+
+    targetCard.classList.remove('hit-shake');
+    void targetCard.offsetWidth;
+    targetCard.classList.add('hit-shake');
+    setTimeout(() => targetCard.classList.remove('hit-shake'), 300);
+}
+
+function renderAdminLasers(dt) {
+    if (!adminLaserCanvas || !adminLaserCtx) return;
+    adminLaserCtx.clearRect(0, 0, adminLaserCanvas.width, adminLaserCanvas.height);
+    if (adminLasers.length === 0) return;
+
+    const nextLasers = [];
+    for (const l of adminLasers) {
+        l.life -= dt;
+        if (l.life <= 0) continue;
+        const alpha = Math.max(0, l.life / l.maxLife);
+        adminLaserCtx.save();
+        adminLaserCtx.globalAlpha = alpha;
+        adminLaserCtx.strokeStyle = l.isDouble ? '#facc15' : '#ef4444';
+        adminLaserCtx.lineWidth = l.isDouble ? 4 : 2.5;
+        adminLaserCtx.beginPath();
+        adminLaserCtx.moveTo(l.x1, l.y1);
+        adminLaserCtx.lineTo(l.x2, l.y2);
+        adminLaserCtx.stroke();
+
+        adminLaserCtx.fillStyle = '#ffffff';
+        adminLaserCtx.beginPath();
+        adminLaserCtx.arc(l.x2, l.y2, 5, 0, Math.PI * 2);
+        adminLaserCtx.fill();
+        adminLaserCtx.restore();
+        nextLasers.push(l);
+    }
+    adminLasers = nextLasers;
+}
+
+function buildAdminCardElement(pid, p) {
+    const isQuitter = Boolean(p.quitter);
+    const isAlive = Boolean(p.alive) && !isQuitter;
+    const armorCount = Number(p.armor_charges || 0);
+    const card = document.createElement('div');
+    card.id = `admin-card-${pid}`;
+    card.className = `screen-card ${isQuitter ? 'quitter' : (isAlive ? 'alive' : 'dead')} ${focusedPlayerId === pid ? 'focused' : ''} ${armorCount > 0 ? 'armor-active' : ''}`;
+    card.onclick = () => focusAdminPlayer(pid);
+
+    const title = document.createElement('div');
+    title.className = 'card-title';
+    title.style.fontWeight = 'bold';
+    title.style.fontSize = '12px';
+    title.innerText = `${p.is_bot ? '🤖' : '👤'} ${p.name || pid}`;
+
+    const status = document.createElement('div');
+    status.className = 'card-status';
+    status.style.fontSize = '10px';
+    status.style.color = isQuitter ? '#facc15' : (isAlive ? '#4ade80' : '#f87171');
+    status.innerText = isQuitter ? '🟨 Quitter' : (isAlive ? 'Main' : 'KO');
+
+    const armorBadge = document.createElement('div');
+    armorBadge.className = 'armor-pill-admin';
+    armorBadge.style.display = armorCount > 0 ? 'inline-block' : 'none';
+    armorBadge.innerText = `🛡️ ARMOR ${armorCount}x`;
+
+    const cMini = document.createElement('canvas');
+    cMini.width = 80;
+    cMini.height = 160;
+    drawGrid(cMini, p.grid, 8);
+
+    const meta = document.createElement('div');
+    meta.className = 'screen-meta';
+    meta.innerHTML = `<span>Skor: <b class="m-score">${p.score || 0}</b></span><span>KO: <b class="m-ko">${p.ko || 0}</b></span>`;
+
+    card.appendChild(title);
+    card.appendChild(status);
+    card.appendChild(armorBadge);
+    card.appendChild(cMini);
+    card.appendChild(meta);
+
+    if (p.is_bot) {
+        const delBtn = document.createElement('button');
+        delBtn.type = 'button';
+        delBtn.className = 'mini-del-btn';
+        delBtn.innerText = '✕ Hapus Bot';
+        delBtn.onclick = (e) => {
+            e.stopPropagation();
+            adminRemoveBot(pid);
+        };
+        card.appendChild(delBtn);
+    }
+
+    return card;
+}
+
+function updateSingleAdminCard(pid, p, isScoreDrop = false) {
+    const card = document.getElementById(`admin-card-${pid}`);
+    if (!card) {
+        renderAdminGrid(latestAdminPlayers);
+        return;
+    }
+    const isQuitter = Boolean(p.quitter);
+    const isAlive = Boolean(p.alive) && !isQuitter;
+    const armorCount = Number(p.armor_charges || 0);
+
+    card.className = `screen-card ${isQuitter ? 'quitter' : (isAlive ? 'alive' : 'dead')} ${focusedPlayerId === pid ? 'focused' : ''} ${armorCount > 0 ? 'armor-active' : ''}`;
+    const statusEl = card.querySelector('.card-status');
+    if (statusEl) {
+        statusEl.style.color = isQuitter ? '#facc15' : (isAlive ? '#4ade80' : '#f87171');
+        statusEl.innerText = isQuitter ? '🟨 Quitter' : (isAlive ? 'Main' : 'KO');
+    }
+    const armorEl = card.querySelector('.armor-pill-admin');
+    if (armorEl) {
+        armorEl.style.display = armorCount > 0 ? 'inline-block' : 'none';
+        armorEl.innerText = `🛡️ ARMOR ${armorCount}x`;
+    }
+    const scoreEl = card.querySelector('.m-score');
+    if (scoreEl) scoreEl.innerText = p.score || 0;
+    const koEl = card.querySelector('.m-ko');
+    if (koEl) koEl.innerText = p.ko || 0;
+
+    const cMini = card.querySelector('canvas');
+    if (cMini) drawGrid(cMini, p.grid, 8);
+
+    if (isScoreDrop) {
+        card.classList.remove('hit-shake');
+        void card.offsetWidth;
+        card.classList.add('hit-shake');
+        setTimeout(() => card.classList.remove('hit-shake'), 300);
+    }
+
+    if (focusedPlayerId === pid) {
+        renderAdminFocusPanel();
+    }
+}
+
+function renderAdminGrid(ps) {
+    latestAdminPlayers = ps || {};
+    const g = document.getElementById('monitor-grid');
+    const entries = Object.entries(latestAdminPlayers);
+    document.getElementById('admin-player-count').innerText = entries.length;
+    resizeAdminLaserCanvas();
+
+    const currentIds = new Set(entries.map(([pid]) => pid));
+    Array.from(g.children).forEach(child => {
+        const cid = child.id.replace('admin-card-', '');
+        if (!currentIds.has(cid)) child.remove();
+    });
+
+    entries.forEach(([pid, p]) => {
+        if (document.getElementById(`admin-card-${pid}`)) {
+            updateSingleAdminCard(pid, p, false);
+        } else {
+            g.appendChild(buildAdminCardElement(pid, p));
+        }
+    });
+
+    if (focusedPlayerId) {
+        if (latestAdminPlayers[focusedPlayerId]) {
+            renderAdminFocusPanel();
+        } else {
+            clearAdminFocus();
+        }
+    }
+}
+
+function renderAdminScoreboard(ps) {
+    const sb = document.getElementById('admin-scoreboard');
+    if (!sb) return;
+    const entries = Object.entries(ps || {});
+    if (entries.length === 0) {
+        sb.innerHTML = `<div style="font-size:11px; color:#94a3b8;">Belum ada peserta</div>`;
+        return;
+    }
+    const sorted = entries.sort((a, b) => ((b[1].score || 0) - (a[1].score || 0)) || ((b[1].ko || 0) - (a[1].ko || 0)));
+    sb.innerHTML = sorted.map(([pid, p], idx) => {
+        const isQuitter = Boolean(p.quitter);
+        const isAlive = Boolean(p.alive) && !isQuitter;
+        const stText = isQuitter ? '🟨 Quitter' : (isAlive ? '🟢 Aktif' : '💀 KO');
+        const buffs = [
+            p.armor_charges > 0 ? `🛡️${p.armor_charges}x` : '',
+            p.double_active ? '⚡2x' : ''
+        ].filter(Boolean).join(' ');
+        return `
+            <div class="admin-score-row ${isQuitter ? 'quitter' : ''}" onclick="focusAdminPlayer('${pid}')" style="cursor:pointer;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <b>#${idx + 1} ${escapeHtml(p.name || pid)}</b>
+                    <span style="font-size:10px; color:${isQuitter ? '#facc15' : (isAlive ? '#4ade80' : '#f87171')};">${stText} ${buffs}</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; color:#cbd5e1;">
+                    <span>Skor: <b>${p.score || 0}</b></span>
+                    <span>KO: <b>${p.ko || 0}</b></span>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function focusAdminPlayer(pid) {
+    if (!latestAdminPlayers[pid]) return;
+    focusedPlayerId = pid;
+    document.getElementById('admin-focus-panel').style.display = 'flex';
+    Array.from(document.querySelectorAll('.screen-card')).forEach(card => {
+        card.classList.toggle('focused', card.id === `admin-card-${pid}`);
+    });
+    renderAdminFocusPanel();
+}
+
+function clearAdminFocus() {
+    focusedPlayerId = null;
+    document.getElementById('admin-focus-panel').style.display = 'none';
+    Array.from(document.querySelectorAll('.screen-card')).forEach(card => {
+        card.classList.remove('focused');
+    });
+}
+
+function renderAdminFocusPanel() {
+    if (!focusedPlayerId || !latestAdminPlayers[focusedPlayerId]) return;
+    const p = latestAdminPlayers[focusedPlayerId];
+    const isQuitter = Boolean(p.quitter);
+    const isAlive = Boolean(p.alive) && !isQuitter;
+    document.getElementById('focus-player-name').innerText = `${p.is_bot ? '🤖' : '👤'} ${p.name || focusedPlayerId}`;
+    const stEl = document.getElementById('focus-player-status');
+    stEl.innerText = isQuitter ? '🟨 Quitter' : (isAlive ? '🟢 Aktif' : '💀 Tereliminasi');
+    stEl.style.color = isQuitter ? '#facc15' : (isAlive ? '#22c55e' : '#ef4444');
+    document.getElementById('focus-player-score').innerText = p.score || 0;
+    document.getElementById('focus-player-ko').innerText = p.ko || 0;
+    document.getElementById('focus-quitter-banner').style.display = isQuitter ? 'block' : 'none';
+    drawGrid(document.getElementById('admin-focus-canvas'), p.grid, 20);
+}
+
+function newPiece() {
     const id = nextPieceId || rollRandomPieceId();
     nextPieceId = rollRandomPieceId();
     drawNextPiecePreview();
     const shape = SHAPES[id];
-    piece = { shape, x: Math.floor(COLS / 2) - Math.floor(shape[0].length / 2), y: 0 };
-    if (collide(grid, piece)) {
-        handlePlayerKO();
+    return { shape, x: Math.floor(COLS / 2) - Math.floor(shape[0].length / 2), y: 0 };
+}
+
+function collide(px, py, sh = piece.shape) {
+    for (let r = 0; r < sh.length; r++) {
+        for (let c = 0; c < sh[r].length; c++) {
+            if (sh[r][c]) {
+                let nx = px + c, ny = py + r;
+                if (nx < 0 || nx >= COLS || ny >= ROWS) return true;
+                if (ny >= 0 && grid[ny][nx]) return true;
+            }
+        }
     }
+    return false;
 }
 
 function merge() {
-    if (!piece) return;
-    piece.shape.forEach((r, y) => r.forEach((v, x) => {
-        if (v && piece.y + y >= 0) grid[piece.y + y][piece.x + x] = v;
-    }));
-}
-
-function appendGarbageToGrid(targetGrid, count) {
-    let lastHole = -1;
-    for (let i = 0; i < count; i++) {
-        let hole = Math.floor(Math.random() * COLS);
-        if (COLS > 1 && hole === lastHole) hole = (hole + 1 + Math.floor(Math.random() * (COLS - 1))) % COLS;
-        lastHole = hole;
-        targetGrid.shift();
-        const row = Array(COLS).fill(8);
-        row[hole] = 0;
-        targetGrid.push(row);
-    }
-}
-
-function applyGarbage(l) {
-    appendGarbageToGrid(grid, l);
-}
-
-function spawnClearAnimation(clearedRows, rowColorsList) {
-    const baseAttack = { 1: 1, 2: 2, 3: 3, 4: 5 }[clearedRows.length] || 1;
-    const attackPreview = isDoubleActive() ? baseAttack * 2 : baseAttack;
-    const labelMap = {
-        1: gameMode === 'solo' ? `CLEAR +${clearedRows.length * 100}` : `CLEAR +${attackPreview}`,
-        2: gameMode === 'solo' ? `DOUBLE +${clearedRows.length * 100}` : `DOUBLE +${attackPreview}`,
-        3: gameMode === 'solo' ? `TRIPLE +${clearedRows.length * 100}` : `TRIPLE +${attackPreview}`,
-        4: gameMode === 'solo' ? `⚡ TETRIS +${clearedRows.length * 100}` : `⚡ TETRIS +${attackPreview}`
-    };
-    const label = pendingGarbage > 0
-        ? `🛡️ BLOCK -${Math.min(pendingGarbage, clearedRows.length)}`
-        : (labelMap[clearedRows.length] || `CLEAR`);
-
-    const textColor = pendingGarbage > 0 ? '#38bdf8' : (clearedRows.length >= 4 ? '#facc15' : '#4ade80');
-    const centerRow = clearedRows[0] ?? 10;
-
-    floatingTexts.push({
-        text: label,
-        x: canvas.width / 2,
-        y: centerRow * BLOCK_SIZE,
-        vy: -32,
-        color: textColor,
-        life: 0.85,
-        maxLife: 0.85
-    });
-
-    clearedRows.forEach((r, idx) => {
-        lineFlashRows.push({ row: r, life: 0.24, maxLife: 0.24 });
-        const colors = rowColorsList[idx] || [];
-        for (let c = 0; c < COLS; c++) {
-            const col = COLORS[colors[c]] || '#facc15';
-            for (let p = 0; p < 3; p++) {
-                particles.push({
-                    x: (c + 0.5) * BLOCK_SIZE,
-                    y: (r + 0.5) * BLOCK_SIZE,
-                    vx: (Math.random() - 0.5) * 120,
-                    vy: (Math.random() - 0.75) * 110,
-                    size: 2.5 + Math.random() * 2.5,
-                    color: col,
-                    life: 0.45 + Math.random() * 0.2,
-                    maxLife: 0.65
-                });
+    for (let r = 0; r < piece.shape.length; r++) {
+        for (let c = 0; c < piece.shape[r].length; c++) {
+            if (piece.shape[r][c]) {
+                let ny = piece.y + r, nx = piece.x + c;
+                if (ny >= 0 && ny < ROWS && nx >= 0 && nx < COLS) {
+                    grid[ny][nx] = piece.shape[r][c];
+                }
             }
         }
-    });
-}
-
-function triggerAttackAnimation(lines, fromName) {
-    shakeTimer = 0.28;
-    attackFlashTimer = 0.35;
-    vibrate(35);
-    floatingTexts.push({
-        text: `🚨 +${lines} ${fromName.toUpperCase()}`,
-        x: canvas.width / 2,
-        y: canvas.height * 0.42,
-        vy: -22,
-        color: '#f87171',
-        life: 0.95,
-        maxLife: 0.95
-    });
-}
-
-function updateAnimations(dtSec) {
-    particles = particles.filter(pt => {
-        pt.life -= dtSec;
-        pt.x += pt.vx * dtSec;
-        pt.y += pt.vy * dtSec;
-        pt.vy += 240 * dtSec;
-        return pt.life > 0;
-    });
-    floatingTexts = floatingTexts.filter(ft => {
-        ft.life -= dtSec;
-        ft.y += ft.vy * dtSec;
-        return ft.life > 0;
-    });
-    lineFlashRows = lineFlashRows.filter(lf => {
-        lf.life -= dtSec;
-        return lf.life > 0;
-    });
-    if (shakeTimer > 0) shakeTimer = Math.max(0, shakeTimer - dtSec);
-    if (attackFlashTimer > 0) attackFlashTimer = Math.max(0, attackFlashTimer - dtSec);
-    if (currentRole === 'admin') {
-        renderAdminLasers(dtSec);
     }
 }
 
-function computeDangerLevel(g) {
-    let rH = ROWS;
-    for (let r = 0; r < ROWS; r++) {
-        if (g[r].some(c => c !== 0)) { rH = r; break; }
-    }
-    return rH <= DANGER_ROW_THRESHOLD ? Math.min(5, (DANGER_ROW_THRESHOLD - rH) + 1) : 0;
-}
-
-function sweepLines() {
-    let cl = 0;
-    const clearedRowIndices = [];
-    const clearedRowColors = [];
-
+function clearLines() {
+    let lines = 0;
+    const clearedIndices = [];
     for (let r = ROWS - 1; r >= 0; r--) {
-        if (grid[r].every(c => c !== 0)) {
-            clearedRowIndices.push(r);
-            clearedRowColors.push([...grid[r]]);
+        if (grid[r].every(v => v > 0)) {
+            clearedIndices.push(r);
+            for (let c = 0; c < COLS; c++) {
+                spawnParticles(c, r, COLORS[grid[r][c]] || '#38bdf8', 5);
+            }
             grid.splice(r, 1);
             grid.unshift(Array(COLS).fill(0));
-            cl++;
+            lines++;
             r++;
         }
     }
 
-    if (cl > 0) {
-        spawnClearAnimation(clearedRowIndices, clearedRowColors);
-        if (pendingGarbage > 0) {
-            const bl = Math.min(pendingGarbage, cl);
-            pendingGarbage -= bl;
-            SFX.block();
-            addLog('player-log', `🛡️ Menangkis ${bl} baris!`);
-            updateAlert();
-        } else {
-            SFX.clear(cl);
-        }
+    if (clearedIndices.length > 0) {
+        clearedIndices.forEach(idx => {
+            lineFlashRows.push({ row: idx, life: 0.25, maxLife: 0.25 });
+        });
+    }
 
-        const forceDbl = isDoubleActive();
-        score += cl * 100 * (gameMode === 'solo' ? soloLevel : 1);
+    if (lines > 0) {
+        score += lines * 100;
         document.getElementById('score').innerText = score;
+        SFX.clear(lines);
+        vibrate(25);
+        addFloatingText(`+${lines * 100}`, canvas.width / 2, canvas.height * 0.35, '#4ade80');
 
         if (gameMode === 'solo') {
-            totalLinesCleared += cl;
+            totalLinesCleared += lines;
             const nextLv = Math.floor(totalLinesCleared / 4) + 1;
             if (nextLv > soloLevel) {
                 soloLevel = nextLv;
-                addLog('player-log', `⚡ NAIK LEVEL ${soloLevel}! Kecepatan jatuh bertambah.`);
+                SFX.block();
+                addFloatingText(`LEVEL UP ${soloLevel}!`, canvas.width / 2, canvas.height * 0.28, '#facc15');
+                addLog('player-log', `⬆️ Naik ke <b>Level ${soloLevel}</b>! Kecepatan jatuh meningkat.`);
             }
             updateLevelDisplay();
+            renderLocalSideList();
         } else {
-            const lineGainMap = { 1: 10, 2: 22, 3: 35, 4: 50 };
-            const baseGain = lineGainMap[cl] || (cl * 12);
-            const critBoost = dangerLevel > 0 ? 1.4 : 1.0;
-            addItemCharge(baseGain * critBoost);
-
-            if (gameMode === 'online') {
-                sendWS({ type: 'line_cleared', lines: cl, double_active: forceDbl });
-            } else if (gameMode === 'vsbot') {
-                localAttackFromPlayer(cl, forceDbl);
-            }
+            const chargeMap = { 1: 18, 2: 36, 3: 55, 4: 100 };
+            addItemCharge(chargeMap[lines] || lines * 20);
         }
-    } else if (pendingGarbage > 0) {
-        applyGarbage(pendingGarbage);
-        pendingGarbage = 0;
-        updateAlert();
+
+        if (gameMode === 'online' && currentRole === 'player') {
+            sendWS({ type: 'line_cleared', lines, double_active: isDoubleActive() });
+        }
     }
+}
+
+function applyPendingGarbage() {
+    if (pendingGarbage <= 0) return;
+    let count = pendingGarbage;
+    pendingGarbage = 0;
+    let lastHole = -1;
+
+    for (let i = 0; i < count; i++) {
+        let hole = Math.floor(Math.random() * COLS);
+        if (COLS > 1 && hole === lastHole) {
+            hole = (hole + 1 + Math.floor(Math.random() * (COLS - 1))) % COLS;
+        }
+        lastHole = hole;
+        grid.shift();
+        let row = Array(COLS).fill(8);
+        row[hole] = 0;
+        grid.push(row);
+    }
+    if (gameMode !== 'solo') {
+        addItemCharge(Math.min(45, count * 10));
+    }
+    addLog('player-log', `⚠️ <b>${count}</b> baris sampah masuk ke papan Anda!`);
+}
+
+function checkTopOut() {
+    if (grid[0].some(v => v > 0)) {
+        isPlaying = false;
+        piece = null;
+        stopLocalBotLoop();
+        setKoOverlay(true);
+        shakeTimer = 0.45;
+        SFX.ko();
+        vibrate(80);
+        document.getElementById('p-status').innerText = '💀 Eliminasi';
+        document.getElementById('p-status').style.color = '#ef4444';
+        if (gameMode === 'online' && currentRole === 'player') {
+            syncBoard();
+            sendWS({ type: 'player_eliminated', last_attacker_id: lastAttackerId });
+        } else if (gameMode === 'vsbot') {
+            addLog('player-log', '💀 Anda tereliminasi! Pantau sisa bot di bawah.');
+            checkVsBotMatchEnd();
+        } else if (gameMode === 'solo') {
+            addLog('player-log', `💀 Game Over di Level ${soloLevel} (Skor: ${score}). Klik Main Lagi!`);
+        }
+        return true;
+    }
+    return false;
 }
 
 function moveLeft() {
     if (!isPlaying || !piece) return;
-    piece.x--;
-    if (collide(grid, piece)) piece.x++;
-    else SFX.move();
+    if (!collide(piece.x - 1, piece.y)) { piece.x--; SFX.move(); }
 }
 
 function moveRight() {
     if (!isPlaying || !piece) return;
-    piece.x++;
-    if (collide(grid, piece)) piece.x--;
-    else SFX.move();
+    if (!collide(piece.x + 1, piece.y)) { piece.x++; SFX.move(); }
 }
 
 function moveDown() {
     if (!isPlaying || !piece) return;
-    piece.y++;
-    if (collide(grid, piece)) {
-        piece.y--;
-        merge();
-        sweepLines();
-        spawnPiece();
-        syncBoard();
-    } else {
+    if (!collide(piece.x, piece.y + 1)) {
+        piece.y++;
         SFX.move();
-        dropC = 0;
+    } else {
+        merge();
+        clearLines();
+        if (checkTopOut()) return;
+        applyPendingGarbage();
+        if (checkTopOut()) return;
+        piece = newPiece();
+        if (collide(piece.x, piece.y)) checkTopOut();
+        syncBoard();
     }
-}
-
-function rotatePiece() {
-    if (!isPlaying || !piece) return;
-    const old = piece.shape;
-    piece.shape = rotateMatrix(piece.shape);
-    if (collide(grid, piece)) piece.shape = old;
-    else SFX.rotate();
+    dropC = 0;
 }
 
 function hardDrop() {
     if (!isPlaying || !piece) return;
-    SFX.drop();
-    while (!collide(grid, piece)) piece.y++;
-    piece.y--;
+    while (!collide(piece.x, piece.y + 1)) piece.y++;
     merge();
-    sweepLines();
-    spawnPiece();
+    clearLines();
+    SFX.drop();
+    spawnParticles(piece.x + 1, piece.y, '#38bdf8', 6);
+    if (checkTopOut()) return;
+    applyPendingGarbage();
+    if (checkTopOut()) return;
+    piece = newPiece();
+    if (collide(piece.x, piece.y)) checkTopOut();
     syncBoard();
+    dropC = 0;
+}
+
+function rotatePiece() {
+    if (!isPlaying || !piece) return;
+    let rot = piece.shape[0].map((_, i) => piece.shape.map(r => r[i]).reverse());
+    if (!collide(piece.x, piece.y, rot)) { piece.shape = rot; SFX.rotate(); }
+    else if (!collide(piece.x - 1, piece.y, rot)) { piece.x--; piece.shape = rot; SFX.rotate(); }
+    else if (!collide(piece.x + 1, piece.y, rot)) { piece.x++; piece.shape = rot; SFX.rotate(); }
 }
 
 document.addEventListener('keydown', e => {
-    if (!isPlaying || !piece) return;
+    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', ' '].includes(e.key)) {
+        if (currentRole === 'player' || currentRole === 'local_solo' || currentRole === 'local_vsbot') {
+            e.preventDefault();
+        }
+    }
+    if (!isPlaying) return;
     ensureAudio();
-    if (e.key === 'ArrowLeft') moveLeft();
-    else if (e.key === 'ArrowRight') moveRight();
-    else if (e.key === 'ArrowDown') moveDown();
-    else if (e.key === 'ArrowUp') rotatePiece();
-    else if (e.key === ' ') { e.preventDefault(); hardDrop(); }
-    else if (hasPowerupsInCurrentMode() && (e.key === '1' || e.key.toLowerCase() === 'q')) activateItem('armor');
-    else if (hasPowerupsInCurrentMode() && (e.key === '2' || e.key.toLowerCase() === 'e')) activateItem('double');
-    else if (hasPowerupsInCurrentMode() && (e.key === '3' || e.key.toLowerCase() === 'r')) activateItem('breaker');
+    if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') moveLeft();
+    else if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') moveRight();
+    else if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') moveDown();
+    else if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') rotatePiece();
+    else if (e.key === ' ') hardDrop();
 });
 
-let tSX = 0, tSY = 0;
-canvas.addEventListener('touchstart', e => {
-    ensureAudio();
-    if (e.touches.length === 1) { tSX = e.touches[0].clientX; tSY = e.touches[0].clientY; }
-}, { passive: true });
+function getBoardWithPiece() {
+    let copy = grid.map(r => [...r]);
+    if (piece && isPlaying) {
+        for (let r = 0; r < piece.shape.length; r++) {
+            for (let c = 0; c < piece.shape[r].length; c++) {
+                if (piece.shape[r][c]) {
+                    let ny = piece.y + r, nx = piece.x + c;
+                    if (ny >= 0 && ny < ROWS && nx >= 0 && nx < COLS) copy[ny][nx] = piece.shape[r][c];
+                }
+            }
+        }
+    }
+    return copy;
+}
 
-canvas.addEventListener('touchend', e => {
-    if (!isPlaying || !piece || e.changedTouches.length === 0) return;
-    const dX = e.changedTouches[0].clientX - tSX;
-    const dY = e.changedTouches[0].clientY - tSY;
-    if (Math.abs(dX) < 12 && Math.abs(dY) < 12) rotatePiece();
-    else if (Math.abs(dX) > Math.abs(dY)) { dX > 20 ? moveRight() : (dX < -20 && moveLeft()); }
-    else if (dY > 35) hardDrop();
-});
+function syncBoard() {
+    if (currentRole === 'player' && gameMode === 'online') {
+        sendWS({ type: 'update_board', score, grid: getBoardWithPiece() });
+    }
+}
 
-function drawBlock(c, x, y, color, size) {
+function drawBlock(c, x, y, color, bs) {
     c.fillStyle = color;
-    c.fillRect(x * size, y * size, size - 1, size - 1);
+    c.fillRect(x * bs, y * bs, bs - 1, bs - 1);
+    c.fillStyle = 'rgba(255,255,255,0.22)';
+    c.fillRect(x * bs, y * bs, bs - 1, Math.max(2, Math.floor(bs * 0.16)));
 }
 
 function drawGrid(cv, gd, bs) {
@@ -2213,1363 +3288,177 @@ function drawGrid(cv, gd, bs) {
     c.setLineDash([]);
 }
 
-function draw() {
-    ctx.save();
-    if (shakeTimer > 0) {
-        const mag = Math.ceil(shakeTimer * 20);
-        ctx.translate((Math.random() - 0.5) * 2 * mag, (Math.random() - 0.5) * 2 * mag);
+function computeDangerLevel() {
+    if (!isPlaying) return 0;
+    let highestRow = ROWS;
+    for (let r = 0; r < ROWS; r++) {
+        if (grid[r].some(v => v > 0)) {
+            highestRow = r;
+            break;
+        }
+    }
+    if (highestRow <= 1) return 3;
+    if (highestRow <= 2) return 2;
+    if (highestRow <= DANGER_ROW_THRESHOLD) return 1;
+    return 0;
+}
+
+function updateDangerState(dt) {
+    dangerLevel = computeDangerLevel();
+    const alertEl = document.getElementById('incoming-alert');
+
+    if (dangerLevel === 0) {
+        dangerBlinkTimer = 0;
+        dangerFlashOn = false;
+        if (pendingGarbage > 0) {
+            alertEl.innerHTML = `<span class="warning">⚠️ +${pendingGarbage} BARIS SAMPAH MASUK!</span>`;
+        } else {
+            alertEl.innerHTML = '';
+        }
+        return;
     }
 
-    ctx.fillStyle = '#020617';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    if (isPlaying && dangerLevel > 0 && dangerFlashOn) {
-        ctx.fillStyle = `rgba(239, 68, 68, ${0.15 + dangerLevel * 0.05})`;
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+    const interval = dangerLevel === 3 ? 0.22 : (dangerLevel === 2 ? 0.36 : 0.55);
+    dangerBlinkTimer += dt;
+    if (dangerBlinkTimer >= interval) {
+        dangerBlinkTimer = 0;
+        dangerFlashOn = !dangerFlashOn;
+        if (dangerFlashOn) SFX.danger(dangerLevel);
     }
 
-    if (attackFlashTimer > 0) {
-        ctx.fillStyle = `rgba(239, 68, 68, ${Math.min(0.45, attackFlashTimer * 1.2)})`;
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-    }
+    const label = dangerLevel === 3 ? '🚨 BAHAYA KRITIS! STACK MENTOK!' : '⚠️ PERINGATAN! STACK TINGGI!';
+    const garText = pendingGarbage > 0 ? ` (+${pendingGarbage} SAMPAH)` : '';
+    alertEl.innerHTML = `<span class="warning">${label}${garText}</span>`;
+}
 
-    const dLY = (DANGER_ROW_THRESHOLD + 1) * BLOCK_SIZE;
-    ctx.strokeStyle = dangerLevel > 0 ? 'rgba(248,113,113,0.9)' : 'rgba(239,68,68,0.2)';
-    ctx.setLineDash([4, 4]);
-    ctx.beginPath();
-    ctx.moveTo(0, dLY);
-    ctx.lineTo(canvas.width, dLY);
-    ctx.stroke();
-    ctx.setLineDash([]);
-
-    grid.forEach((r, y) => r.forEach((v, x) => { if (v) drawBlock(ctx, x, y, COLORS[v], BLOCK_SIZE); }));
-    if (piece && isPlaying) {
-        piece.shape.forEach((r, y) => r.forEach((v, x) => {
-            if (v) drawBlock(ctx, piece.x + x, piece.y + y, COLORS[v], BLOCK_SIZE);
-        }));
-    }
-
-    lineFlashRows.forEach(lf => {
-        ctx.fillStyle = `rgba(255, 255, 255, ${Math.max(0, lf.life / lf.maxLife) * 0.85})`;
+function updateAndRenderEffects(dt) {
+    for (let i = lineFlashRows.length - 1; i >= 0; i--) {
+        const lf = lineFlashRows[i];
+        lf.life -= dt;
+        if (lf.life <= 0) {
+            lineFlashRows.splice(i, 1);
+            continue;
+        }
+        const alpha = Math.max(0, lf.life / lf.maxLife);
+        ctx.fillStyle = `rgba(255, 255, 255, ${alpha * 0.85})`;
         ctx.fillRect(0, lf.row * BLOCK_SIZE, canvas.width, BLOCK_SIZE);
-    });
+    }
 
-    particles.forEach(pt => {
-        ctx.globalAlpha = Math.max(0, pt.life / pt.maxLife);
+    for (let i = particles.length - 1; i >= 0; i--) {
+        const pt = particles[i];
+        pt.life -= dt;
+        if (pt.life <= 0) {
+            particles.splice(i, 1);
+            continue;
+        }
+        pt.x += pt.vx * dt;
+        pt.y += pt.vy * dt;
+        pt.vy += 180 * dt;
+        const alpha = Math.max(0, pt.life / pt.maxLife);
+        ctx.globalAlpha = alpha;
         ctx.fillStyle = pt.color;
         ctx.fillRect(pt.x - pt.size / 2, pt.y - pt.size / 2, pt.size, pt.size);
-    });
-    ctx.globalAlpha = 1;
+        ctx.globalAlpha = 1;
+    }
 
-    floatingTexts.forEach(ft => {
-        ctx.globalAlpha = Math.max(0, ft.life / ft.maxLife);
-        ctx.font = 'bold 11px system-ui, sans-serif';
+    for (let i = floatingTexts.length - 1; i >= 0; i--) {
+        const ft = floatingTexts[i];
+        ft.life -= dt;
+        if (ft.life <= 0) {
+            floatingTexts.splice(i, 1);
+            continue;
+        }
+        ft.y += ft.vy * dt;
+        const alpha = Math.max(0, ft.life / ft.maxLife);
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.font = 'bold 12px system-ui, sans-serif';
         ctx.textAlign = 'center';
         ctx.fillStyle = '#020617';
         ctx.fillText(ft.text, ft.x + 1, ft.y + 1);
         ctx.fillStyle = ft.color;
         ctx.fillText(ft.text, ft.x, ft.y);
-    });
-    ctx.globalAlpha = 1;
-
-    ctx.restore();
-
-    if (attackFlashTimer > 0) {
-        canvas.style.borderColor = '#f87171';
-        canvas.style.boxShadow = '0 0 16px rgba(248,113,113,0.9)';
-    } else if (isDoubleActive() && isPlaying) {
-        canvas.style.borderColor = '#facc15';
-        canvas.style.boxShadow = '0 0 14px rgba(250,204,21,0.75)';
-    } else if (armorCharges > 0 && isPlaying) {
-        canvas.style.borderColor = '#38bdf8';
-        canvas.style.boxShadow = '0 0 14px rgba(56,189,248,0.65)';
-    } else if (isPlaying && dangerLevel > 0 && dangerFlashOn) {
-        canvas.style.borderColor = '#ef4444';
-        canvas.style.boxShadow = `0 0 ${8 + dangerLevel * 3}px rgba(239,68,68,0.8)`;
-    } else {
-        canvas.style.borderColor = '#475569';
-        canvas.style.boxShadow = '0 0 12px rgba(0,0,0,0.5)';
+        ctx.restore();
     }
 }
 
-function loop(t = 0) {
-    const dt = Math.min(100, t - lT || 16);
-    lT = t;
-    const dtSec = dt / 1000;
-    updateAnimations(dtSec);
+function renderPlayer() {
+    ctx.save();
+    if (shakeTimer > 0) {
+        const mag = dangerLevel >= 2 ? 5 : 3;
+        const dx = (Math.random() - 0.5) * mag * 2;
+        const dy = (Math.random() - 0.5) * mag * 2;
+        ctx.translate(dx, dy);
+    }
 
-    if (isPlaying && piece && (gameMode !== 'online' || !hasLeftArena)) {
-        dropC += dt;
-        syncC += dt;
-        uiC += dt;
+    drawGrid(canvas, getBoardWithPiece(), BLOCK_SIZE);
 
-        dangerLevel = computeDangerLevel(grid);
+    if (attackFlashTimer > 0) {
+        ctx.strokeStyle = `rgba(239, 68, 68, ${Math.min(1, attackFlashTimer * 3)})`;
+        ctx.lineWidth = 4;
+        ctx.strokeRect(1, 1, canvas.width - 2, canvas.height - 2);
+    }
 
-        if (hasPowerupsInCurrentMode()) {
-            const passiveRate = dangerLevel > 0 ? 2.5 : 1.0;
-            addItemCharge(passiveRate * dtSec);
-        }
+    if (dangerLevel > 0) {
+        const alpha = dangerFlashOn ? (0.12 + dangerLevel * 0.08) : 0.04;
+        ctx.fillStyle = `rgba(239, 68, 68, ${alpha})`;
+        ctx.fillRect(0, 0, canvas.width, (DANGER_ROW_THRESHOLD + 1) * BLOCK_SIZE);
+        ctx.strokeStyle = dangerFlashOn ? 'rgba(248, 113, 113, 0.95)' : 'rgba(239, 68, 68, 0.45)';
+        ctx.lineWidth = dangerLevel >= 2 ? 3 : 2;
+        ctx.strokeRect(1, 1, canvas.width - 2, canvas.height - 2);
+    }
 
-        if (dangerLevel > 0) {
-            const bIM = Math.max(75, 460 - (dangerLevel * 75));
-            dangerBlinkTimer += dt;
-            if (dangerBlinkTimer >= bIM) {
-                dangerFlashOn = !dangerFlashOn;
-                dangerBlinkTimer = 0;
-                if (dangerFlashOn) SFX.danger(dangerLevel);
-            }
-        } else {
-            dangerFlashOn = false;
-            dangerBlinkTimer = 0;
-        }
+    if (hasPowerupsInCurrentMode() && armorCharges > 0) {
+        ctx.strokeStyle = 'rgba(74, 222, 128, 0.85)';
+        ctx.lineWidth = 2.5;
+        ctx.strokeRect(2, 2, canvas.width - 4, canvas.height - 4);
+    }
 
-        if (dropC > getDropIntervalMs()) {
-            piece.y++;
-            if (collide(grid, piece)) {
-                piece.y--;
-                merge();
-                sweepLines();
-                spawnPiece();
-                syncBoard();
-            }
+    updateAndRenderEffects(0.016);
+    ctx.restore();
+}
+
+function loop(now) {
+    if (!lT) lT = now;
+    let dt = (now - lT) / 1000;
+    lT = now;
+    if (dt > 0.25) dt = 0.25;
+
+    if (shakeTimer > 0) shakeTimer = Math.max(0, shakeTimer - dt);
+    if (attackFlashTimer > 0) attackFlashTimer = Math.max(0, attackFlashTimer - dt);
+
+    if (isPlaying && piece) {
+        dropC += dt * 1000;
+        const intervalMs = getDropIntervalMs();
+        if (dropC > intervalMs) {
             dropC = 0;
+            moveDown();
         }
-        if (gameMode === 'online' && syncC > 350) {
-            syncBoard();
+        syncC += dt;
+        if (syncC > 0.45) {
             syncC = 0;
-        }
-        if (hasPowerupsInCurrentMode() && uiC > 120) {
-            refreshItemUI();
-            uiC = 0;
+            syncBoard();
         }
     }
-    draw();
+
+    if (currentRole === 'player' || currentRole === 'local_solo' || currentRole === 'local_vsbot') {
+        updateDangerState(dt);
+        renderPlayer();
+        uiC += dt;
+        if (uiC > 0.1) {
+            uiC = 0;
+            refreshItemUI();
+        }
+    } else if (currentRole === 'admin') {
+        renderAdminLasers(dt);
+    }
+
     requestAnimationFrame(loop);
 }
 
-function localBotCollide(board, shape, px, py) {
-    for (let r = 0; r < shape.length; r++) {
-        for (let c = 0; c < shape[r].length; c++) {
-            if (shape[r][c]) {
-                const nr = py + r;
-                const nc = px + c;
-                if (nc < 0 || nc >= COLS || nr >= ROWS) return true;
-                if (nr >= 0 && board[nr][nc] !== 0) return true;
-            }
-        }
-    }
-    return false;
-}
-
-function evaluateLocalBoard(board, linesCleared) {
-    let aggHeight = 0;
-    let holes = 0;
-    const colHeights = Array(COLS).fill(0);
-
-    for (let c = 0; c < COLS; c++) {
-        let seen = false;
-        for (let r = 0; r < ROWS; r++) {
-            if (board[r][c] !== 0) {
-                if (!seen) {
-                    colHeights[c] = ROWS - r;
-                    aggHeight += colHeights[c];
-                    seen = true;
-                }
-            } else if (seen) {
-                holes++;
-            }
-        }
-    }
-
-    let bumpiness = 0;
-    for (let i = 0; i < COLS - 1; i++) {
-        bumpiness += Math.abs(colHeights[i] - colHeights[i + 1]);
-    }
-    const maxHeight = Math.max(...colHeights, 0);
-    const lineBonus = ({ 0: 0, 1: 4.5, 2: 11, 3: 22, 4: 40 })[linesCleared] || (linesCleared * 8);
-
-    return lineBonus - (holes * 5.2) - (aggHeight * 0.45) - (bumpiness * 1.1) - (Math.max(0, maxHeight - 12) * 1.6);
-}
-
-function pickLocalBotPiece(bot) {
-    const board = bot.board;
-    const baseShape = SHAPES[Math.floor(Math.random() * 7) + 1];
-    const rotations = [];
-    let curr = baseShape.map(r => [...r]);
-
-    for (let i = 0; i < 4; i++) {
-        const key = JSON.stringify(curr);
-        if (!rotations.some(item => JSON.stringify(item) === key)) {
-            rotations.push(curr.map(r => [...r]));
-        }
-        curr = rotateMatrix(curr);
-    }
-
-    const moves = [];
-    for (const rotShape of rotations) {
-        const w = rotShape[0].length;
-        for (let x = 0; x <= COLS - w; x++) {
-            if (localBotCollide(board, rotShape, x, 0)) continue;
-            let y = 0;
-            while (!localBotCollide(board, rotShape, x, y + 1)) y++;
-
-            const temp = board.map(r => [...r]);
-            for (let r = 0; r < rotShape.length; r++) {
-                for (let c = 0; c < rotShape[r].length; c++) {
-                    if (rotShape[r][c]) {
-                        const nr = y + r;
-                        const nc = x + c;
-                        if (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS) temp[nr][nc] = rotShape[r][c];
-                    }
-                }
-            }
-
-            let cleared = 0;
-            const kept = [];
-            for (const row of temp) {
-                if (row.every(v => v !== 0)) cleared++;
-                else kept.push(row);
-            }
-            while (kept.length < ROWS) kept.unshift(Array(COLS).fill(0));
-            const topPenalty = kept[0].some(v => v !== 0) ? 12 : 0;
-            moves.push({ score: evaluateLocalBoard(kept, cleared) - topPenalty, shape: rotShape, x });
-        }
-    }
-
-    moves.sort((a, b) => b.score - a.score);
-    const chosen = moves.length > 0
-        ? (Math.random() < 0.85 || moves.length === 1 ? moves[0] : moves[Math.floor(Math.random() * Math.min(3, moves.length))])
-        : { shape: baseShape.map(r => [...r]), x: Math.floor(COLS / 2) - 1 };
-
-    const startX = Math.max(0, Math.min(COLS - chosen.shape[0].length, Math.floor(COLS / 2) - Math.floor(chosen.shape[0].length / 2)));
-    return {
-        shape: chosen.shape,
-        x: startX,
-        y: 0,
-        targetX: chosen.x,
-        hesitate: Math.floor(Math.random() * 2)
-    };
-}
-
-function getLocalBotGrid(bot) {
-    const snap = bot.board.map(r => [...r]);
-    if (bot.alive && bot.curPiece) {
-        bot.curPiece.shape.forEach((r, y) => r.forEach((v, x) => {
-            if (v) {
-                const nr = bot.curPiece.y + y;
-                const nc = bot.curPiece.x + x;
-                if (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS) snap[nr][nc] = v;
-            }
-        }));
-    }
-    return snap;
-}
-
-function makeLocalBotObj(name) {
-    return {
-        id: `lbot_${vsBotSerial++}`,
-        name,
-        is_bot: true,
-        alive: true,
-        score: 0,
-        ko: 0,
-        board: createEmptyGrid(),
-        curPiece: null,
-        spawnCooldown: Math.floor(Math.random() * 3),
-        charge: 0,
-        armorCharges: 0,
-        doubleUntil: 0
-    };
-}
-
-function setupLocalBots(count) {
-    localBots = [];
-    for (let i = 0; i < count; i++) {
-        localBots.push(makeLocalBotObj(`Bot_${i + 1}`));
-    }
-    renderVsBotSideList();
-    renderBotSpectatorPanel();
-}
-
-function localAddBot() {
-    if (gameMode !== 'vsbot') return;
-    const b = makeLocalBotObj(`Bot_${localBots.length + 1}`);
-    localBots.push(b);
-    addLog('player-log', `🤖 ${b.name} masuk ke arena!`);
-    renderVsBotSideList();
-    renderBotSpectatorPanel();
-}
-
-function localRemoveBot() {
-    if (gameMode !== 'vsbot' || localBots.length === 0) return;
-    const removed = localBots.pop();
-    if (focusedBotId === removed.id) {
-        focusedBotId = null;
-    }
-    addLog('player-log', `🤖 ${removed.name} dikeluarkan dari arena.`);
-    renderVsBotSideList();
-    renderBotSpectatorPanel();
-    checkVsBotMatchState();
-}
-
-function localAttackFromPlayer(lines, forceDbl) {
-    if (gameMode !== 'vsbot') return;
-    const map = { 1: 1, 2: 2, 3: 3, 4: 5 };
-    let dmg = map[lines] || 1;
-    if (forceDbl) dmg *= 2;
-
-    const aliveBots = localBots.filter(b => b.alive);
-    if (aliveBots.length === 0) return;
-
-    const target = aliveBots[Math.floor(Math.random() * aliveBots.length)];
-    if (target.armorCharges > 0) {
-        target.armorCharges--;
-        addLog('player-log', `🛡️ Armor ${target.name} menangkis ${dmg} baris!`);
-        renderVsBotSideList();
-        return;
-    }
-
-    appendGarbageToGrid(target.board, Math.min(dmg, 5));
-    addLog('player-log', `⚡ Anda mengirim ${dmg} baris ke ${target.name}!`);
-    if (target.board[0].some(v => v !== 0)) {
-        target.alive = false;
-        playerKoCount++;
-        document.getElementById('ko').innerText = playerKoCount;
-        addLog('player-log', `💀 Anda meng-KO ${target.name}!`);
-        checkVsBotMatchState();
-    }
-    renderVsBotSideList();
-    renderBotSpectatorPanel();
-}
-
-function localAttackFromBot(bot, lines) {
-    const map = { 1: 1, 2: 2, 3: 3, 4: 5 };
-    let dmg = map[lines] || 1;
-    if (performance.now() < bot.doubleUntil) dmg *= 2;
-
-    const targets = [];
-    if (isPlaying) targets.push({ type: 'player' });
-    localBots.forEach(b => { if (b.alive && b.id !== bot.id) targets.push({ type: 'bot', bot: b }); });
-    if (targets.length === 0) return;
-
-    const chosen = targets[Math.floor(Math.random() * targets.length)];
-    if (chosen.type === 'player') {
-        if (armorCharges > 0) {
-            armorCharges--;
-            SFX.block();
-            refreshItemUI();
-            addLog('player-log', `🛡️ Armor Anda menahan ${dmg} baris dari ${bot.name}! (Sisa ${armorCharges}x)`);
-            return;
-        }
-        pendingGarbage += dmg;
-        lastAttackerId = bot.id;
-        SFX.attack();
-        triggerAttackAnimation(dmg, bot.name);
-        updateAlert();
-        addLog('player-log', `🚨 ${bot.name} mengirim +${dmg} baris!`);
-    } else {
-        const tBot = chosen.bot;
-        if (tBot.armorCharges > 0) {
-            tBot.armorCharges--;
-            addLog('player-log', `🛡️ Armor ${tBot.name} menahan serangan ${bot.name}!`);
-            return;
-        }
-        appendGarbageToGrid(tBot.board, Math.min(dmg, 4));
-        addLog('player-log', `⚡ ${bot.name} mengirim ${dmg} baris ke ${tBot.name}`);
-        if (tBot.board[0].some(v => v !== 0)) {
-            tBot.alive = false;
-            bot.ko++;
-            addLog('player-log', `💀 ${bot.name} meng-KO ${tBot.name}!`);
-            checkVsBotMatchState();
-        }
-    }
-}
-
-function checkVsBotMatchState() {
-    if (gameMode !== 'vsbot') return;
-    const aliveBots = localBots.filter(b => b.alive);
-    if (!isPlaying && aliveBots.length > 0) {
-        document.getElementById('bot-spectator-panel').style.display = 'block';
-        if (!focusedBotId && aliveBots[0]) focusedBotId = aliveBots[0].id;
-        renderBotSpectatorPanel();
-    } else if (isPlaying && aliveBots.length === 0 && localBots.length > 0) {
-        isPlaying = false;
-        dangerLevel = 0;
-        dangerFlashOn = false;
-        refreshItemUI();
-        SFX.win();
-        document.getElementById('p-status').innerText = '🍗 CHICKEN DINNER!';
-        document.getElementById('p-status').style.color = '#facc15';
-        renderPodium('player-podium', [{
-            rank: 1,
-            name: myUsername || 'Anda',
-            is_bot: false,
-            score,
-            ko: playerKoCount,
-            reason: 'Mengalahkan Semua Bot'
-        }], true);
-        addLog('player-log', '🍗 CHICKEN DINNER! Anda mengalahkan semua bot!');
-    }
-}
-
-function startLocalBotLoop() {
-    stopLocalBotLoop();
-    botLoopTimer = setInterval(() => {
-        if (gameMode !== 'vsbot') return;
-        const aliveBots = localBots.filter(b => b.alive);
-        if (!isPlaying && aliveBots.length === 0) return;
-
-        for (const bot of localBots) {
-            if (!bot.alive) continue;
-
-            bot.charge += 0.35;
-            if (bot.charge >= 100) {
-                bot.charge = 0;
-                const isCrit = bot.board.slice(0, 5).some(r => r.some(v => v !== 0));
-                if (isCrit && bot.armorCharges === 0) {
-                    bot.armorCharges = 3;
-                    addLog('player-log', `🛡️ ${bot.name} mengaktifkan ARMOR!`);
-                } else {
-                    bot.doubleUntil = performance.now() + DOUBLE_DURATION_MS;
-                    addLog('player-log', `⚡ ${bot.name} mengaktifkan DOUBLE 5 detik!`);
-                }
-            }
-
-            if (bot.spawnCooldown > 0) {
-                bot.spawnCooldown--;
-                continue;
-            }
-
-            if (!bot.curPiece) {
-                const nextP = pickLocalBotPiece(bot);
-                if (localBotCollide(bot.board, nextP.shape, nextP.x, nextP.y)) {
-                    bot.alive = false;
-                    addLog('player-log', `💀 ${bot.name} tereliminasi!`);
-                    checkVsBotMatchState();
-                    continue;
-                }
-                bot.curPiece = nextP;
-            }
-
-            const cur = bot.curPiece;
-            if (cur.hesitate > 0) {
-                cur.hesitate--;
-            } else if (cur.x < cur.targetX && !localBotCollide(bot.board, cur.shape, cur.x + 1, cur.y)) {
-                cur.x++;
-            } else if (cur.x > cur.targetX && !localBotCollide(bot.board, cur.shape, cur.x - 1, cur.y)) {
-                cur.x--;
-            } else if (!localBotCollide(bot.board, cur.shape, cur.x, cur.y + 1)) {
-                cur.y++;
-            } else {
-                cur.shape.forEach((r, y) => r.forEach((v, x) => {
-                    if (v && cur.y + y >= 0 && cur.y + y < ROWS && cur.x + x >= 0 && cur.x + x < COLS) {
-                        bot.board[cur.y + y][cur.x + x] = v;
-                    }
-                }));
-                bot.curPiece = null;
-                bot.spawnCooldown = 1;
-
-                let cleared = 0;
-                const kept = [];
-                for (const row of bot.board) {
-                    if (row.every(v => v !== 0)) cleared++;
-                    else kept.push(row);
-                }
-                while (kept.length < ROWS) kept.unshift(Array(COLS).fill(0));
-                bot.board = kept;
-
-                if (cleared > 0) {
-                    bot.score += cleared * 100;
-                    const gainMap = { 1: 10, 2: 22, 3: 35, 4: 50 };
-                    bot.charge = Math.min(100, bot.charge + (gainMap[cleared] || cleared * 12));
-                    localAttackFromBot(bot, cleared);
-                }
-
-                if (bot.board[0].some(v => v !== 0)) {
-                    bot.alive = false;
-                    addLog('player-log', `💀 ${bot.name} tereliminasi!`);
-                    checkVsBotMatchState();
-                }
-            }
-        }
-
-        renderVsBotSideList();
-        if (!isPlaying || document.getElementById('bot-spectator-panel').style.display !== 'none') {
-            renderBotSpectatorPanel();
-        }
-    }, 280);
-}
-
-function stopLocalBotLoop() {
-    if (botLoopTimer) {
-        clearInterval(botLoopTimer);
-        botLoopTimer = null;
-    }
-}
-
-function renderVsBotSideList() {
-    const c = document.getElementById('opponents');
-    if (!c || gameMode !== 'vsbot') return;
-
-    const rows = [
-        {
-            id: 'self',
-            name: `${myUsername || 'Anda'} (Anda)`,
-            score,
-            ko: playerKoCount,
-            alive: isPlaying,
-            is_bot: false
-        },
-        ...localBots.map(b => ({
-            id: b.id,
-            name: b.name,
-            score: b.score,
-            ko: b.ko,
-            alive: b.alive,
-            is_bot: true
-        }))
-    ].sort((a, b) => (b.score - a.score) || (b.ko - a.ko));
-
-    c.innerHTML = rows.map(item => {
-        const cls = item.alive ? '' : 'dead';
-        const clickAttr = item.is_bot ? `onclick="openBotSpectatorAndFocus('${item.id}')"` : '';
-        return `
-            <div class="opp-badge ${cls} ${item.is_bot ? 'clickable-bot' : ''}" ${clickAttr}>
-                <div class="opp-badge-row">
-                    <span class="opp-name">${item.is_bot ? '🤖 ' : ''}${escapeHtml(item.name)} ${item.alive ? '🟢' : '💀'}</span>
-                    <span class="opp-stats"><b>${item.score}</b>p • KO:${item.ko}</span>
-                </div>
-            </div>
-        `;
-    }).join('');
-}
-
-function openBotSpectatorAndFocus(botId) {
-    focusedBotId = botId;
-    document.getElementById('bot-spectator-panel').style.display = 'block';
-    renderBotSpectatorPanel();
-}
-
-function clearBotZoom() {
-    focusedBotId = null;
-    document.getElementById('bot-zoom-panel').style.display = 'none';
-    renderBotSpectatorPanel();
-}
-
-function renderBotSpectatorPanel() {
-    const panel = document.getElementById('bot-spectator-panel');
-    if (!panel || gameMode !== 'vsbot') return;
-
-    const gridEl = document.getElementById('bot-spectator-grid');
-    gridEl.innerHTML = '';
-
-    localBots.forEach(bot => {
-        const card = document.createElement('div');
-        const isFocused = bot.id === focusedBotId;
-        card.className = `bot-mini-card ${bot.alive ? 'alive' : 'dead'}${isFocused ? ' focused' : ''}`;
-        card.onclick = () => {
-            focusedBotId = bot.id;
-            renderBotSpectatorPanel();
-        };
-        card.innerHTML = `
-            <div style="font-size:11px; font-weight:700;">🤖 ${escapeHtml(bot.name)} ${bot.alive ? '🟢' : '💀'}</div>
-            <canvas id="bmini-${bot.id}" width="80" height="160"></canvas>
-            <div style="width:100%; display:flex; justify-content:space-between; font-size:10px; color:#cbd5e1;">
-                <span>S:${bot.score}</span>
-                <span>K:${bot.ko}</span>
-            </div>
-        `;
-        gridEl.appendChild(card);
-        drawGrid(document.getElementById(`bmini-${bot.id}`), getLocalBotGrid(bot), 8);
-    });
-
-    const zoomPanel = document.getElementById('bot-zoom-panel');
-    const targetBot = localBots.find(b => b.id === focusedBotId);
-    if (targetBot) {
-        zoomPanel.style.display = 'flex';
-        document.getElementById('bot-zoom-name').innerText = `🤖 ${targetBot.name}`;
-        document.getElementById('bot-zoom-score').innerText = targetBot.score;
-        document.getElementById('bot-zoom-ko').innerText = targetBot.ko;
-        const stEl = document.getElementById('bot-zoom-status');
-        stEl.innerText = targetBot.alive ? '🟢 Sedang Main' : '💀 Tereliminasi';
-        stEl.style.color = targetBot.alive ? '#22c55e' : '#ef4444';
-        drawGrid(document.getElementById('bot-zoom-canvas'), getLocalBotGrid(targetBot), 16);
-    } else {
-        zoomPanel.style.display = 'none';
-    }
-}
-
-function resetBoardStateForMatch() {
-    grid = createEmptyGrid();
-    piece = null;
-    nextPieceId = rollRandomPieceId();
-    drawNextPiecePreview();
-    score = 0;
-    soloLevel = 1;
-    totalLinesCleared = 0;
-    playerKoCount = 0;
-    pendingGarbage = 0;
-    lastAttackerId = null;
-    dangerLevel = 0;
-    dangerFlashOn = false;
-    dropC = 0;
-    itemTokens = 0;
-    itemCharge = 0;
-    armorCharges = 0;
-    doubleExpiresAt = 0;
-    particles = [];
-    floatingTexts = [];
-    lineFlashRows = [];
-    shakeTimer = 0;
-    attackFlashTimer = 0;
-
-    document.getElementById('score').innerText = '0';
-    document.getElementById('ko').innerText = '0';
-    document.getElementById('player-log').innerHTML = '';
-    updateLevelDisplay();
-    updateAlert();
-    hidePodiums();
-    setKoBanner(false);
-}
-
-function startSoloMode() {
-    ensureAudio();
-    gameMode = 'solo';
-    hasLeftArena = true;
-    isOnlineRoomHost = false;
-    stopLobbyPolling();
-    stopLocalBotLoop();
-    myUsername = document.getElementById('solo-name').value.trim() || 'Pemain Solo';
-
-    document.getElementById('lobby-card').style.display = 'none';
-    document.getElementById('admin-view').style.display = 'none';
-    document.getElementById('player-view').style.display = 'flex';
-    document.getElementById('bot-spectator-panel').style.display = 'none';
-    document.getElementById('opponents').innerHTML = `
-        <div class="opp-badge">
-            <div class="opp-badge-row">
-                <span class="opp-name">⚡ Kecepatan Naik Tiap Level</span>
-                <span class="opp-stats">4 Baris / Lv</span>
-            </div>
-        </div>
-    `;
-
-    applyModeVisibilityToPlayerView();
-    resetBoardStateForMatch();
-    resizeBoardForScreen();
-    isPlaying = true;
-    const stEl = document.getElementById('p-status');
-    stEl.innerText = '🟢 Main';
-    stEl.style.color = '#22c55e';
-    spawnPiece();
-    addLog('player-log', '🎯 Mode Main Sendiri dimulai! Lv. 1');
-}
-
-function startVsBotMode() {
-    ensureAudio();
-    gameMode = 'vsbot';
-    hasLeftArena = true;
-    isOnlineRoomHost = false;
-    stopLobbyPolling();
-    myUsername = document.getElementById('vsbot-name').value.trim() || 'Anda';
-    focusedBotId = null;
-
-    document.getElementById('lobby-card').style.display = 'none';
-    document.getElementById('admin-view').style.display = 'none';
-    document.getElementById('player-view').style.display = 'flex';
-    document.getElementById('bot-spectator-panel').style.display = 'none';
-
-    applyModeVisibilityToPlayerView();
-    resetBoardStateForMatch();
-    resizeBoardForScreen();
-    isPlaying = true;
-    refreshItemUI();
-    setupLocalBots(vsBotDesiredCount);
-
-    const stEl = document.getElementById('p-status');
-    stEl.innerText = '🟢 Main';
-    stEl.style.color = '#22c55e';
-    spawnPiece();
-    startLocalBotLoop();
-    addLog('player-log', `⚔️ Lawan ${vsBotDesiredCount} Bot dimulai!`);
-}
-
-function restartLocalMode() {
-    if (gameMode === 'solo') startSoloMode();
-    else if (gameMode === 'vsbot') startVsBotMode();
-}
-
-function exitToLobby() {
-    if (gameMode === 'online' && currentRole === 'player') {
-        notifyPlayerQuit();
-    }
-    stopLocalBotLoop();
-    isPlaying = false;
-    isOnlineRoomHost = false;
-    pendingPlayerCreateRoom = false;
-    dangerLevel = 0;
-    dangerFlashOn = false;
-    setKoBanner(false);
-    hidePodiums();
-    document.getElementById('player-view').style.display = 'none';
-    document.getElementById('admin-view').style.display = 'none';
-    document.getElementById('lobby-card').style.display = 'block';
-    startLobbyPolling();
-}
-
-function notifyPlayerQuit() {
-    if (gameMode !== 'online' || currentRole !== 'player' || !activeRoomCode || hasLeftArena) return;
-    hasLeftArena = true;
-    isPlaying = false;
-    dangerLevel = 0;
-    dangerFlashOn = false;
-    refreshItemUI();
-
-    const payload = JSON.stringify({ type: 'player_quit' });
-    try {
-        if (socket && socket.readyState === WebSocket.OPEN) {
-            socket.send(payload);
-        }
-    } catch (_) {}
-
-    try {
-        if (navigator.sendBeacon) {
-            const blob = new Blob([payload], { type: 'application/json' });
-            navigator.sendBeacon(`/api/quit/${encodeURIComponent(activeRoomCode)}/${encodeURIComponent(clientId)}`, blob);
-        }
-    } catch (_) {}
-}
-
-window.addEventListener('pagehide', notifyPlayerQuit);
-window.addEventListener('beforeunload', notifyPlayerQuit);
-document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'hidden' && gameMode === 'online' && currentRole === 'player' && isPlaying) {
-        notifyPlayerQuit();
-    }
-});
-
-function switchTab(tab) {
-    ensureAudio();
-    document.getElementById('tab-solo').classList.toggle('active', tab === 'solo');
-    document.getElementById('tab-vsbot').classList.toggle('active', tab === 'vsbot');
-    document.getElementById('tab-player').classList.toggle('active', tab === 'player');
-    document.getElementById('tab-admin').classList.toggle('active', tab === 'admin');
-
-    document.getElementById('form-solo').style.display = tab === 'solo' ? 'block' : 'none';
-    document.getElementById('form-vsbot').style.display = tab === 'vsbot' ? 'block' : 'none';
-    document.getElementById('form-player').style.display = tab === 'player' ? 'block' : 'none';
-    document.getElementById('form-admin').style.display = tab === 'admin' ? 'block' : 'none';
-
-    if (tab === 'player') fetchLobbyRooms();
-}
-
-function connectWS(onOpen) {
-    if (socket && socket.readyState === WebSocket.OPEN) {
-        if (onOpen) onOpen();
-        return;
-    }
-    const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-    socket = new WebSocket(`${protocol}//${location.host}/ws/${clientId}`);
-
-    socket.onopen = () => {
-        if (onOpen) onOpen();
-        clearInterval(pingInterval);
-        pingInterval = setInterval(() => sendWS({ type: 'ping' }), 15000);
-    };
-
-    socket.onclose = () => {
-        clearInterval(pingInterval);
-        if (hasLeftArena || gameMode !== 'online') return;
-        setTimeout(() => {
-            if (hasLeftArena || gameMode !== 'online') return;
-            connectWS(() => {
-                if (!hasLeftArena && gameMode === 'online' && currentRole === 'player' && activeRoomCode && myUsername) {
-                    sendWS({ type: 'join_game', room_code: activeRoomCode, username: myUsername });
-                }
-            });
-        }, 2000);
-    };
-
-    socket.onmessage = (e) => handleServerEvent(JSON.parse(e.data));
-}
-
-function sendWS(payload) {
-    if (socket && socket.readyState === WebSocket.OPEN) {
-        socket.send(JSON.stringify(payload));
-    }
-}
-
-function createAdminRoom() {
-    ensureAudio();
-    gameMode = 'admin';
-    isOnlineRoomHost = false;
-    pendingPlayerCreateRoom = false;
-    const customCode = document.getElementById('custom-room-code').value.trim().toUpperCase();
-    connectWS(() => {
-        currentRole = 'admin';
-        stopLobbyPolling();
-        sendWS({ type: 'create_room', room_code: customCode });
-    });
-}
-
-function createPlayerRoom() {
-    ensureAudio();
-    const nameInput = document.getElementById('player-name');
-    const createCodeInput = document.getElementById('player-create-code');
-    const name = nameInput.value.trim();
-    const customCode = createCodeInput.value.trim().toUpperCase();
-
-    if (!name) {
-        alert('Nama wajib diisi sebelum membuat room!');
-        nameInput.focus();
-        return;
-    }
-
-    gameMode = 'online';
-    hasLeftArena = false;
-    isOnlineRoomHost = true;
-    pendingPlayerCreateRoom = true;
-    myUsername = name;
-    activeRoomCode = customCode;
-
-    connectWS(() => {
-        currentRole = 'player';
-        stopLobbyPolling();
-        sendWS({
-            type: 'create_room',
-            room_code: customCode,
-            as_player: true,
-            username: name
-        });
-    });
-}
-
-function joinAsPlayer() {
-    ensureAudio();
-    const nameInput = document.getElementById('player-name');
-    const roomInput = document.getElementById('join-room-code');
-    const name = nameInput.value.trim();
-    const roomCode = roomInput.value.trim().toUpperCase();
-
-    if (!name) {
-        alert('Nama wajib diisi sebelum masuk room!');
-        nameInput.focus();
-        return;
-    }
-    if (!roomCode) {
-        alert('Pilih room dari daftar lobby atau masukkan Kode Room terlebih dahulu!');
-        roomInput.focus();
-        return;
-    }
-
-    gameMode = 'online';
-    hasLeftArena = false;
-    isOnlineRoomHost = false;
-    pendingPlayerCreateRoom = false;
-    myUsername = name;
-    activeRoomCode = roomCode;
-    connectWS(() => {
-        currentRole = 'player';
-        stopLobbyPolling();
-        sendWS({ type: 'join_game', room_code: roomCode, username: name });
-    });
-}
-
-function adminAddBot() { ensureAudio(); sendWS({ type: 'admin_add_bot' }); }
-function adminRemoveBot(botId = null) { ensureAudio(); sendWS({ type: 'admin_remove_bot', bot_id: botId }); }
-function adminStartMatch() { ensureAudio(); sendWS({ type: 'admin_start_match' }); }
-function adminResetRoom() { ensureAudio(); sendWS({ type: 'admin_reset_room' }); }
-
-// --- ADMIN LASER & CARD HIT ANIMATION ---
-function resizeAdminLaserCanvas() {
-    if (!adminLaserCanvas) return;
-    const area = adminLaserCanvas.parentElement;
-    if (!area) return;
-    adminLaserCanvas.width = Math.max(1, area.clientWidth);
-    adminLaserCanvas.height = Math.max(1, area.clientHeight);
-}
-
-function getCardCenterInAdminArea(pid) {
-    if (!pid || !adminLaserCanvas) return null;
-    const card = document.querySelector(`.screen-card[data-pid="${pid}"]`);
-    const area = adminLaserCanvas.parentElement;
-    if (!card || !area) return null;
-    const cRect = card.getBoundingClientRect();
-    const aRect = area.getBoundingClientRect();
-    if (cRect.width === 0 || cRect.height === 0) return null;
-    return {
-        x: (cRect.left - aRect.left) + (cRect.width / 2),
-        y: (cRect.top - aRect.top) + (cRect.height / 2)
-    };
-}
-
-function triggerAdminCardShake(pid) {
-    if (!pid) return;
-    const card = document.querySelector(`.screen-card[data-pid="${pid}"]`);
-    if (!card) return;
-    card.classList.remove('hit-shake');
-    void card.offsetWidth;
-    card.classList.add('hit-shake');
-    setTimeout(() => {
-        card.classList.remove('hit-shake');
-    }, 320);
-}
-
-function findAdminPlayerIdByName(name) {
-    if (!name || !latestAdminPlayers) return null;
-    const lower = String(name).toLowerCase();
-    for (const [pid, p] of Object.entries(latestAdminPlayers)) {
-        if (String(p.name || '').toLowerCase() === lower) return pid;
-    }
-    return null;
-}
-
-function launchAdminAttackLasers(fromId, targetIds, isDouble = false) {
-    resizeAdminLaserCanvas();
-    const targets = Array.isArray(targetIds) ? targetIds.filter(Boolean) : [];
-    if (!fromId || targets.length === 0) return;
-
-    targets.forEach((tid, idx) => {
-        adminLasers.push({
-            fromId,
-            toId: tid,
-            isDouble: !!isDouble,
-            progress: 0,
-            duration: 0.42 + idx * 0.05,
-            curveSign: (idx % 2 === 0 ? 1 : -1) * (0.22 + Math.random() * 0.14),
-            shaken: false
-        });
-    });
-}
-
-function renderAdminLasers(dtSec) {
-    if (!adminLaserCanvas || !adminLaserCtx) return;
-    adminLaserCtx.clearRect(0, 0, adminLaserCanvas.width, adminLaserCanvas.height);
-    if (adminLasers.length === 0) return;
-
-    const nextList = [];
-    for (const beam of adminLasers) {
-        beam.progress += dtSec / beam.duration;
-        const start = getCardCenterInAdminArea(beam.fromId);
-        const end = getCardCenterInAdminArea(beam.toId);
-
-        if (start && end) {
-            const t = Math.min(1, beam.progress);
-            const dx = end.x - start.x;
-            const dy = end.y - start.y;
-            const dist = Math.hypot(dx, dy) || 1;
-            const nx = -dy / dist;
-            const ny = dx / dist;
-            const arch = dist * beam.curveSign;
-            const ctrlX = (start.x + end.x) / 2 + nx * arch;
-            const ctrlY = (start.y + end.y) / 2 + ny * arch;
-
-            const drawEndT = Math.min(1, t * 1.25);
-            const drawStartT = Math.max(0, t - 0.35);
-
-            const sampleQuad = (u) => {
-                const inv = 1 - u;
-                return {
-                    x: inv * inv * start.x + 2 * inv * u * ctrlX + u * u * end.x,
-                    y: inv * inv * start.y + 2 * inv * u * ctrlY + u * u * end.y
-                };
-            };
-
-            const steps = 16;
-            adminLaserCtx.save();
-            adminLaserCtx.lineCap = 'round';
-            const alpha = t < 0.8 ? 1 : Math.max(0, (1 - t) / 0.2);
-            adminLaserCtx.globalAlpha = alpha;
-
-            adminLaserCtx.beginPath();
-            for (let s = 0; s <= steps; s++) {
-                const u = drawStartT + (drawEndT - drawStartT) * (s / steps);
-                const pt = sampleQuad(u);
-                if (s === 0) adminLaserCtx.moveTo(pt.x, pt.y);
-                else adminLaserCtx.lineTo(pt.x, pt.y);
-            }
-            adminLaserCtx.strokeStyle = beam.isDouble ? 'rgba(250, 204, 21, 0.45)' : 'rgba(248, 113, 113, 0.45)';
-            adminLaserCtx.lineWidth = beam.isDouble ? 9 : 7;
-            adminLaserCtx.stroke();
-
-            adminLaserCtx.beginPath();
-            for (let s = 0; s <= steps; s++) {
-                const u = drawStartT + (drawEndT - drawStartT) * (s / steps);
-                const pt = sampleQuad(u);
-                if (s === 0) adminLaserCtx.moveTo(pt.x, pt.y);
-                else adminLaserCtx.lineTo(pt.x, pt.y);
-            }
-            adminLaserCtx.strokeStyle = beam.isDouble ? '#fef08a' : '#fca5a5';
-            adminLaserCtx.lineWidth = beam.isDouble ? 3.5 : 2.5;
-            adminLaserCtx.stroke();
-
-            const tip = sampleQuad(drawEndT);
-            adminLaserCtx.beginPath();
-            adminLaserCtx.arc(tip.x, tip.y, beam.isDouble ? 6 : 4.5, 0, Math.PI * 2);
-            adminLaserCtx.fillStyle = beam.isDouble ? '#facc15' : '#ef4444';
-            adminLaserCtx.fill();
-
-            if (!beam.shaken && t >= 0.85) {
-                beam.shaken = true;
-                triggerAdminCardShake(beam.toId);
-            }
-            adminLaserCtx.restore();
-        }
-
-        if (beam.progress < 1) {
-            nextList.push(beam);
-        }
-    }
-    adminLasers = nextList;
-}
-
-function selectAdminFocus(pid) {
-    if (!latestAdminPlayers[pid]) return;
-    focusedPlayerId = pid;
-    renderAdminFocusPanel();
-    updateFocusCardHighlight();
-}
-
-function clearAdminFocus() {
-    focusedPlayerId = null;
-    document.getElementById('admin-focus-panel').style.display = 'none';
-    updateFocusCardHighlight();
-}
-
-function updateFocusCardHighlight() {
-    document.querySelectorAll('.screen-card').forEach(card => {
-        card.classList.toggle('focused', card.dataset.pid === focusedPlayerId);
-    });
-}
-
-function renderAdminFocusPanel() {
-    const panel = document.getElementById('admin-focus-panel');
-    if (!focusedPlayerId || !latestAdminPlayers[focusedPlayerId]) {
-        panel.style.display = 'none';
-        return;
-    }
-    const p = latestAdminPlayers[focusedPlayerId];
-    const quitter = isPlayerQuitter(p);
-
-    panel.style.display = 'flex';
-    document.getElementById('focus-player-name').innerText = `${p.is_bot ? '🤖 ' : ''}${p.name}`;
-    document.getElementById('focus-player-score').innerText = p.score || 0;
-    document.getElementById('focus-player-ko').innerText = p.ko || 0;
-
-    const stEl = document.getElementById('focus-player-status');
-    const qBanner = document.getElementById('focus-quitter-banner');
-    if (quitter) {
-        stEl.innerText = '🟨 Quitter';
-        stEl.style.color = '#facc15';
-        qBanner.style.display = 'block';
-    } else if (p.alive) {
-        stEl.innerText = '🟢 Sedang Main';
-        stEl.style.color = '#22c55e';
-        qBanner.style.display = 'none';
-    } else {
-        stEl.innerText = '💀 Eliminated';
-        stEl.style.color = '#ef4444';
-        qBanner.style.display = 'none';
-    }
-
-    drawGrid(document.getElementById('admin-focus-canvas'), p.grid, 20);
-}
-
-function renderOpponents(ps) {
-    const c = document.getElementById('opponents');
-    if (!c) return;
-    c.innerHTML = '';
-
-    const entries = Object.entries(ps || {}).sort((a, b) => {
-        const sb = (b[1].score || 0) - (a[1].score || 0);
-        if (sb !== 0) return sb;
-        return (b[1].ko || 0) - (a[1].ko || 0);
-    });
-
-    entries.forEach(([pid, p]) => {
-        if (pid === clientId) {
-            document.getElementById('ko').innerText = p.ko || 0;
-            document.getElementById('score').innerText = p.score || 0;
-            armorCharges = p.armor_charges || 0;
-            refreshItemUI();
-        }
-        const quitter = isPlayerQuitter(p);
-        const d = document.createElement('div');
-        d.className = 'opp-badge' + (quitter ? ' quitter' : (p.alive ? '' : ' dead'));
-        const statusIcon = quitter ? '🟨' : (p.alive ? '🟢' : '💀');
-        const youTag = pid === clientId ? ' (Anda)' : '';
-        const quitterTag = quitter ? ' [QUITTER]' : '';
-        d.innerHTML = `
-            <div class="opp-badge-row">
-                <span class="opp-name">${p.is_bot ? '🤖 ' : ''}${escapeHtml(p.name)}${escapeHtml(youTag)} ${statusIcon}${escapeHtml(quitterTag)}</span>
-                <span class="opp-stats"><b>${p.score || 0}</b>p • KO:${p.ko || 0}</span>
-            </div>
-        `;
-        c.appendChild(d);
-    });
-}
-
-function renderAdminScoreboard(ps) {
-    const box = document.getElementById('admin-scoreboard');
-    if (!box) return;
-    const entries = Object.entries(ps || {}).sort((a, b) => {
-        const sb = (b[1].score || 0) - (a[1].score || 0);
-        if (sb !== 0) return sb;
-        return (b[1].ko || 0) - (a[1].ko || 0);
-    });
-
-    if (entries.length === 0) {
-        box.innerHTML = `<div style="font-size:11px; color:#94a3b8;">Belum ada peserta.</div>`;
-        return;
-    }
-
-    box.innerHTML = entries.map(([pid, p], idx) => {
-        const quitter = isPlayerQuitter(p);
-        const stLabel = quitter ? '🟨 Quitter' : (p.alive ? '🟢 Aktif' : '💀 KO');
-        return `
-            <div class="admin-score-row ${quitter ? 'quitter' : ''}" onclick="selectAdminFocus('${pid}')" style="cursor:pointer;">
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <b>#${idx + 1} ${p.is_bot ? '🤖 ' : ''}${escapeHtml(p.name)}</b>
-                    <span>${stLabel}</span>
-                </div>
-                <div style="display:flex; justify-content:space-between; color:#cbd5e1;">
-                    <span>Skor: <b>${p.score || 0}</b></span>
-                    <span>KO: <b>${p.ko || 0}</b></span>
-                </div>
-            </div>
-        `;
-    }).join('');
-}
-
-function renderAdminGrid(ps) {
-    latestAdminPlayers = ps || {};
-    const g = document.getElementById('monitor-grid');
-    if (!g) return;
-    const keys = Object.keys(latestAdminPlayers);
-    document.getElementById('admin-player-count').innerText = keys.length;
-
-    if (focusedPlayerId && !latestAdminPlayers[focusedPlayerId]) {
-        focusedPlayerId = null;
-    }
-
-    g.innerHTML = '';
-    keys.forEach(pid => {
-        const p = latestAdminPlayers[pid];
-        const quitter = isPlayerQuitter(p);
-        const armorCount = p.armor_charges || 0;
-        const hasArmor = !quitter && p.alive && armorCount > 0;
-        const card = document.createElement('div');
-        card.dataset.pid = pid;
-        card.className = 'screen-card ' + (quitter ? 'quitter' : (p.alive ? 'alive' : 'dead')) + (hasArmor ? ' armor-active' : '') + (pid === focusedPlayerId ? ' focused' : '');
-        card.onclick = () => selectAdminFocus(pid);
-
-        const stText = quitter ? '🟨 Quitter' : (p.alive ? '🟢 Main' : '💀 KO');
-        const stColor = quitter ? '#facc15' : (p.alive ? '#22c55e' : '#ef4444');
-        const armorBadge = hasArmor
-            ? `<div class="armor-pill-admin">🛡️ ARMOR ${armorCount}x</div>`
-            : '';
-        const delBtn = p.is_bot
-            ? `<button type="button" class="mini-del-btn" onclick="event.stopPropagation(); adminRemoveBot('${pid}')">✕ Hapus Bot</button>`
-            : '';
-        const qBanner = quitter
-            ? `<div class="police-line-banner"><span>QUITTER</span></div>`
-            : '';
-
-        card.innerHTML = `
-            <div style="font-size:12px; font-weight:bold; width:100%; text-align:center; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${p.is_bot ? '🤖 ' : ''}${escapeHtml(p.name)}</div>
-            <div style="font-size:10px; color:${stColor}; font-weight:bold;">${stText}</div>
-            ${armorBadge}
-            <canvas id="m-${pid}" width="100" height="200"></canvas>
-            <div class="screen-meta"><span>Skor: <b>${p.score || 0}</b></span><span>KO: <b>${p.ko || 0}</b></span></div>
-            ${qBanner}
-            ${delBtn}
-        `;
-        g.appendChild(card);
-        drawGrid(document.getElementById(`m-${pid}`), p.grid, 10);
-    });
-
-    renderAdminScoreboard(latestAdminPlayers);
-    renderAdminFocusPanel();
-    resizeAdminLaserCanvas();
-}
-
-function handleServerEvent(data) {
-    if (data.type === 'error') {
-        alert(data.message);
-        pendingPlayerCreateRoom = false;
-        return;
-    }
-    if (data.type === 'room_created') {
-        activeRoomCode = data.room_code;
-        if (pendingPlayerCreateRoom && currentRole === 'player') {
-            pendingPlayerCreateRoom = false;
-            isOnlineRoomHost = true;
-            sendWS({ type: 'join_game', room_code: activeRoomCode, username: myUsername });
-            return;
-        }
-        document.getElementById('lobby-card').style.display = 'none';
-        document.getElementById('player-view').style.display = 'none';
-        document.getElementById('admin-view').style.display = 'block';
-        document.getElementById('admin-room-display').innerText = data.room_code;
-        hidePodiums();
-        return;
-    }
-    if (data.type === 'joined_room') {
-        activeRoomCode = data.room_code;
-        hasLeftArena = false;
-        isOnlineRoomHost = Boolean(data.is_host === true || data.host_id === clientId);
-        document.getElementById('lobby-card').style.display = 'none';
-        document.getElementById('admin-view').style.display = 'none';
-        document.getElementById('player-view').style.display = 'flex';
-        document.getElementById('bot-spectator-panel').style.display = 'none';
-        applyModeVisibilityToPlayerView();
-        resetBoardStateForMatch();
-        resizeBoardForScreen();
-        refreshItemUI();
-        const stEl = document.getElementById('p-status');
-        stEl.innerText = data.state === 'playing' ? '🟢 Main' : '⏳ Menunggu';
-        stEl.style.color = data.state === 'playing' ? '#22c55e' : '#fbbf24';
-        if (data.state === 'playing') {
-            isPlaying = true;
-            spawnPiece();
-            syncBoard();
-        }
-        renderOpponents(data.players);
-        if (isOnlineRoomHost) {
-            addLog('player-log', `👑 Anda adalah Host Room <b>${escapeHtml(activeRoomCode)}</b>! Bisa tambah bot & klik <b>▶ Mulai Match</b>.`);
-        }
-        return;
-    }
-    if (data.type === 'room_state') {
-        const stMap = { waiting: '⏳ Menunggu', playing: '🟢 Berlangsung', finished: '🏆 Selesai' };
-        const stEl = document.getElementById('admin-match-status');
-        if (stEl) {
-            stEl.innerText = stMap[data.state] || data.state;
-            stEl.style.color = data.state === 'playing' ? '#4ade80' : (data.state === 'finished' ? '#facc15' : '#fbbf24');
-        }
-        renderAdminGrid(data.players);
-        if (currentRole === 'player' && !hasLeftArena) {
-            if (data.host_id === clientId && !isOnlineRoomHost) {
-                isOnlineRoomHost = true;
-                applyModeVisibilityToPlayerView();
-            }
-            renderOpponents(data.players);
-        }
-        return;
-    }
-    if (data.type === 'match_started') {
-        if (currentRole === 'player' && hasLeftArena) return;
-        resetBoardStateForMatch();
-        resizeBoardForScreen();
-        isPlaying = true;
-        refreshItemUI();
-        const stEl = document.getElementById('p-status');
-        stEl.innerText = '🟢 Main';
-        stEl.style.color = '#22c55e';
-        spawnPiece();
-        syncBoard();
-        addLog('player-log', '🚀 Pertandingan dimulai!');
-        if (currentRole === 'admin') {
-            hidePodiums();
-            addLog('admin-log', '🚀 Pertandingan dimulai!');
-        }
-        return;
-    }
-    if (data.type === 'room_reset') {
-        if (currentRole === 'player' && hasLeftArena) return;
-        resetBoardStateForMatch();
-        isPlaying = false;
-        refreshItemUI();
-        const stEl = document.getElementById('p-status');
-        stEl.innerText = '⏳ Menunggu';
-        stEl.style.color = '#fbbf24';
-        addLog('player-log', '🔄 Room direset.');
-        if (currentRole === 'admin') {
-            hidePodiums();
-            addLog('admin-log', '🔄 Room direset.');
-        }
-        return;
-    }
-    if (data.type === 'garbage_received') {
-        if (currentRole !== 'player' || !isPlaying || hasLeftArena) return;
-        if (armorCharges > 0) {
-            armorCharges--;
-            SFX.block();
-            refreshItemUI();
-            addLog('player-log', `🛡️ Armor menahan serangan ${data.lines} baris dari ${escapeHtml(data.from_name)}! (Sisa ${armorCharges}x)`);
-            sendWS({ type: 'item_state_sync', armor_charges: armorCharges });
-            return;
-        }
-        pendingGarbage += data.lines;
-        lastAttackerId = data.from_id;
-        SFX.attack();
-        triggerAttackAnimation(data.lines, data.from_name || 'Lawan');
-        updateAlert();
-        addLog('player-log', `🚨 +${data.lines} baris dari ${escapeHtml(data.from_name)}!`);
-        return;
-    }
-    if (data.type === 'attack_log') {
-        const msg = `⚡ <b>${escapeHtml(data.from_name)}</b> kirim <b>${data.lines}</b> baris${data.double_active ? ' (2x)' : ''}`;
-        addLog('player-log', msg);
-        addLog('admin-log', msg);
-        if (currentRole === 'admin') {
-            const attackerId = data.from_id || findAdminPlayerIdByName(data.from_name);
-            let targetList = Array.isArray(data.target_ids)
-                ? data.target_ids
-                : (data.target_id ? [data.target_id] : []);
-            if (targetList.length === 0 && attackerId && latestAdminPlayers) {
-                targetList = Object.keys(latestAdminPlayers).filter(pid => {
-                    const p = latestAdminPlayers[pid];
-                    return pid !== attackerId && p && p.alive && !isPlayerQuitter(p);
-                });
-            }
-            launchAdminAttackLasers(attackerId, targetList, !!data.double_active);
-        }
-        return;
-    }
-    if (data.type === 'player_ko') {
-        const msg = `💀 <b>${escapeHtml(data.victim_name)}</b> KO${data.killer_name ? ` oleh <b>${escapeHtml(data.killer_name)}</b>` : ''}!`;
-        addLog('player-log', msg);
-        addLog('admin-log', msg);
-        return;
-    }
-    if (data.type === 'player_quit_notice') {
-        const msg = `🟨 <b>${escapeHtml(data.player_name)}</b> keluar (Quitter).`;
-        addLog('player-log', msg);
-        addLog('admin-log', msg);
-        return;
-    }
-    if (data.type === 'match_finished') {
-        if (currentRole === 'player' && hasLeftArena) return;
-        isPlaying = false;
-        dangerLevel = 0;
-        dangerFlashOn = false;
-        refreshItemUI();
-        SFX.win();
-
-        const podiumList = data.podium || [];
-        const topWinner = podiumList.find(i => i.rank === 1) || podiumList[0];
-        const isMeWinner = topWinner && topWinner.id === clientId;
-
-        if (currentRole === 'player') {
-            const stEl = document.getElementById('p-status');
-            if (isMeWinner) {
-                stEl.innerText = '🍗 CHICKEN DINNER!';
-                stEl.style.color = '#facc15';
-            } else {
-                stEl.innerText = '🏁 Selesai';
-                stEl.style.color = '#facc15';
-            }
-            renderPodium('player-podium', podiumList, !!isMeWinner);
-        } else if (currentRole === 'admin') {
-            document.getElementById('admin-match-status').innerText = '🏆 Selesai';
-            document.getElementById('admin-match-status').style.color = '#facc15';
-            renderPodium('admin-podium', podiumList, podiumList.length > 0);
-        }
-    }
-}
-
-startLobbyPolling();
+drawNextPiecePreview();
+refreshItemUI();
+fetchLobbyRooms();
 requestAnimationFrame(loop);
 </script>
 </body>
