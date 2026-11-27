@@ -1400,6 +1400,7 @@ let grid = createEmptyGrid();
 let piece = null, score = 0, isPlaying = false, lastAttackerId = null, pendingGarbage = 0;
 let dangerLevel = 0, dangerBlinkTimer = 0, dangerFlashOn = false;
 let dropC = 0, syncC = 0, uiC = 0, lT = 0;
+let lastRealTimeSyncMs = 0;
 
 let particles = [];
 let floatingTexts = [];
@@ -1622,7 +1623,7 @@ function activateItem(itemType) {
         vibrate(30);
         addLog('player-log', `💥 BREAKER menghapus ${removedCount} baris acak!`);
         if (gameMode === 'online') sendWS({ type: 'use_item', item: 'breaker' });
-        syncBoard();
+        syncBoardNow(true);
     }
 
     refreshItemUI();
@@ -2524,6 +2525,7 @@ function handleServerMessage(data) {
             document.getElementById('p-status').innerText = '🟢 Main';
             document.getElementById('p-status').style.color = '#22c55e';
             addLog('player-log', `🎮 Bergabung ke room <b>${escapeHtml(data.room_code)}</b>!`);
+            syncBoardNow(true);
         } else if (data.active && !data.alive) {
             isPlaying = false;
             piece = null;
@@ -2592,7 +2594,7 @@ function handleServerMessage(data) {
                 piece = newPiece();
                 document.getElementById('p-status').innerText = '🟢 Main';
                 document.getElementById('p-status').style.color = '#22c55e';
-                syncBoard();
+                syncBoardNow(true);
             } else {
                 isPlaying = false;
                 piece = null;
@@ -2697,11 +2699,14 @@ function handleServerMessage(data) {
             const newScore = Number(data.score || 0);
             latestAdminPlayers[data.pid] = {
                 ...(prev || {}),
-                name: data.name,
-                alive: data.alive,
+                name: data.name ?? (prev && prev.name) ?? data.pid,
+                alive: data.alive !== undefined ? Boolean(data.alive) : (prev ? prev.alive : true),
                 score: newScore,
-                ko: data.ko,
-                grid: data.grid,
+                ko: data.ko !== undefined ? Number(data.ko) : (prev ? prev.ko : 0),
+                grid: data.grid || (prev && prev.grid),
+                armor_charges: data.armor_charges !== undefined ? data.armor_charges : (prev && prev.armor_charges),
+                double_active: data.double_active !== undefined ? data.double_active : (prev && prev.double_active),
+                quitter: data.quitter !== undefined ? data.quitter : (prev && prev.quitter),
             };
             updateSingleAdminCard(data.pid, latestAdminPlayers[data.pid], newScore < prevScore);
             renderAdminScoreboard(latestAdminPlayers);
@@ -2783,6 +2788,7 @@ function resizeAdminLaserCanvas() {
 
 function spawnAdminLaser(fromId, targetId, lines, isDouble) {
     if (!adminLaserCanvas) return;
+    resizeAdminLaserCanvas();
     const area = document.querySelector('.admin-center-area');
     if (!area) return;
     const areaRect = area.getBoundingClientRect();
@@ -2799,12 +2805,20 @@ function spawnAdminLaser(fromId, targetId, lines, isDouble) {
     const x2 = (r2.left + r2.right) / 2 - areaRect.left;
     const y2 = (r2.top + r2.bottom) / 2 - areaRect.top;
 
+    // Titik kontrol kurva melengkung ke atas/samping
+    const dx = x2 - x1;
+    const dy = y2 - y1;
+    const dist = Math.hypot(dx, dy) || 1;
+    const curveArc = Math.min(130, Math.max(36, dist * 0.34));
+    const ctrlX = (x1 + x2) / 2 - (dy / dist) * (curveArc * 0.45);
+    const ctrlY = Math.min(y1, y2) - curveArc;
+
     adminLasers.push({
-        x1, y1, x2, y2,
+        x1, y1, ctrlX, ctrlY, x2, y2,
         lines,
         isDouble,
-        life: 0.45,
-        maxLife: 0.45,
+        life: 0.72,
+        maxLife: 0.72,
     });
 
     targetCard.classList.remove('hit-shake');
@@ -2822,20 +2836,36 @@ function renderAdminLasers(dt) {
     for (const l of adminLasers) {
         l.life -= dt;
         if (l.life <= 0) continue;
-        const alpha = Math.max(0, l.life / l.maxLife);
+        const progress = 1 - Math.max(0, l.life / l.maxLife);
+        const alpha = Math.min(1, (l.life / l.maxLife) * 1.35);
+
+        // Titik ujung kepala serangan yang meluncur sepanjang kurva
+        const t = Math.min(1, progress * 1.45);
+        const invT = 1 - t;
+        const headX = invT * invT * l.x1 + 2 * invT * t * l.ctrlX + t * t * l.x2;
+        const headY = invT * invT * l.y1 + 2 * invT * t * l.ctrlY + t * t * l.y2;
+
         adminLaserCtx.save();
         adminLaserCtx.globalAlpha = alpha;
         adminLaserCtx.strokeStyle = l.isDouble ? '#facc15' : '#ef4444';
-        adminLaserCtx.lineWidth = l.isDouble ? 4 : 2.5;
+        adminLaserCtx.lineWidth = l.isDouble ? 4.5 : 3;
+        adminLaserCtx.lineCap = 'round';
         adminLaserCtx.beginPath();
         adminLaserCtx.moveTo(l.x1, l.y1);
-        adminLaserCtx.lineTo(l.x2, l.y2);
+        adminLaserCtx.quadraticCurveTo(l.ctrlX, l.ctrlY, l.x2, l.y2);
         adminLaserCtx.stroke();
 
-        adminLaserCtx.fillStyle = '#ffffff';
+        // Bola energi melengkung
+        adminLaserCtx.fillStyle = l.isDouble ? '#fef08a' : '#fca5a5';
         adminLaserCtx.beginPath();
-        adminLaserCtx.arc(l.x2, l.y2, 5, 0, Math.PI * 2);
+        adminLaserCtx.arc(headX, headY, l.isDouble ? 7 : 5.5, 0, Math.PI * 2);
         adminLaserCtx.fill();
+
+        // Label jumlah baris di puncak kurva
+        adminLaserCtx.font = 'bold 11px system-ui, sans-serif';
+        adminLaserCtx.textAlign = 'center';
+        adminLaserCtx.fillStyle = l.isDouble ? '#facc15' : '#ffedd5';
+        adminLaserCtx.fillText(`${l.isDouble ? '⚡2x ' : ''}+${l.lines}`, l.ctrlX, l.ctrlY - 6);
         adminLaserCtx.restore();
         nextLasers.push(l);
     }
@@ -3039,7 +3069,12 @@ function newPiece() {
     nextPieceId = rollRandomPieceId();
     drawNextPiecePreview();
     const shape = SHAPES[id];
-    return { shape, x: Math.floor(COLS / 2) - Math.floor(shape[0].length / 2), y: 0 };
+    return {
+        id,
+        shape,
+        x: Math.floor(COLS / 2) - Math.floor(shape[0].length / 2),
+        y: 0
+    };
 }
 
 function collide(px, py, sh = piece.shape) {
@@ -3048,7 +3083,7 @@ function collide(px, py, sh = piece.shape) {
             if (sh[r][c]) {
                 let nx = px + c, ny = py + r;
                 if (nx < 0 || nx >= COLS || ny >= ROWS) return true;
-                if (ny >= 0 && grid[ny][nx]) return true;
+                if (ny >= 0 && grid[ny][nx] !== 0) return true;
             }
         }
     }
@@ -3070,97 +3105,109 @@ function merge() {
 
 function clearLines() {
     let lines = 0;
-    const clearedIndices = [];
-    for (let r = ROWS - 1; r >= 0; r--) {
-        if (grid[r].every(v => v > 0)) {
-            clearedIndices.push(r);
+    let newGrid = [];
+    for (let r = 0; r < ROWS; r++) {
+        if (grid[r].every(v => v !== 0)) {
+            lines++;
+            lineFlashRows.push({ row: r, life: 0.25, maxLife: 0.25 });
             for (let c = 0; c < COLS; c++) {
                 spawnParticles(c, r, COLORS[grid[r][c]] || '#38bdf8', 5);
             }
-            grid.splice(r, 1);
-            grid.unshift(Array(COLS).fill(0));
-            lines++;
-            r++;
+        } else {
+            newGrid.push(grid[r]);
         }
     }
-
-    if (clearedIndices.length > 0) {
-        clearedIndices.forEach(idx => {
-            lineFlashRows.push({ row: idx, life: 0.25, maxLife: 0.25 });
-        });
-    }
+    while (newGrid.length < ROWS) newGrid.unshift(Array(COLS).fill(0));
+    grid = newGrid;
 
     if (lines > 0) {
-        score += lines * 100;
+        const pts = [0, 100, 300, 500, 800][lines] || (lines * 200);
+        score += pts;
+        totalLinesCleared += lines;
         document.getElementById('score').innerText = score;
+        if (gameMode === 'solo') {
+            soloLevel = Math.floor(totalLinesCleared / 4) + 1;
+        }
+        updateLevelDisplay();
+
         SFX.clear(lines);
         vibrate(25);
-        addFloatingText(`+${lines * 100}`, canvas.width / 2, canvas.height * 0.35, '#4ade80');
+        addFloatingText(`+${pts} (${lines}x)`, canvas.width / 2, canvas.height * 0.35, '#4ade80');
 
-        if (gameMode === 'solo') {
-            totalLinesCleared += lines;
-            const nextLv = Math.floor(totalLinesCleared / 4) + 1;
-            if (nextLv > soloLevel) {
-                soloLevel = nextLv;
-                SFX.block();
-                addFloatingText(`LEVEL UP ${soloLevel}!`, canvas.width / 2, canvas.height * 0.28, '#facc15');
-                addLog('player-log', `⬆️ Naik ke <b>Level ${soloLevel}</b>! Kecepatan jatuh meningkat.`);
-            }
-            updateLevelDisplay();
-            renderLocalSideList();
-        } else {
-            const chargeMap = { 1: 18, 2: 36, 3: 55, 4: 100 };
-            addItemCharge(chargeMap[lines] || lines * 20);
+        if (hasPowerupsInCurrentMode()) {
+            const chargeGain = { 1: 25, 2: 45, 3: 70, 4: 100 }[lines] || 30;
+            addItemCharge(chargeGain);
         }
 
-        if (gameMode === 'online' && currentRole === 'player') {
+        if (currentRole === 'player' && gameMode === 'online') {
             sendWS({ type: 'line_cleared', lines, double_active: isDoubleActive() });
+        } else if (gameMode === 'vsbot') {
+            const map = { 1: 1, 2: 2, 3: 3, 4: 5 };
+            let dmg = map[lines] || 1;
+            if (isDoubleActive()) dmg *= 2;
+            const targets = localBots.filter(b => b.alive);
+            if (targets.length > 0) {
+                const tBot = targets[Math.floor(Math.random() * targets.length)];
+                if (tBot.armorCharges > 0) {
+                    tBot.armorCharges -= 1;
+                    addLog('player-log', `🛡️ ${escapeHtml(tBot.name)} menangkis serangan Anda dengan Armor!`);
+                } else {
+                    const hole = Math.floor(Math.random() * COLS);
+                    for (let i = 0; i < dmg; i++) {
+                        tBot.board.shift();
+                        const row = Array(COLS).fill(8);
+                        row[hole] = 0;
+                        tBot.board.push(row);
+                    }
+                    if (tBot.board[0].some(v => v !== 0)) {
+                        eliminateLocalBot(tBot, myUsername);
+                    }
+                    addLog('player-log', `⚔️ Anda mengirim ${dmg} baris ke <b>${escapeHtml(tBot.name)}</b>!`);
+                }
+            }
         }
     }
 }
 
 function applyPendingGarbage() {
     if (pendingGarbage <= 0) return;
-    let count = pendingGarbage;
-    pendingGarbage = 0;
-    let lastHole = -1;
-
-    for (let i = 0; i < count; i++) {
-        let hole = Math.floor(Math.random() * COLS);
-        if (COLS > 1 && hole === lastHole) {
-            hole = (hole + 1 + Math.floor(Math.random() * (COLS - 1))) % COLS;
-        }
-        lastHole = hole;
+    let hole = Math.floor(Math.random() * COLS);
+    for (let i = 0; i < pendingGarbage; i++) {
         grid.shift();
         let row = Array(COLS).fill(8);
         row[hole] = 0;
         grid.push(row);
     }
-    if (gameMode !== 'solo') {
-        addItemCharge(Math.min(45, count * 10));
-    }
-    addLog('player-log', `⚠️ <b>${count}</b> baris sampah masuk ke papan Anda!`);
+    pendingGarbage = 0;
+    syncBoardNow(true);
 }
 
 function checkTopOut() {
-    if (grid[0].some(v => v > 0)) {
+    if (grid[0].some(v => v !== 0)) {
         isPlaying = false;
         piece = null;
-        stopLocalBotLoop();
         setKoOverlay(true);
-        shakeTimer = 0.45;
         SFX.ko();
         vibrate(80);
         document.getElementById('p-status').innerText = '💀 Eliminasi';
         document.getElementById('p-status').style.color = '#ef4444';
-        if (gameMode === 'online' && currentRole === 'player') {
-            syncBoard();
-            sendWS({ type: 'player_eliminated', last_attacker_id: lastAttackerId });
+        syncBoardNow(true);
+
+        if (currentRole === 'player' && gameMode === 'online') {
+            sendWS({ type: 'player_eliminated', attacker_id: lastAttackerId });
         } else if (gameMode === 'vsbot') {
-            addLog('player-log', '💀 Anda tereliminasi! Pantau sisa bot di bawah.');
-            checkVsBotMatchEnd();
+            stopLocalBotLoop();
+            addLog('player-log', '💀 Anda tereliminasi! Memantau sisa bot...');
+            const aliveBots = localBots.filter(b => b.alive);
+            const podiumData = [
+                ...(aliveBots[0] ? [{ rank: 1, name: aliveBots[0].name, score: aliveBots[0].score, ko: aliveBots[0].ko, reason: 'Bertahan Terakhir' }] : []),
+                { rank: aliveBots[0] ? 2 : 1, name: myUsername, score, ko: playerKoCount, reason: 'Tereliminasi' }
+            ];
+            renderPodium('player-podium', podiumData, aliveBots[0] ? aliveBots[0].name : myUsername);
+            document.getElementById('bot-spectator-panel').style.display = 'block';
+            renderBotSpectatorGrid();
         } else if (gameMode === 'solo') {
-            addLog('player-log', `💀 Game Over di Level ${soloLevel} (Skor: ${score}). Klik Main Lagi!`);
+            addLog('player-log', `💀 Game Over! Skor akhir: <b>${score}</b> (Level ${soloLevel}, ${totalLinesCleared} baris).`);
         }
         return true;
     }
@@ -3169,297 +3216,325 @@ function checkTopOut() {
 
 function moveLeft() {
     if (!isPlaying || !piece) return;
-    if (!collide(piece.x - 1, piece.y)) { piece.x--; SFX.move(); }
+    if (!collide(piece.x - 1, piece.y)) {
+        piece.x--;
+        SFX.move();
+        syncBoardNow(false);
+    }
 }
 
 function moveRight() {
     if (!isPlaying || !piece) return;
-    if (!collide(piece.x + 1, piece.y)) { piece.x++; SFX.move(); }
+    if (!collide(piece.x + 1, piece.y)) {
+        piece.x++;
+        SFX.move();
+        syncBoardNow(false);
+    }
 }
 
 function moveDown() {
     if (!isPlaying || !piece) return;
     if (!collide(piece.x, piece.y + 1)) {
         piece.y++;
-        SFX.move();
-    } else {
-        merge();
-        clearLines();
-        if (checkTopOut()) return;
-        applyPendingGarbage();
-        if (checkTopOut()) return;
+        syncBoardNow(false);
+        return;
+    }
+    merge();
+    clearLines();
+    applyPendingGarbage();
+    if (!checkTopOut()) {
         piece = newPiece();
-        if (collide(piece.x, piece.y)) checkTopOut();
-        syncBoard();
+        if (collide(piece.x, piece.y)) {
+            isPlaying = false;
+            piece = null;
+            setKoOverlay(true);
+            SFX.ko();
+            document.getElementById('p-status').innerText = '💀 Eliminasi';
+            document.getElementById('p-status').style.color = '#ef4444';
+            syncBoardNow(true);
+            if (currentRole === 'player' && gameMode === 'online') {
+                sendWS({ type: 'player_eliminated', attacker_id: lastAttackerId });
+            } else if (gameMode === 'vsbot') {
+                stopLocalBotLoop();
+                document.getElementById('bot-spectator-panel').style.display = 'block';
+                renderBotSpectatorGrid();
+            }
+        } else {
+            syncBoardNow(true);
+        }
     }
     dropC = 0;
 }
 
 function hardDrop() {
     if (!isPlaying || !piece) return;
-    while (!collide(piece.x, piece.y + 1)) piece.y++;
-    merge();
-    clearLines();
+    while (!collide(piece.x, piece.y + 1)) {
+        piece.y++;
+        score += 2;
+    }
+    document.getElementById('score').innerText = score;
     SFX.drop();
-    spawnParticles(piece.x + 1, piece.y, '#38bdf8', 6);
-    if (checkTopOut()) return;
-    applyPendingGarbage();
-    if (checkTopOut()) return;
-    piece = newPiece();
-    if (collide(piece.x, piece.y)) checkTopOut();
-    syncBoard();
-    dropC = 0;
+    moveDown();
 }
 
 function rotatePiece() {
     if (!isPlaying || !piece) return;
-    let rot = piece.shape[0].map((_, i) => piece.shape.map(r => r[i]).reverse());
-    if (!collide(piece.x, piece.y, rot)) { piece.shape = rot; SFX.rotate(); }
-    else if (!collide(piece.x - 1, piece.y, rot)) { piece.x--; piece.shape = rot; SFX.rotate(); }
-    else if (!collide(piece.x + 1, piece.y, rot)) { piece.x++; piece.shape = rot; SFX.rotate(); }
+    let rot = piece.shape[0].map((_, i) => piece.shape.map(row => row[i]).reverse());
+    if (!collide(piece.x, piece.y, rot)) {
+        piece.shape = rot;
+        SFX.rotate();
+        syncBoardNow(false);
+    } else if (!collide(piece.x - 1, piece.y, rot)) {
+        piece.x -= 1;
+        piece.shape = rot;
+        SFX.rotate();
+        syncBoardNow(false);
+    } else if (!collide(piece.x + 1, piece.y, rot)) {
+        piece.x += 1;
+        piece.shape = rot;
+        SFX.rotate();
+        syncBoardNow(false);
+    }
 }
 
 document.addEventListener('keydown', e => {
-    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', ' '].includes(e.key)) {
-        if (currentRole === 'player' || currentRole === 'local_solo' || currentRole === 'local_vsbot') {
-            e.preventDefault();
-        }
-    }
     if (!isPlaying) return;
     ensureAudio();
-    if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') moveLeft();
-    else if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') moveRight();
-    else if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') moveDown();
-    else if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') rotatePiece();
+    if (['ArrowLeft', 'ArrowRight', 'ArrowDown', 'ArrowUp', ' '].includes(e.key)) {
+        e.preventDefault();
+    }
+    if (e.key === 'ArrowLeft') moveLeft();
+    else if (e.key === 'ArrowRight') moveRight();
+    else if (e.key === 'ArrowDown') moveDown();
+    else if (e.key === 'ArrowUp') rotatePiece();
     else if (e.key === ' ') hardDrop();
+    else if (e.key === '1') activateItem('armor');
+    else if (e.key === '2') activateItem('double');
+    else if (e.key === '3') activateItem('breaker');
 });
 
-function getBoardWithPiece() {
-    let copy = grid.map(r => [...r]);
+function buildCurrentDisplayGrid() {
+    let snap = grid.map(r => [...r]);
     if (piece && isPlaying) {
         for (let r = 0; r < piece.shape.length; r++) {
             for (let c = 0; c < piece.shape[r].length; c++) {
                 if (piece.shape[r][c]) {
                     let ny = piece.y + r, nx = piece.x + c;
-                    if (ny >= 0 && ny < ROWS && nx >= 0 && nx < COLS) copy[ny][nx] = piece.shape[r][c];
+                    if (ny >= 0 && ny < ROWS && nx >= 0 && nx < COLS) {
+                        snap[ny][nx] = piece.shape[r][c];
+                    }
                 }
             }
         }
     }
-    return copy;
+    return snap;
 }
 
-function syncBoard() {
-    if (currentRole === 'player' && gameMode === 'online') {
-        sendWS({ type: 'update_board', score, grid: getBoardWithPiece() });
-    }
-}
-
-function drawBlock(c, x, y, color, bs) {
-    c.fillStyle = color;
-    c.fillRect(x * bs, y * bs, bs - 1, bs - 1);
-    c.fillStyle = 'rgba(255,255,255,0.22)';
-    c.fillRect(x * bs, y * bs, bs - 1, Math.max(2, Math.floor(bs * 0.16)));
-}
-
-function drawGrid(cv, gd, bs) {
-    if (!cv) return;
-    const c = cv.getContext('2d');
-    c.fillStyle = '#020617';
-    c.fillRect(0, 0, cv.width, cv.height);
-
-    const hasValidGrid = Array.isArray(gd) && gd.length > 0 && Array.isArray(gd[0]);
-    if (hasValidGrid) {
-        gd.forEach((r, y) => {
-            if (!Array.isArray(r)) return;
-            r.forEach((v, x) => {
-                if (v) drawBlock(c, x, y, COLORS[v] || '#64748b', bs);
-            });
-        });
-    }
-
-    const dY = (DANGER_ROW_THRESHOLD + 1) * bs;
-    c.strokeStyle = 'rgba(239,68,68,0.5)';
-    c.setLineDash([3, 3]);
-    c.beginPath();
-    c.moveTo(0, dY);
-    c.lineTo(cv.width, dY);
-    c.stroke();
-    c.setLineDash([]);
+function syncBoardNow(force = false) {
+    if (currentRole !== 'player' || gameMode !== 'online') return;
+    const now = performance.now();
+    if (!force && (now - lastRealTimeSyncMs) < 35) return;
+    lastRealTimeSyncMs = now;
+    sendWS({
+        type: 'update_board',
+        grid: buildCurrentDisplayGrid(),
+        score,
+        alive: isPlaying
+    });
 }
 
 function computeDangerLevel() {
-    if (!isPlaying) return 0;
-    let highestRow = ROWS;
+    let highestFilledRow = ROWS;
     for (let r = 0; r < ROWS; r++) {
-        if (grid[r].some(v => v > 0)) {
-            highestRow = r;
+        if (grid[r].some(v => v !== 0)) {
+            highestFilledRow = r;
             break;
         }
     }
-    if (highestRow <= 1) return 3;
-    if (highestRow <= 2) return 2;
-    if (highestRow <= DANGER_ROW_THRESHOLD) return 1;
+    const rowsFromTop = highestFilledRow;
+    if (rowsFromTop <= 1) return 3;
+    if (rowsFromTop <= 2) return 2;
+    if (rowsFromTop <= DANGER_ROW_THRESHOLD) return 1;
     return 0;
 }
 
-function updateDangerState(dt) {
-    dangerLevel = computeDangerLevel();
-    const alertEl = document.getElementById('incoming-alert');
+function updateEffects(dt) {
+    if (shakeTimer > 0) shakeTimer = Math.max(0, shakeTimer - dt);
+    if (attackFlashTimer > 0) attackFlashTimer = Math.max(0, attackFlashTimer - dt);
 
-    if (dangerLevel === 0) {
-        dangerBlinkTimer = 0;
-        dangerFlashOn = false;
-        if (pendingGarbage > 0) {
-            alertEl.innerHTML = `<span class="warning">⚠️ +${pendingGarbage} BARIS SAMPAH MASUK!</span>`;
-        } else {
-            alertEl.innerHTML = '';
-        }
-        return;
-    }
+    particles = particles.filter(p => {
+        p.life -= dt;
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.vy += 180 * dt;
+        return p.life > 0;
+    });
 
-    const interval = dangerLevel === 3 ? 0.22 : (dangerLevel === 2 ? 0.36 : 0.55);
-    dangerBlinkTimer += dt;
-    if (dangerBlinkTimer >= interval) {
-        dangerBlinkTimer = 0;
-        dangerFlashOn = !dangerFlashOn;
-        if (dangerFlashOn) SFX.danger(dangerLevel);
-    }
+    floatingTexts = floatingTexts.filter(ft => {
+        ft.life -= dt;
+        ft.y += ft.vy * dt;
+        return ft.life > 0;
+    });
 
-    const label = dangerLevel === 3 ? '🚨 BAHAYA KRITIS! STACK MENTOK!' : '⚠️ PERINGATAN! STACK TINGGI!';
-    const garText = pendingGarbage > 0 ? ` (+${pendingGarbage} SAMPAH)` : '';
-    alertEl.innerHTML = `<span class="warning">${label}${garText}</span>`;
+    lineFlashRows = lineFlashRows.filter(lf => {
+        lf.life -= dt;
+        return lf.life > 0;
+    });
 }
 
-function updateAndRenderEffects(dt) {
-    for (let i = lineFlashRows.length - 1; i >= 0; i--) {
-        const lf = lineFlashRows[i];
-        lf.life -= dt;
-        if (lf.life <= 0) {
-            lineFlashRows.splice(i, 1);
-            continue;
+function drawGrid(targetCanvas, targetGrid, bs) {
+    if (!targetCanvas) return;
+    const tctx = targetCanvas.getContext('2d');
+    if (!targetGrid) {
+        tctx.clearRect(0, 0, targetCanvas.width, targetCanvas.height);
+        return;
+    }
+    tctx.clearRect(0, 0, targetCanvas.width, targetCanvas.height);
+    for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+            let v = targetGrid[r] ? targetGrid[r][c] : 0;
+            if (v) {
+                tctx.fillStyle = COLORS[v] || '#94a3b8';
+                tctx.fillRect(c * bs, r * bs, bs - 1, bs - 1);
+            }
         }
-        const alpha = Math.max(0, lf.life / lf.maxLife);
-        ctx.fillStyle = `rgba(255, 255, 255, ${alpha * 0.85})`;
-        ctx.fillRect(0, lf.row * BLOCK_SIZE, canvas.width, BLOCK_SIZE);
+    }
+}
+
+function drawPlayerBoard() {
+    ctx.save();
+    if (shakeTimer > 0) {
+        const mag = shakeTimer * 24;
+        ctx.translate((Math.random() - 0.5) * mag, (Math.random() - 0.5) * mag);
     }
 
-    for (let i = particles.length - 1; i >= 0; i--) {
-        const pt = particles[i];
-        pt.life -= dt;
-        if (pt.life <= 0) {
-            particles.splice(i, 1);
-            continue;
-        }
-        pt.x += pt.vx * dt;
-        pt.y += pt.vy * dt;
-        pt.vy += 180 * dt;
-        const alpha = Math.max(0, pt.life / pt.maxLife);
-        ctx.globalAlpha = alpha;
-        ctx.fillStyle = pt.color;
-        ctx.fillRect(pt.x - pt.size / 2, pt.y - pt.size / 2, pt.size, pt.size);
-        ctx.globalAlpha = 1;
+    drawGrid(canvas, buildCurrentDisplayGrid(), BLOCK_SIZE);
+
+    for (const lf of lineFlashRows) {
+        const alpha = Math.max(0, lf.life / lf.maxLife) * 0.75;
+        ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+        ctx.fillRect(0, lf.row * BLOCK_SIZE, COLS * BLOCK_SIZE, BLOCK_SIZE);
     }
 
-    for (let i = floatingTexts.length - 1; i >= 0; i--) {
-        const ft = floatingTexts[i];
-        ft.life -= dt;
-        if (ft.life <= 0) {
-            floatingTexts.splice(i, 1);
-            continue;
-        }
-        ft.y += ft.vy * dt;
-        const alpha = Math.max(0, ft.life / ft.maxLife);
-        ctx.save();
-        ctx.globalAlpha = alpha;
+    if (isPlaying && dangerLevel > 0) {
+        const pulseAlpha = dangerFlashOn ? (0.12 + dangerLevel * 0.08) : 0.04;
+        ctx.fillStyle = `rgba(239, 68, 68, ${pulseAlpha})`;
+        ctx.fillRect(0, 0, canvas.width, DANGER_ROW_THRESHOLD * BLOCK_SIZE);
+
+        ctx.strokeStyle = dangerFlashOn ? '#ef4444' : 'rgba(239, 68, 68, 0.45)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(0, DANGER_ROW_THRESHOLD * BLOCK_SIZE);
+        ctx.lineTo(canvas.width, DANGER_ROW_THRESHOLD * BLOCK_SIZE);
+        ctx.stroke();
+    }
+
+    if (hasPowerupsInCurrentMode() && armorCharges > 0) {
+        ctx.strokeStyle = 'rgba(74, 222, 128, 0.85)';
+        ctx.lineWidth = 3;
+        ctx.strokeRect(1.5, 1.5, canvas.width - 3, canvas.height - 3);
+    }
+
+    if (attackFlashTimer > 0) {
+        ctx.fillStyle = `rgba(239, 68, 68, ${attackFlashTimer * 0.9})`;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+
+    for (const p of particles) {
+        ctx.globalAlpha = Math.max(0, p.life / p.maxLife);
+        ctx.fillStyle = p.color;
+        ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
+    }
+    ctx.globalAlpha = 1;
+
+    for (const ft of floatingTexts) {
+        ctx.globalAlpha = Math.max(0, ft.life / ft.maxLife);
         ctx.font = 'bold 12px system-ui, sans-serif';
         ctx.textAlign = 'center';
         ctx.fillStyle = '#020617';
         ctx.fillText(ft.text, ft.x + 1, ft.y + 1);
         ctx.fillStyle = ft.color;
         ctx.fillText(ft.text, ft.x, ft.y);
-        ctx.restore();
     }
-}
+    ctx.globalAlpha = 1;
 
-function renderPlayer() {
-    ctx.save();
-    if (shakeTimer > 0) {
-        const mag = dangerLevel >= 2 ? 5 : 3;
-        const dx = (Math.random() - 0.5) * mag * 2;
-        const dy = (Math.random() - 0.5) * mag * 2;
-        ctx.translate(dx, dy);
-    }
-
-    drawGrid(canvas, getBoardWithPiece(), BLOCK_SIZE);
-
-    if (attackFlashTimer > 0) {
-        ctx.strokeStyle = `rgba(239, 68, 68, ${Math.min(1, attackFlashTimer * 3)})`;
-        ctx.lineWidth = 4;
-        ctx.strokeRect(1, 1, canvas.width - 2, canvas.height - 2);
-    }
-
-    if (dangerLevel > 0) {
-        const alpha = dangerFlashOn ? (0.12 + dangerLevel * 0.08) : 0.04;
-        ctx.fillStyle = `rgba(239, 68, 68, ${alpha})`;
-        ctx.fillRect(0, 0, canvas.width, (DANGER_ROW_THRESHOLD + 1) * BLOCK_SIZE);
-        ctx.strokeStyle = dangerFlashOn ? 'rgba(248, 113, 113, 0.95)' : 'rgba(239, 68, 68, 0.45)';
-        ctx.lineWidth = dangerLevel >= 2 ? 3 : 2;
-        ctx.strokeRect(1, 1, canvas.width - 2, canvas.height - 2);
-    }
-
-    if (hasPowerupsInCurrentMode() && armorCharges > 0) {
-        ctx.strokeStyle = 'rgba(74, 222, 128, 0.85)';
-        ctx.lineWidth = 2.5;
-        ctx.strokeRect(2, 2, canvas.width - 4, canvas.height - 4);
-    }
-
-    updateAndRenderEffects(0.016);
     ctx.restore();
 }
 
-function loop(now) {
-    if (!lT) lT = now;
-    let dt = (now - lT) / 1000;
-    lT = now;
-    if (dt > 0.25) dt = 0.25;
+function update(time = 0) {
+    let dt = Math.min(0.1, (time - lT) / 1000 || 0);
+    lT = time;
 
-    if (shakeTimer > 0) shakeTimer = Math.max(0, shakeTimer - dt);
-    if (attackFlashTimer > 0) attackFlashTimer = Math.max(0, attackFlashTimer - dt);
+    updateEffects(dt);
 
-    if (isPlaying && piece) {
+    if (currentRole === 'admin') {
+        renderAdminLasers(dt);
+    }
+
+    if (isPlaying) {
         dropC += dt * 1000;
         const intervalMs = getDropIntervalMs();
         if (dropC > intervalMs) {
             dropC = 0;
             moveDown();
         }
+
         syncC += dt;
-        if (syncC > 0.45) {
+        if (syncC > 0.08) {
             syncC = 0;
-            syncBoard();
+            syncBoardNow(false);
         }
+
+        dangerLevel = computeDangerLevel();
+        if (dangerLevel > 0) {
+            dangerBlinkTimer += dt;
+            const blinkSpeed = dangerLevel === 3 ? 0.16 : (dangerLevel === 2 ? 0.28 : 0.45);
+            if (dangerBlinkTimer >= blinkSpeed) {
+                dangerBlinkTimer = 0;
+                dangerFlashOn = !dangerFlashOn;
+                if (dangerFlashOn) SFX.danger(dangerLevel);
+            }
+        } else {
+            dangerLevel = 0;
+            dangerBlinkTimer = 0;
+            dangerFlashOn = false;
+        }
+    } else {
+        dangerLevel = 0;
+        dangerFlashOn = false;
     }
 
-    if (currentRole === 'player' || currentRole === 'local_solo' || currentRole === 'local_vsbot') {
-        updateDangerState(dt);
-        renderPlayer();
-        uiC += dt;
-        if (uiC > 0.1) {
-            uiC = 0;
+    uiC += dt;
+    if (uiC >= 0.08) {
+        uiC = 0;
+        const alertEl = document.getElementById('incoming-alert');
+        if (alertEl) {
+            if (isPlaying && dangerLevel > 0) {
+                const label = dangerLevel === 3 ? '🚨 BAHAYA TOP-OUT!' : (dangerLevel === 2 ? '⚠️ ZONA KRITIS!' : '⚠️ WASPADA TINGGI!');
+                alertEl.innerHTML = `<span class="warning">${label}</span>`;
+            } else if (pendingGarbage > 0) {
+                alertEl.innerHTML = `<span class="warning">⚠️ +${pendingGarbage} BARIS SAMPAH</span>`;
+            } else {
+                alertEl.innerHTML = '';
+            }
+        }
+        if (hasPowerupsInCurrentMode()) {
             refreshItemUI();
         }
-    } else if (currentRole === 'admin') {
-        renderAdminLasers(dt);
+        if (gameMode === 'solo') {
+            renderLocalSideList();
+        }
     }
 
-    requestAnimationFrame(loop);
+    if (document.getElementById('player-view').style.display !== 'none') {
+        drawPlayerBoard();
+    }
+
+    requestAnimationFrame(update);
 }
 
 drawNextPiecePreview();
-refreshItemUI();
-fetchLobbyRooms();
-requestAnimationFrame(loop);
+requestAnimationFrame(update);
 </script>
 </body>
 </html>
