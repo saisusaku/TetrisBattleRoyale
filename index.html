@@ -1350,9 +1350,6 @@ const COLS = 10, ROWS = 20;
 let BLOCK_SIZE = 16;
 const DANGER_ROW_THRESHOLD = 4;
 
-const AWAY_QUIT_TIMEOUT_MS = 30000;
-let awaySinceMs = null;
-
 let gameMode = 'solo';
 let isOnlineRoomHost = false;
 let pendingPlayerCreateRoom = false;
@@ -1447,7 +1444,7 @@ function createEmptyGrid() {
 let grid = createEmptyGrid();
 let piece = null, score = 0, isPlaying = false, lastAttackerId = null, pendingGarbage = 0;
 let dangerLevel = 0, dangerBlinkTimer = 0, dangerFlashOn = false;
-let dropC = 0, syncC = 0, uiC = 0, chargeTickC = 0, lT = 0;
+let dropC = 0, uiC = 0, lT = 0;
 
 let particles = [];
 let floatingTexts = [];
@@ -1656,21 +1653,21 @@ function activateItem(itemType) {
         armorCharges = 3;
         SFX.block();
         addLog('player-log', '🛡️ ARMOR aktif! Menahan 3 serangan masuk.');
-        if (gameMode === 'online') {
-            sendWS({ type: 'use_item', item: 'armor' });
-        }
+        if (gameMode === 'online') sendWS({ type: 'use_item', item: 'armor' });
     } else if (itemType === 'double') {
         doubleExpiresAt = performance.now() + DOUBLE_DURATION_MS;
         SFX.clear(3);
         addLog('player-log', '⚡ DOUBLE aktif selama 10 detik! Serangan 2x.');
         if (gameMode === 'online') sendWS({ type: 'use_item', item: 'double' });
     } else if (itemType === 'breaker') {
-        const removedCount = breakTwoRandomRows();
-        SFX.drop();
-        vibrate(30);
-        addLog('player-log', `💥 BREAKER menghapus ${removedCount} baris acak!`);
-        if (gameMode === 'online') sendWS({ type: 'use_item', item: 'breaker' });
-        syncBoardNow(true);
+        if (gameMode !== 'online') {
+            const removedCount = breakTwoRandomRows();
+            SFX.drop();
+            vibrate(30);
+            addLog('player-log', `💥 BREAKER menghapus ${removedCount} baris acak!`);
+        } else {
+            sendWS({ type: 'use_item', item: 'breaker' });
+        }
     }
 
     refreshItemUI();
@@ -1896,7 +1893,6 @@ function stopLocalBotLoop() {
 
 function resetPlayerStateForNewMatch(keepBots = false) {
     stopLocalBotLoop();
-    awaySinceMs = null;
     grid = createEmptyGrid();
     nextPieceId = rollRandomPieceId();
     score = 0;
@@ -2358,26 +2354,11 @@ function sendQuitSignal(useBeacon = false) {
     }
 }
 
-function markLeftArenaByAwayTimeout() {
-    if (currentRole !== 'player' || gameMode !== 'online' || hasLeftArena) return;
-    isPlaying = false;
-    piece = null;
-    awaySinceMs = null;
-    sendQuitSignal(true);
-    const stEl = document.getElementById('p-status');
-    if (stEl) {
-        stEl.innerText = '🟨 Keluar (>30s)';
-        stEl.style.color = '#facc15';
-    }
-    addLog('player-log', '🟨 Meninggalkan game lebih dari 30 detik — dianggap keluar dari permainan.');
-}
-
 window.addEventListener('pagehide', () => sendQuitSignal(true));
 window.addEventListener('beforeunload', () => sendQuitSignal(true));
 
 function exitToLobby() {
     stopLocalBotLoop();
-    awaySinceMs = null;
     if (currentRole === 'player') {
         sendQuitSignal(true);
     } else if (socket) {
@@ -2409,7 +2390,7 @@ function connectWS(onOpenCallback) {
             if (socket && socket.readyState === WebSocket.OPEN) {
                 socket.send(JSON.stringify({ type: 'ping' }));
             }
-        }, 15000);
+        }, 10000);
         if (onOpenCallback) onOpenCallback();
     };
     socket.onmessage = (event) => {
@@ -2429,6 +2410,66 @@ function sendWS(payload) {
     if (socket && socket.readyState === WebSocket.OPEN) {
         socket.send(JSON.stringify(payload));
     }
+}
+
+function applyServerSync(data) {
+    if (Array.isArray(data.grid) && data.grid.length === ROWS) {
+        grid = data.grid;
+    }
+    if (data.active_piece && data.active_piece.shape) {
+        piece = {
+            shape: data.active_piece.shape,
+            x: Number(data.active_piece.x || 0),
+            y: Number(data.active_piece.y || 0),
+        };
+    } else {
+        piece = null;
+    }
+    if (data.next_piece_id) {
+        nextPieceId = Number(data.next_piece_id);
+        drawNextPiecePreview();
+    }
+    if (data.score !== undefined) {
+        score = Number(data.score || 0);
+        document.getElementById('score').innerText = score;
+    }
+    if (data.ko !== undefined) {
+        playerKoCount = Number(data.ko || 0);
+        document.getElementById('ko').innerText = playerKoCount;
+    }
+    if (data.pending_garbage !== undefined) {
+        pendingGarbage = Number(data.pending_garbage || 0);
+    }
+    if (data.armor_charges !== undefined) {
+        armorCharges = Number(data.armor_charges || 0);
+    }
+    if (data.double_remaining !== undefined) {
+        const remSec = Number(data.double_remaining || 0);
+        doubleExpiresAt = remSec > 0 ? (performance.now() + remSec * 1000) : 0;
+    }
+    if (data.charge !== undefined) {
+        itemCharge = Math.max(0, Math.min(100, Number(data.charge || 0)));
+    }
+    if (data.item_tokens !== undefined) {
+        itemTokens = Number(data.item_tokens || 0);
+    }
+    if (data.alive !== undefined) {
+        const nowAlive = Boolean(data.alive);
+        if (!nowAlive && isPlaying) {
+            isPlaying = false;
+            piece = null;
+            setKoOverlay(true);
+            SFX.ko();
+            document.getElementById('p-status').innerText = '💀 Eliminasi';
+            document.getElementById('p-status').style.color = '#ef4444';
+        } else if (nowAlive && !isPlaying && activeRoomCode) {
+            isPlaying = true;
+            setKoOverlay(false);
+            document.getElementById('p-status').innerText = '🟢 Main';
+            document.getElementById('p-status').style.color = '#22c55e';
+        }
+    }
+    refreshItemUI();
 }
 
 function createPlayerRoom() {
@@ -2589,6 +2630,13 @@ function applyAdminFrameObject(frameObj) {
 function handleServerMessage(data) {
     if (data.type === 'pong') return;
 
+    if (data.type === 'server_sync') {
+        if (currentRole === 'player' && gameMode === 'online') {
+            applyServerSync(data);
+        }
+        return;
+    }
+
     if (data.type === 'error') {
         alert(data.message);
         if (currentRole === 'player' && !isPlaying) {
@@ -2601,7 +2649,7 @@ function handleServerMessage(data) {
         if (currentRole === 'player' && hasPowerupsInCurrentMode()) {
             const wasFull = itemTokens > 0 || itemCharge >= 100;
             const serverCharge = Math.max(0, Math.min(100, Number(data.charge ?? itemCharge)));
-            itemCharge = Math.max(itemCharge, serverCharge);
+            itemCharge = serverCharge;
             itemTokens = Number(data.item_tokens ?? (itemCharge >= 100 ? 1 : 0));
             if (itemCharge >= 100) {
                 itemCharge = 100;
@@ -2668,21 +2716,18 @@ function handleServerMessage(data) {
             score = 0; soloLevel = 1; totalLinesCleared = 0; playerKoCount = 0;
             updateLevelDisplay();
             pendingGarbage = 0; armorCharges = 0; doubleExpiresAt = 0; itemTokens = 0; itemCharge = 0;
-            awaySinceMs = null;
             resetVisualEffects();
             isPlaying = true;
-            piece = newPiece();
+            piece = null;
             document.getElementById('p-status').innerText = '🟢 Main';
             document.getElementById('p-status').style.color = '#22c55e';
             addLog('player-log', `🎮 Bergabung ke room <b>${escapeHtml(data.room_code)}</b>!`);
-            syncBoardNow(true);
         } else if (data.active && !data.alive) {
             isPlaying = false;
             piece = null;
             document.getElementById('p-status').innerText = '⏳ Menonton Ronde';
             document.getElementById('p-status').style.color = '#fbbf24';
             addLog('player-log', '⏳ Ronde sedang berjalan. Tunggu ronde berikutnya.');
-            syncBoardNow(true);
         } else {
             isPlaying = false;
             piece = null;
@@ -2691,7 +2736,6 @@ function handleServerMessage(data) {
             addLog('player-log', isOnlineRoomHost
                 ? `👑 Anda Host room <b>${escapeHtml(data.room_code)}</b>. Tambah bot/teman lalu klik Mulai Match.`
                 : `⏳ Terhubung ke room <b>${escapeHtml(data.room_code)}</b>. Menunggu match dimulai...`);
-            syncBoardNow(true);
         }
         refreshItemUI();
         renderOpponents(data.players || {});
@@ -2741,14 +2785,12 @@ function handleServerMessage(data) {
             score = 0; soloLevel = 1; totalLinesCleared = 0; playerKoCount = 0;
             updateLevelDisplay();
             pendingGarbage = 0; lastAttackerId = null; armorCharges = 0; doubleExpiresAt = 0; itemTokens = 0; itemCharge = 0;
-            awaySinceMs = document.hidden ? Date.now() : null;
             resetVisualEffects();
             if (canPlay) {
                 isPlaying = true;
-                piece = newPiece();
+                piece = null;
                 document.getElementById('p-status').innerText = '🟢 Main';
                 document.getElementById('p-status').style.color = '#22c55e';
-                syncBoardNow(true);
             } else {
                 isPlaying = false;
                 piece = null;
@@ -2778,7 +2820,6 @@ function handleServerMessage(data) {
         if (currentRole === 'player') {
             isPlaying = false;
             piece = null;
-            awaySinceMs = null;
             grid = createEmptyGrid();
             nextPieceId = rollRandomPieceId();
             drawNextPiecePreview();
@@ -2825,7 +2866,7 @@ function handleServerMessage(data) {
     if (data.type === 'receive_attack') {
         if (currentRole === 'player' && isPlaying) {
             const lines = Number(data.lines || 1);
-            pendingGarbage += lines;
+            pendingGarbage = lines;
             lastAttackerId = data.from_id;
             shakeTimer = 0.25;
             attackFlashTimer = 0.3;
@@ -2868,7 +2909,6 @@ function handleServerMessage(data) {
 
     if (data.type === 'match_finished') {
         countdownLabelText = '';
-        awaySinceMs = null;
         SFX.win();
         launchConfetti(85);
         if (currentRole === 'player') {
@@ -3307,9 +3347,7 @@ function clearLines() {
             addItemCharge(chargeGain);
         }
 
-        if (currentRole === 'player' && gameMode === 'online') {
-            sendWS({ type: 'line_cleared', lines, double_active: isDoubleActive() });
-        } else if (gameMode === 'vsbot') {
+        if (gameMode === 'vsbot') {
             const map = { 1: 1, 2: 2, 3: 3, 4: 5 };
             let dmg = map[lines] || 1;
             if (isDoubleActive()) dmg *= 2;
@@ -3334,7 +3372,6 @@ function clearLines() {
                 }
             }
         }
-        syncBoardNow(true);
     }
 }
 
@@ -3348,24 +3385,19 @@ function applyPendingGarbage() {
         grid.push(row);
     }
     pendingGarbage = 0;
-    syncBoardNow(true);
 }
 
 function checkTopOut() {
     if (grid[0].some(v => v !== 0)) {
         isPlaying = false;
         piece = null;
-        awaySinceMs = null;
         setKoOverlay(true);
         SFX.ko();
         vibrate(80);
         document.getElementById('p-status').innerText = '💀 Eliminasi';
         document.getElementById('p-status').style.color = '#ef4444';
-        syncBoardNow(true);
 
-        if (currentRole === 'player' && gameMode === 'online') {
-            sendWS({ type: 'player_eliminated', attacker_id: lastAttackerId, last_attacker_id: lastAttackerId });
-        } else if (gameMode === 'vsbot') {
+        if (gameMode === 'vsbot') {
             stopLocalBotLoop();
             addLog('player-log', '💀 Anda tereliminasi! Memantau sisa bot...');
             const aliveBots = localBots.filter(b => b.alive);
@@ -3385,28 +3417,42 @@ function checkTopOut() {
 }
 
 function moveLeft() {
-    if (!isPlaying || !piece) return;
+    if (!isPlaying) return;
+    if (gameMode === 'online') {
+        SFX.move();
+        sendWS({ type: 'player_input', action: 'left' });
+        return;
+    }
+    if (!piece) return;
     if (!collide(piece.x - 1, piece.y)) {
         piece.x--;
         SFX.move();
-        syncBoardNow(true);
     }
 }
 
 function moveRight() {
-    if (!isPlaying || !piece) return;
+    if (!isPlaying) return;
+    if (gameMode === 'online') {
+        SFX.move();
+        sendWS({ type: 'player_input', action: 'right' });
+        return;
+    }
+    if (!piece) return;
     if (!collide(piece.x + 1, piece.y)) {
         piece.x++;
         SFX.move();
-        syncBoardNow(true);
     }
 }
 
 function moveDown() {
-    if (!isPlaying || !piece) return;
+    if (!isPlaying) return;
+    if (gameMode === 'online') {
+        sendWS({ type: 'player_input', action: 'down' });
+        return;
+    }
+    if (!piece) return;
     if (!collide(piece.x, piece.y + 1)) {
         piece.y++;
-        syncBoardNow(true);
         return;
     }
     merge();
@@ -3417,28 +3463,28 @@ function moveDown() {
         if (collide(piece.x, piece.y)) {
             isPlaying = false;
             piece = null;
-            awaySinceMs = null;
             setKoOverlay(true);
             SFX.ko();
             document.getElementById('p-status').innerText = '💀 Eliminasi';
             document.getElementById('p-status').style.color = '#ef4444';
-            syncBoardNow(true);
-            if (currentRole === 'player' && gameMode === 'online') {
-                sendWS({ type: 'player_eliminated', attacker_id: lastAttackerId, last_attacker_id: lastAttackerId });
-            } else if (gameMode === 'vsbot') {
+            if (gameMode === 'vsbot') {
                 stopLocalBotLoop();
                 document.getElementById('bot-spectator-panel').style.display = 'block';
                 renderBotSpectatorGrid();
             }
-        } else {
-            syncBoardNow(true);
         }
     }
     dropC = 0;
 }
 
 function hardDrop() {
-    if (!isPlaying || !piece) return;
+    if (!isPlaying) return;
+    if (gameMode === 'online') {
+        SFX.drop();
+        sendWS({ type: 'player_input', action: 'hard_drop' });
+        return;
+    }
+    if (!piece) return;
     while (!collide(piece.x, piece.y + 1)) {
         piece.y++;
         score += 2;
@@ -3449,22 +3495,25 @@ function hardDrop() {
 }
 
 function rotatePiece() {
-    if (!isPlaying || !piece) return;
+    if (!isPlaying) return;
+    if (gameMode === 'online') {
+        SFX.rotate();
+        sendWS({ type: 'player_input', action: 'rotate' });
+        return;
+    }
+    if (!piece) return;
     let rot = piece.shape[0].map((_, i) => piece.shape.map(row => row[i]).reverse());
     if (!collide(piece.x, piece.y, rot)) {
         piece.shape = rot;
         SFX.rotate();
-        syncBoardNow(true);
     } else if (!collide(piece.x - 1, piece.y, rot)) {
         piece.x -= 1;
         piece.shape = rot;
         SFX.rotate();
-        syncBoardNow(true);
     } else if (!collide(piece.x + 1, piece.y, rot)) {
         piece.x += 1;
         piece.shape = rot;
         SFX.rotate();
-        syncBoardNow(true);
     }
 }
 
@@ -3483,17 +3532,6 @@ document.addEventListener('keydown', e => {
     else if (e.key === '2') activateItem('double');
     else if (e.key === '3') activateItem('breaker');
 });
-
-function syncBoardNow(force = true) {
-    if (currentRole !== 'player' || gameMode !== 'online' || hasLeftArena) return;
-    sendWS({
-        type: 'update_board',
-        grid: grid,
-        active_piece: piece && isPlaying ? { shape: piece.shape, x: piece.x, y: piece.y } : null,
-        score,
-        alive: isPlaying
-    });
-}
 
 function computeDangerLevel() {
     let highestFilledRow = ROWS;
@@ -3644,21 +3682,6 @@ function advanceGameTick(dt) {
 
     if (!isPlaying) return;
 
-    if (hasPowerupsInCurrentMode() && (gameMode === 'vsbot' || gameMode === 'online')) {
-        chargeTickC += dt;
-        if (chargeTickC >= 0.5) {
-            const steps = Math.floor(chargeTickC / 0.5);
-            chargeTickC -= steps * 0.5;
-            addItemCharge(0.5 * steps);
-        }
-    }
-
-    syncC += dt;
-    if (syncC > 0.05) {
-        syncC = 0;
-        syncBoardNow(true);
-    }
-
     dangerLevel = computeDangerLevel();
     if (dangerLevel > 0) {
         dangerBlinkTimer += dt;
@@ -3675,56 +3698,12 @@ function advanceGameTick(dt) {
     }
 }
 
-let lastOnlineTickAt = Date.now();
-
-setInterval(() => {
-    const nowMs = Date.now();
-    const elapsedSec = Math.min(2.0, Math.max(0, (nowMs - lastOnlineTickAt) / 1000));
-    lastOnlineTickAt = nowMs;
-
-    if (currentRole !== 'player' || gameMode !== 'online' || hasLeftArena) {
-        awaySinceMs = null;
-        return;
-    }
-
-    if (document.hidden && isPlaying) {
-        if (awaySinceMs === null) {
-            awaySinceMs = nowMs;
-        } else if (nowMs - awaySinceMs >= AWAY_QUIT_TIMEOUT_MS) {
-            markLeftArenaByAwayTimeout();
-            return;
-        }
-    } else if (!document.hidden) {
-        awaySinceMs = null;
-    }
-
-    if (!isPlaying || elapsedSec <= 0) return;
-
-    advanceGameTick(elapsedSec);
-    if (hasPowerupsInCurrentMode()) {
-        refreshItemUI();
-    }
-}, 100);
-
 document.addEventListener('visibilitychange', () => {
-    const nowMs = Date.now();
-    if (document.hidden) {
-        if (currentRole === 'player' && gameMode === 'online' && isPlaying && !hasLeftArena && awaySinceMs === null) {
-            awaySinceMs = nowMs;
-        }
-    } else {
-        if (currentRole === 'player' && gameMode === 'online' && isPlaying && !hasLeftArena && awaySinceMs !== null) {
-            if (nowMs - awaySinceMs >= AWAY_QUIT_TIMEOUT_MS) {
-                markLeftArenaByAwayTimeout();
-                return;
-            }
-        }
-        awaySinceMs = null;
+    if (currentRole === 'player' && gameMode === 'online' && !hasLeftArena) {
+        sendWS({ type: 'player_away', away: document.hidden });
+    }
+    if (!document.hidden) {
         lT = performance.now();
-        lastOnlineTickAt = nowMs;
-        if (gameMode === 'online' && !hasLeftArena) {
-            syncBoardNow(true);
-        }
         if (hasPowerupsInCurrentMode()) {
             refreshItemUI();
         }
