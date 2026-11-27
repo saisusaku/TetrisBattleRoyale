@@ -14,6 +14,8 @@ DB_PATH = os.path.join(BASE_DIR, "tetris_br.db")
 BARCODE_PATH = os.path.join(BASE_DIR, "KepoTetris.jpeg")
 ROWS, COLS = 20, 10
 DOUBLE_DURATION_SEC = 10.0
+GRAVITY_INTERVAL_SEC = 0.56
+AWAY_QUIT_TIMEOUT_SEC = 30.0
 
 SHAPES = [
     [[1, 1, 1, 1]],
@@ -73,6 +75,21 @@ def empty_grid():
     return [[0 for _ in range(COLS)] for _ in range(ROWS)]
 
 
+def random_piece_id() -> int:
+    return random.randint(1, len(SHAPES))
+
+
+def spawn_player_piece(p: dict) -> dict:
+    pid_shape = int(p.get("next_piece_id") or random_piece_id())
+    if pid_shape < 1 or pid_shape > len(SHAPES):
+        pid_shape = random_piece_id()
+    p["next_piece_id"] = random_piece_id()
+    shape = [row[:] for row in SHAPES[pid_shape - 1]]
+    x = COLS // 2 - len(shape[0]) // 2
+    y = 0
+    return {"id": pid_shape, "shape": shape, "x": x, "y": y}
+
+
 def rotate_matrix(m):
     return [list(row) for row in zip(*m[::-1])]
 
@@ -95,6 +112,23 @@ def compute_bot_view_grid(bot: dict):
     snap = [row[:] for row in base]
     cur = bot.get("cur_piece")
     if cur and bot.get("alive"):
+        shape = cur["shape"]
+        px, py = cur["x"], cur["y"]
+        for r_idx, row in enumerate(shape):
+            for c_idx, val in enumerate(row):
+                if val:
+                    nr = py + r_idx
+                    nc = px + c_idx
+                    if 0 <= nr < ROWS and 0 <= nc < COLS:
+                        snap[nr][nc] = val
+    return snap
+
+
+def compute_player_view_grid(p: dict):
+    base = p.get("board") or p.get("grid") or empty_grid()
+    snap = [row[:] for row in base]
+    cur = p.get("cur_piece")
+    if cur and p.get("alive"):
         shape = cur["shape"]
         px, py = cur["x"], cur["y"]
         for r_idx, row in enumerate(shape):
@@ -143,6 +177,58 @@ def add_player_charge(p: dict, amount: float) -> bool:
         p["item_tokens"] = 1
         return True
     return False
+
+
+def reset_player_match_fields(p: dict, alive: bool = True, is_active_match: bool = False):
+    p["alive"] = alive
+    p["quitter"] = False
+    p["score"] = 0
+    p["ko"] = 0
+    p["board"] = empty_grid()
+    p["grid"] = empty_grid()
+    p["next_piece_id"] = random_piece_id()
+    if p.get("is_bot"):
+        p["cur_piece"] = pick_smart_human_target(p) if (alive and is_active_match) else None
+    else:
+        p["cur_piece"] = spawn_player_piece(p) if (alive and is_active_match) else None
+    p["drop_accum"] = 0.0
+    p["pending_garbage"] = 0
+    p["spawn_cooldown"] = 0
+    p["last_attacker_id"] = None
+    p["last_target_id"] = None
+    p["double_until"] = 0.0
+    p["armor_charges"] = 0
+    p["charge"] = 0.0
+    p["item_tokens"] = 0
+    p["last_seen"] = time.time()
+    p["away_since"] = None
+
+
+async def send_player_sync(room_code: str, player_id: str, p: dict):
+    now_ts = time.time()
+    rem_dbl = max(0.0, float(p.get("double_until", 0.0)) - now_ts)
+    cur = p.get("cur_piece")
+    active_piece_payload = (
+        {"shape": cur["shape"], "x": cur["x"], "y": cur["y"]}
+        if cur and p.get("alive")
+        else None
+    )
+    board_only = p.get("board") or p.get("grid") or empty_grid()
+    p["grid"] = compute_player_view_grid(p)
+    await send_to_player(room_code, player_id, {
+        "type": "server_sync",
+        "grid": board_only,
+        "active_piece": active_piece_payload,
+        "next_piece_id": int(p.get("next_piece_id") or 1),
+        "score": int(p.get("score", 0)),
+        "ko": int(p.get("ko", 0)),
+        "alive": bool(p.get("alive", False)),
+        "pending_garbage": int(p.get("pending_garbage", 0)),
+        "armor_charges": int(p.get("armor_charges", 0)),
+        "double_remaining": round(rem_dbl, 2),
+        "charge": round(float(p.get("charge", 0.0)), 1),
+        "item_tokens": int(p.get("item_tokens", 0)),
+    })
 
 
 async def bot_use_powerup(room_code: str, bot_id: str, bot: dict):
@@ -347,7 +433,7 @@ def get_room_players_summary(room_code: str, include_grid: bool = False):
             "item_tokens": int(p.get("item_tokens", 0)),
         }
         if include_grid:
-            item["grid"] = compute_bot_view_grid(p) if p.get("is_bot") else (p.get("grid") or empty_grid())
+            item["grid"] = compute_bot_view_grid(p) if p.get("is_bot") else compute_player_view_grid(p)
         result[pid] = item
     return result
 
@@ -598,6 +684,7 @@ async def mark_player_quit(room_code: str, player_id: str, reason_msg: Optional[
     p["connected"] = False
     p["quitter"] = True
     p["alive"] = False
+    p["cur_piece"] = None
     p["ws"] = None
     reassign_host_if_needed(room, player_id)
 
@@ -710,6 +797,9 @@ async def perform_attack(room_code: str, attacker_id: str, lines: int, client_do
             "ko": target_player["ko"],
             "grid": compute_bot_view_grid(target_player),
         })
+    elif not target_player.get("is_bot") and target_player["alive"]:
+        target_player["pending_garbage"] = int(target_player.get("pending_garbage", 0)) + min(garbage_count, 6)
+        target_player["last_attacker_id"] = attacker_id
 
     await broadcast_to_room(room_code, {
         "type": "attack_log",
@@ -748,9 +838,153 @@ async def eliminate_player(room_code: str, victim_id: str, killer_id: Optional[s
             "msg": f"💀 {victim_name} tereliminasi!",
         })
 
+    if not victim.get("is_bot"):
+        await send_player_sync(room_code, victim_id, victim)
+
     record_stat(victim_name, win=0, ko=victim["ko"], score=victim["score"])
     await broadcast_room_state(room_code)
     await check_winner(room_code)
+
+
+async def step_human_player(room_code: str, pid: str, p: dict, dt: float) -> bool:
+    room = rooms.get(room_code)
+    if not room or not room.get("active") or not p.get("alive") or p.get("quitter"):
+        return False
+
+    board = p.get("board")
+    if not board or len(board) != ROWS:
+        board = empty_grid()
+        p["board"] = board
+
+    cur = p.get("cur_piece")
+    if not cur:
+        cur = spawn_player_piece(p)
+        if bot_collide(board, cur["shape"], cur["x"], cur["y"]):
+            await eliminate_player(room_code, pid, p.get("last_attacker_id"))
+            return True
+        p["cur_piece"] = cur
+
+    p["drop_accum"] = float(p.get("drop_accum", 0.0)) + dt
+    moved = False
+
+    while p.get("alive") and room.get("active") and float(p.get("drop_accum", 0.0)) >= GRAVITY_INTERVAL_SEC:
+        p["drop_accum"] -= GRAVITY_INTERVAL_SEC
+        cur = p.get("cur_piece")
+        if not cur:
+            cur = spawn_player_piece(p)
+            p["cur_piece"] = cur
+
+        if not bot_collide(board, cur["shape"], cur["x"], cur["y"] + 1):
+            cur["y"] += 1
+            moved = True
+        else:
+            for r_idx, row in enumerate(cur["shape"]):
+                for c_idx, val in enumerate(row):
+                    if val:
+                        nr = cur["y"] + r_idx
+                        nc = cur["x"] + c_idx
+                        if 0 <= nr < ROWS and 0 <= nc < COLS:
+                            board[nr][nc] = val
+
+            p["cur_piece"] = None
+            moved = True
+
+            cleared_lines = 0
+            new_board = []
+            for r in board:
+                if all(cell != 0 for cell in r):
+                    cleared_lines += 1
+                else:
+                    new_board.append(r)
+            while len(new_board) < ROWS:
+                new_board.insert(0, [0] * COLS)
+            board = new_board
+            p["board"] = board
+
+            if cleared_lines > 0:
+                pts = [0, 100, 300, 500, 800][cleared_lines] if cleared_lines <= 4 else cleared_lines * 200
+                p["score"] = int(p.get("score", 0)) + pts
+                line_charge_map = {1: 10.0, 2: 22.0, 3: 35.0, 4: 50.0}
+                gain = line_charge_map.get(cleared_lines, cleared_lines * 12.0)
+                just_full = add_player_charge(p, gain)
+                if just_full:
+                    await send_to_player(room_code, pid, {
+                        "type": "charge_update",
+                        "charge": p["charge"],
+                        "item_tokens": p["item_tokens"],
+                        "full_now": True,
+                    })
+                await perform_attack(room_code, pid, cleared_lines)
+                if not room.get("active"):
+                    return True
+
+            pending = int(p.get("pending_garbage", 0))
+            if pending > 0:
+                append_random_garbage_rows(board, min(pending, 6))
+                p["pending_garbage"] = 0
+                p["board"] = board
+
+            if any(cell != 0 for cell in board[0]):
+                await eliminate_player(room_code, pid, p.get("last_attacker_id"))
+                return True
+
+            nxt = spawn_player_piece(p)
+            if bot_collide(board, nxt["shape"], nxt["x"], nxt["y"]):
+                await eliminate_player(room_code, pid, p.get("last_attacker_id"))
+                return True
+            p["cur_piece"] = nxt
+
+    p["grid"] = compute_player_view_grid(p)
+    return moved
+
+
+async def apply_player_input_action(room_code: str, pid: str, p: dict, action: str):
+    room = rooms.get(room_code)
+    if not room or not room.get("active") or not p.get("alive") or p.get("quitter"):
+        return
+
+    board = p.get("board")
+    if not board or len(board) != ROWS:
+        board = empty_grid()
+        p["board"] = board
+
+    cur = p.get("cur_piece")
+    if not cur:
+        cur = spawn_player_piece(p)
+        p["cur_piece"] = cur
+
+    if action == "left":
+        if not bot_collide(board, cur["shape"], cur["x"] - 1, cur["y"]):
+            cur["x"] -= 1
+    elif action == "right":
+        if not bot_collide(board, cur["shape"], cur["x"] + 1, cur["y"]):
+            cur["x"] += 1
+    elif action == "rotate":
+        rot = rotate_matrix(cur["shape"])
+        if not bot_collide(board, rot, cur["x"], cur["y"]):
+            cur["shape"] = rot
+        elif not bot_collide(board, rot, cur["x"] - 1, cur["y"]):
+            cur["x"] -= 1
+            cur["shape"] = rot
+        elif not bot_collide(board, rot, cur["x"] + 1, cur["y"]):
+            cur["x"] += 1
+            cur["shape"] = rot
+    elif action == "down":
+        if not bot_collide(board, cur["shape"], cur["x"], cur["y"] + 1):
+            cur["y"] += 1
+        else:
+            p["drop_accum"] = GRAVITY_INTERVAL_SEC
+            await step_human_player(room_code, pid, p, 0.0)
+    elif action == "hard_drop":
+        drop_dist = 0
+        while not bot_collide(board, cur["shape"], cur["x"], cur["y"] + 1):
+            cur["y"] += 1
+            drop_dist += 1
+        p["score"] = int(p.get("score", 0)) + drop_dist * 2
+        p["drop_accum"] = GRAVITY_INTERVAL_SEC
+        await step_human_player(room_code, pid, p, 0.0)
+
+    p["grid"] = compute_player_view_grid(p)
 
 
 async def run_match_countdown(room_code: str):
@@ -779,21 +1013,9 @@ async def run_match_countdown(room_code: str):
             if not p.get("is_bot") and (not p.get("connected", True) or p.get("quitter", False)):
                 p["alive"] = False
                 p["quitter"] = True
+                p["cur_piece"] = None
                 continue
-            p["alive"] = True
-            p["quitter"] = False
-            p["score"] = 0
-            p["ko"] = 0
-            p["board"] = empty_grid()
-            p["grid"] = empty_grid()
-            p["cur_piece"] = pick_smart_human_target(p) if p.get("is_bot") else None
-            p["spawn_cooldown"] = 0
-            p["last_attacker_id"] = None
-            p["last_target_id"] = None
-            p["double_until"] = 0.0
-            p["armor_charges"] = 0
-            p["charge"] = 0.0
-            p["item_tokens"] = 0
+            reset_player_match_fields(p, alive=True, is_active_match=True)
 
         await broadcast_to_room(room_code, {
             "type": "countdown",
@@ -804,6 +1026,9 @@ async def run_match_countdown(room_code: str):
             "type": "match_started",
             "players": get_room_players_summary(room_code, include_grid=True),
         })
+        for pid, p in list(room["players"].items()):
+            if not p.get("is_bot") and p.get("connected", True) and not p.get("quitter", False):
+                await send_player_sync(room_code, pid, p)
         await broadcast_room_state(room_code)
     except asyncio.CancelledError:
         room = rooms.get(room_code)
@@ -820,9 +1045,13 @@ async def game_loop():
     while True:
         await asyncio.sleep(tick_sec)
         loop_idx += 1
+        now_ts = time.time()
         for room_code, room in list(rooms.items()):
             if not room.get("active"):
                 continue
+
+            any_moved = False
+            admin_frames = []
 
             for pid, p in list(room["players"].items()):
                 if p.get("is_bot") or not p.get("alive"):
@@ -830,6 +1059,24 @@ async def game_loop():
                 ws = p.get("ws")
                 if not p.get("connected", True) or ws is None or getattr(ws.client_state, "name", "") != "CONNECTED":
                     await mark_player_quit(room_code, pid)
+                    continue
+
+                away_since = p.get("away_since")
+                if away_since is not None and (now_ts - float(away_since)) >= AWAY_QUIT_TIMEOUT_SEC:
+                    await mark_player_quit(
+                        room_code,
+                        pid,
+                        f"🟨 {p['name']} meninggalkan game >30 detik (QUITTER).",
+                    )
+                    continue
+
+                last_seen = float(p.get("last_seen", now_ts))
+                if (now_ts - last_seen) >= AWAY_QUIT_TIMEOUT_SEC:
+                    await mark_player_quit(
+                        room_code,
+                        pid,
+                        f"🟨 {p['name']} tidak merespons >30 detik (QUITTER).",
+                    )
                     continue
 
                 just_full = add_player_charge(p, 1.0 * tick_sec)
@@ -841,12 +1088,23 @@ async def game_loop():
                         "full_now": True,
                     })
 
+                moved_h = await step_human_player(room_code, pid, p, tick_sec)
+                if moved_h or loop_idx % 2 == 0:
+                    await send_player_sync(room_code, pid, p)
+                    any_moved = True
+                    admin_frames.append({
+                        "pid": pid,
+                        "name": p["name"],
+                        "alive": p["alive"],
+                        "score": p["score"],
+                        "ko": p["ko"],
+                        "armor_charges": p.get("armor_charges", 0),
+                        "grid": compute_player_view_grid(p),
+                    })
+
             await check_winner(room_code)
             if not room.get("active"):
                 continue
-
-            any_bot_moved = False
-            bot_frames = []
 
             for pid, p in list(room["players"].items()):
                 if not p.get("is_bot") or not p.get("alive"):
@@ -920,8 +1178,8 @@ async def game_loop():
                                 await eliminate_player(room_code, pid, p.get("last_attacker_id"))
                                 continue
 
-                any_bot_moved = True
-                bot_frames.append({
+                any_moved = True
+                admin_frames.append({
                     "pid": pid,
                     "name": p["name"],
                     "alive": p["alive"],
@@ -931,13 +1189,13 @@ async def game_loop():
                     "grid": compute_bot_view_grid(p),
                 })
 
-            if bot_frames:
+            if admin_frames:
                 await send_to_admins(room_code, {
                     "type": "admin_batch_update",
-                    "frames": bot_frames,
+                    "frames": admin_frames,
                 })
 
-            if any_bot_moved and loop_idx % 2 == 0:
+            if any_moved and loop_idx % 2 == 0:
                 await broadcast_to_room(room_code, {
                     "type": "lobby_update",
                     "players": get_room_players_summary(room_code, include_grid=False),
@@ -989,8 +1247,28 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
             data = json.loads(raw)
             event = data.get("type")
 
+            if current_room and current_room in rooms and client_id in rooms[current_room]["players"]:
+                p_seen = rooms[current_room]["players"][client_id]
+                p_seen["last_seen"] = time.time()
+                if event not in ("player_away",):
+                    p_seen["away_since"] = None
+
             if event == "ping":
                 await websocket.send_text(json.dumps({"type": "pong"}))
+                continue
+
+            if event == "player_away":
+                if role == "player" and current_room and current_room in rooms:
+                    p = rooms[current_room]["players"].get(client_id)
+                    if p and p.get("alive") and not p.get("quitter", False):
+                        is_away = bool(data.get("away", True))
+                        if is_away:
+                            if p.get("away_since") is None:
+                                p["away_since"] = time.time()
+                        else:
+                            p["away_since"] = None
+                            p["last_seen"] = time.time()
+                            await send_player_sync(current_room, client_id, p)
                 continue
 
             if event == "create_room":
@@ -1037,13 +1315,20 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                                 "alive": True,
                                 "score": 0,
                                 "ko": 0,
+                                "board": empty_grid(),
                                 "grid": empty_grid(),
+                                "next_piece_id": random_piece_id(),
+                                "cur_piece": None,
+                                "drop_accum": 0.0,
+                                "pending_garbage": 0,
                                 "last_attacker_id": None,
                                 "last_target_id": None,
                                 "double_until": 0.0,
                                 "armor_charges": 0,
                                 "charge": 0.0,
                                 "item_tokens": 0,
+                                "last_seen": time.time(),
+                                "away_since": None,
                             }
                         },
                     }
@@ -1180,20 +1465,7 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                     if not p.get("is_bot") and (not p.get("connected", True) or p.get("quitter", False)):
                         del room["players"][pid]
                         continue
-                    p["alive"] = True
-                    p["quitter"] = False
-                    p["score"] = 0
-                    p["ko"] = 0
-                    p["board"] = empty_grid()
-                    p["grid"] = empty_grid()
-                    p["cur_piece"] = None
-                    p["spawn_cooldown"] = 0
-                    p["last_attacker_id"] = None
-                    p["last_target_id"] = None
-                    p["double_until"] = 0.0
-                    p["armor_charges"] = 0
-                    p["charge"] = 0.0
-                    p["item_tokens"] = 0
+                    reset_player_match_fields(p, alive=True, is_active_match=False)
 
                 await broadcast_to_room(current_room, {
                     "type": "room_reset",
@@ -1245,9 +1517,13 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                     existing["connected"] = True
                     existing["quitter"] = False
                     existing["name"] = username
+                    existing["last_seen"] = time.time()
+                    existing["away_since"] = None
+                    if existing["alive"] and room["active"] and not existing.get("cur_piece"):
+                        existing["cur_piece"] = spawn_player_piece(existing)
                     can_play_now = existing["alive"]
                 else:
-                    room["players"][client_id] = {
+                    new_p = {
                         "ws": websocket,
                         "is_bot": False,
                         "connected": True,
@@ -1256,14 +1532,24 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                         "alive": not is_mid_game,
                         "score": 0,
                         "ko": 0,
+                        "board": empty_grid(),
                         "grid": empty_grid(),
+                        "next_piece_id": random_piece_id(),
+                        "cur_piece": None,
+                        "drop_accum": 0.0,
+                        "pending_garbage": 0,
                         "last_attacker_id": None,
                         "last_target_id": None,
                         "double_until": 0.0,
                         "armor_charges": 0,
                         "charge": 0.0,
                         "item_tokens": 0,
+                        "last_seen": time.time(),
+                        "away_since": None,
                     }
+                    if not is_mid_game:
+                        new_p["cur_piece"] = None
+                    room["players"][client_id] = new_p
                     can_play_now = not is_mid_game
 
                 if not room.get("host_id") and not room.get("admins"):
@@ -1284,7 +1570,7 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                     "host_id": room.get("host_id"),
                     "players": get_room_players_summary(room_code, include_grid=False),
                 }))
-
+                await send_player_sync(room_code, client_id, room["players"][client_id])
                 await broadcast_room_state(room_code)
 
             elif event == "player_quit":
@@ -1292,6 +1578,26 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                     p = rooms[current_room]["players"].get(client_id)
                     msg = f"🟨 {p['name']} meninggalkan halaman (QUITTER)." if p else None
                     await mark_player_quit(current_room, client_id, msg)
+
+            elif event == "player_input":
+                if role != "player" or not current_room or current_room not in rooms:
+                    continue
+                room = rooms[current_room]
+                p = room["players"].get(client_id)
+                if not room.get("active") or not p or not p.get("alive") or p.get("quitter", False):
+                    continue
+                action = str(data.get("action", "")).strip()
+                await apply_player_input_action(current_room, client_id, p, action)
+                await send_player_sync(current_room, client_id, p)
+                await send_to_admins(current_room, {
+                    "type": "admin_screen_update",
+                    "pid": client_id,
+                    "name": p["name"],
+                    "alive": p["alive"],
+                    "score": p["score"],
+                    "ko": p["ko"],
+                    "grid": compute_player_view_grid(p),
+                })
 
             elif event == "use_item":
                 if role != "player" or not current_room or current_room not in rooms:
@@ -1311,6 +1617,7 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                     p["armor_charges"] = 3
                     p["charge"] = 0.0
                     p["item_tokens"] = 0
+                    await send_player_sync(current_room, client_id, p)
                     await broadcast_to_room(current_room, {
                         "type": "attack_log",
                         "msg": f"🛡️ {p['name']} mengaktifkan ARMOR (tahan 3 serangan)!",
@@ -1325,6 +1632,7 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                         "item": "double",
                         "double_seconds": int(DOUBLE_DURATION_SEC),
                     })
+                    await send_player_sync(current_room, client_id, p)
                     await broadcast_to_room(current_room, {
                         "type": "attack_log",
                         "msg": f"⚡ {p['name']} mengaktifkan DOUBLE ATTACK selama {int(DOUBLE_DURATION_SEC)} detik!",
@@ -1333,6 +1641,16 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                 elif item_type == "breaker":
                     p["charge"] = 0.0
                     p["item_tokens"] = 0
+                    board = p.get("board") or empty_grid()
+                    non_empty_rows = [idx for idx, row in enumerate(board) if any(cell != 0 for cell in row)]
+                    if non_empty_rows:
+                        to_remove = random.sample(non_empty_rows, k=min(2, len(non_empty_rows)))
+                        kept = [row for idx, row in enumerate(board) if idx not in to_remove]
+                        while len(kept) < ROWS:
+                            kept.insert(0, [0] * COLS)
+                        p["board"] = kept
+                    p["grid"] = compute_player_view_grid(p)
+                    await send_player_sync(current_room, client_id, p)
                     await broadcast_to_room(current_room, {
                         "type": "attack_log",
                         "msg": f"💥 {p['name']} mengaktifkan BREAKER (menghapus baris tumpukan)!",
@@ -1345,8 +1663,10 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                 room = rooms[current_room]
                 p = room["players"].get(client_id)
                 if p and p.get("alive") and not p.get("quitter", False):
-                    p["score"] = int(data.get("score", 0))
-                    p["grid"] = data.get("grid", empty_grid())
+                    p["score"] = max(int(p.get("score", 0)), int(data.get("score", 0)))
+                    if isinstance(data.get("grid"), list) and len(data["grid"]) == ROWS:
+                        p["board"] = data["grid"]
+                        p["grid"] = compute_player_view_grid(p)
 
                     await send_to_admins(current_room, {
                         "type": "admin_screen_update",
@@ -1355,7 +1675,7 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                         "alive": p["alive"],
                         "score": p["score"],
                         "ko": p["ko"],
-                        "grid": p["grid"],
+                        "grid": compute_player_view_grid(p),
                     })
 
             elif event == "line_cleared":
