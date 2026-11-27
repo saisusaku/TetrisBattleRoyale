@@ -14,7 +14,7 @@ DB_PATH = os.path.join(BASE_DIR, "tetris_br.db")
 BARCODE_PATH = os.path.join(BASE_DIR, "KepoTetris.jpeg")
 ROWS, COLS = 20, 10
 DOUBLE_DURATION_SEC = 10.0
-DEAD_SOCKET_TIMEOUT_SEC = 25.0
+DEAD_SOCKET_TIMEOUT_SEC = 12.0
 
 SHAPES = [
     [[1, 1, 1, 1]],
@@ -128,6 +128,16 @@ def cancel_countdown(room_code: str):
     task = countdown_tasks.pop(room_code, None)
     if task and not task.done():
         task.cancel()
+
+
+def cleanup_empty_rooms():
+    empty_codes = [
+        code for code, room in list(rooms.items())
+        if not room.get("admins") and not room.get("players") and not room.get("host_id")
+    ]
+    for code in empty_codes:
+        cancel_countdown(code)
+        rooms.pop(code, None)
 
 
 def add_player_charge(p: dict, amount: float) -> bool:
@@ -370,14 +380,9 @@ def get_room_players_summary(room_code: str, include_grid: bool = False):
 
 
 def get_lobby_list():
+    cleanup_empty_rooms()
     lobby = []
     for code, room in rooms.items():
-        has_admin = len(room.get("admins", {})) > 0
-        has_players = len(room.get("players", {})) > 0
-        has_host = bool(room.get("host_id"))
-        if not has_admin and not has_players and not has_host:
-            continue
-
         if room.get("active"):
             state = "playing"
             status_label = "🔥 Sedang Main"
@@ -818,7 +823,7 @@ async def run_match_countdown(room_code: str):
 
 
 async def game_loop():
-    tick_sec = 0.28
+    tick_sec = 0.45
     loop_idx = 0
     while True:
         await asyncio.sleep(tick_sec)
@@ -941,7 +946,7 @@ async def game_loop():
                     "grid": compute_bot_view_grid(p),
                 })
 
-            if admin_frames and loop_idx % 2 == 0:
+            if admin_frames and loop_idx % 3 == 0:
                 await send_to_admins(room_code, {
                     "type": "admin_batch_update",
                     "frames": admin_frames,
