@@ -1666,7 +1666,12 @@ function activateItem(itemType) {
             vibrate(30);
             addLog('player-log', `💥 BREAKER menghapus ${removedCount} baris acak!`);
         } else {
+            const removedCount = breakTwoRandomRows();
+            SFX.drop();
+            vibrate(30);
+            addLog('player-log', `💥 BREAKER menghapus ${removedCount} baris acak!`);
             sendWS({ type: 'use_item', item: 'breaker' });
+            sendWS({ type: 'update_board', score, grid });
         }
     }
 
@@ -2388,9 +2393,9 @@ function connectWS(onOpenCallback) {
     socket.onopen = () => {
         pingInterval = setInterval(() => {
             if (socket && socket.readyState === WebSocket.OPEN) {
-                socket.send(JSON.stringify({ type: 'ping', is_away: Boolean(document.hidden) }));
+                socket.send(JSON.stringify({ type: 'ping' }));
             }
-        }, 10000);
+        }, 12000);
         if (onOpenCallback) onOpenCallback();
     };
     socket.onmessage = (event) => {
@@ -2410,66 +2415,6 @@ function sendWS(payload) {
     if (socket && socket.readyState === WebSocket.OPEN) {
         socket.send(JSON.stringify(payload));
     }
-}
-
-function applyServerSync(data) {
-    if (Array.isArray(data.grid) && data.grid.length === ROWS) {
-        grid = data.grid;
-    }
-    if (data.active_piece && data.active_piece.shape) {
-        piece = {
-            shape: data.active_piece.shape,
-            x: Number(data.active_piece.x || 0),
-            y: Number(data.active_piece.y || 0),
-        };
-    } else {
-        piece = null;
-    }
-    if (data.next_piece_id) {
-        nextPieceId = Number(data.next_piece_id);
-        drawNextPiecePreview();
-    }
-    if (data.score !== undefined) {
-        score = Number(data.score || 0);
-        document.getElementById('score').innerText = score;
-    }
-    if (data.ko !== undefined) {
-        playerKoCount = Number(data.ko || 0);
-        document.getElementById('ko').innerText = playerKoCount;
-    }
-    if (data.pending_garbage !== undefined) {
-        pendingGarbage = Number(data.pending_garbage || 0);
-    }
-    if (data.armor_charges !== undefined) {
-        armorCharges = Number(data.armor_charges || 0);
-    }
-    if (data.double_remaining !== undefined) {
-        const remSec = Number(data.double_remaining || 0);
-        doubleExpiresAt = remSec > 0 ? (performance.now() + remSec * 1000) : 0;
-    }
-    if (data.charge !== undefined) {
-        itemCharge = Math.max(0, Math.min(100, Number(data.charge || 0)));
-    }
-    if (data.item_tokens !== undefined) {
-        itemTokens = Number(data.item_tokens || 0);
-    }
-    if (data.alive !== undefined) {
-        const nowAlive = Boolean(data.alive);
-        if (!nowAlive && isPlaying) {
-            isPlaying = false;
-            piece = null;
-            setKoOverlay(true);
-            SFX.ko();
-            document.getElementById('p-status').innerText = '💀 Eliminasi';
-            document.getElementById('p-status').style.color = '#ef4444';
-        } else if (nowAlive) {
-            isPlaying = true;
-            setKoOverlay(false);
-            document.getElementById('p-status').innerText = '🟢 Main';
-            document.getElementById('p-status').style.color = '#22c55e';
-        }
-    }
-    refreshItemUI();
 }
 
 function createPlayerRoom() {
@@ -2630,13 +2575,6 @@ function applyAdminFrameObject(frameObj) {
 function handleServerMessage(data) {
     if (data.type === 'pong') return;
 
-    if (data.type === 'server_sync') {
-        if (currentRole === 'player' && gameMode === 'online') {
-            applyServerSync(data);
-        }
-        return;
-    }
-
     if (data.type === 'error') {
         alert(data.message);
         if (currentRole === 'player' && !isPlaying) {
@@ -2718,7 +2656,7 @@ function handleServerMessage(data) {
             pendingGarbage = 0; armorCharges = 0; doubleExpiresAt = 0; itemTokens = 0; itemCharge = 0;
             resetVisualEffects();
             isPlaying = true;
-            piece = null;
+            piece = newPiece();
             document.getElementById('p-status').innerText = '🟢 Main';
             document.getElementById('p-status').style.color = '#22c55e';
             addLog('player-log', `🎮 Bergabung ke room <b>${escapeHtml(data.room_code)}</b>!`);
@@ -2760,15 +2698,6 @@ function handleServerMessage(data) {
         return;
     }
 
-    if (data.type === 'lobby_update') {
-        if (currentRole === 'player') {
-            renderOpponents(data.players || {});
-        } else if (currentRole === 'admin') {
-            renderAdminScoreboard(data.players || {});
-        }
-        return;
-    }
-
     if (data.type === 'match_started') {
         countdownLabelText = '';
         document.getElementById('player-podium').style.display = 'none';
@@ -2788,9 +2717,10 @@ function handleServerMessage(data) {
             resetVisualEffects();
             if (canPlay) {
                 isPlaying = true;
-                piece = null;
+                piece = newPiece();
                 document.getElementById('p-status').innerText = '🟢 Main';
                 document.getElementById('p-status').style.color = '#22c55e';
+                sendWS({ type: 'update_board', score, grid });
             } else {
                 isPlaying = false;
                 piece = null;
@@ -2866,7 +2796,7 @@ function handleServerMessage(data) {
     if (data.type === 'receive_attack') {
         if (currentRole === 'player' && isPlaying) {
             const lines = Number(data.lines || 1);
-            pendingGarbage = lines;
+            pendingGarbage += lines;
             lastAttackerId = data.from_id;
             shakeTimer = 0.25;
             attackFlashTimer = 0.3;
@@ -3347,7 +3277,13 @@ function clearLines() {
             addItemCharge(chargeGain);
         }
 
-        if (gameMode === 'vsbot') {
+        if (gameMode === 'online') {
+            sendWS({
+                type: 'line_cleared',
+                lines,
+                double_active: isDoubleActive(),
+            });
+        } else if (gameMode === 'vsbot') {
             const map = { 1: 1, 2: 2, 3: 3, 4: 5 };
             let dmg = map[lines] || 1;
             if (isDoubleActive()) dmg *= 2;
@@ -3397,7 +3333,13 @@ function checkTopOut() {
         document.getElementById('p-status').innerText = '💀 Eliminasi';
         document.getElementById('p-status').style.color = '#ef4444';
 
-        if (gameMode === 'vsbot') {
+        if (gameMode === 'online') {
+            sendWS({
+                type: 'player_eliminated',
+                last_attacker_id: lastAttackerId,
+            });
+            addLog('player-log', '💀 Anda tereliminasi!');
+        } else if (gameMode === 'vsbot') {
             stopLocalBotLoop();
             addLog('player-log', '💀 Anda tereliminasi! Memantau sisa bot...');
             const aliveBots = localBots.filter(b => b.alive);
@@ -3417,13 +3359,7 @@ function checkTopOut() {
 }
 
 function moveLeft() {
-    if (!isPlaying) return;
-    if (gameMode === 'online') {
-        SFX.move();
-        sendWS({ type: 'player_input', action: 'left' });
-        return;
-    }
-    if (!piece) return;
+    if (!isPlaying || !piece) return;
     if (!collide(piece.x - 1, piece.y)) {
         piece.x--;
         SFX.move();
@@ -3431,13 +3367,7 @@ function moveLeft() {
 }
 
 function moveRight() {
-    if (!isPlaying) return;
-    if (gameMode === 'online') {
-        SFX.move();
-        sendWS({ type: 'player_input', action: 'right' });
-        return;
-    }
-    if (!piece) return;
+    if (!isPlaying || !piece) return;
     if (!collide(piece.x + 1, piece.y)) {
         piece.x++;
         SFX.move();
@@ -3445,12 +3375,7 @@ function moveRight() {
 }
 
 function moveDown() {
-    if (!isPlaying) return;
-    if (gameMode === 'online') {
-        sendWS({ type: 'player_input', action: 'down' });
-        return;
-    }
-    if (!piece) return;
+    if (!isPlaying || !piece) return;
     if (!collide(piece.x, piece.y + 1)) {
         piece.y++;
         return;
@@ -3467,24 +3392,22 @@ function moveDown() {
             SFX.ko();
             document.getElementById('p-status').innerText = '💀 Eliminasi';
             document.getElementById('p-status').style.color = '#ef4444';
-            if (gameMode === 'vsbot') {
+            if (gameMode === 'online') {
+                sendWS({ type: 'player_eliminated', last_attacker_id: lastAttackerId });
+            } else if (gameMode === 'vsbot') {
                 stopLocalBotLoop();
                 document.getElementById('bot-spectator-panel').style.display = 'block';
                 renderBotSpectatorGrid();
             }
+        } else if (gameMode === 'online') {
+            sendWS({ type: 'update_board', score, grid });
         }
     }
     dropC = 0;
 }
 
 function hardDrop() {
-    if (!isPlaying) return;
-    if (gameMode === 'online') {
-        SFX.drop();
-        sendWS({ type: 'player_input', action: 'hard_drop' });
-        return;
-    }
-    if (!piece) return;
+    if (!isPlaying || !piece) return;
     while (!collide(piece.x, piece.y + 1)) {
         piece.y++;
         score += 2;
@@ -3495,13 +3418,7 @@ function hardDrop() {
 }
 
 function rotatePiece() {
-    if (!isPlaying) return;
-    if (gameMode === 'online') {
-        SFX.rotate();
-        sendWS({ type: 'player_input', action: 'rotate' });
-        return;
-    }
-    if (!piece) return;
+    if (!isPlaying || !piece) return;
     let rot = piece.shape[0].map((_, i) => piece.shape.map(row => row[i]).reverse());
     if (!collide(piece.x, piece.y, rot)) {
         piece.shape = rot;
@@ -3699,8 +3616,12 @@ function advanceGameTick(dt) {
 }
 
 document.addEventListener('visibilitychange', () => {
-    if (currentRole === 'player' && gameMode === 'online' && !hasLeftArena) {
-        sendWS({ type: 'player_away', away: document.hidden });
+    if (currentRole === 'player' && gameMode === 'online' && !hasLeftArena && document.hidden) {
+        sendWS({ type: 'player_away', away: true });
+        if (navigator.sendBeacon && activeRoomCode) {
+            const quitUrl = `${getServerUrl()}/api/quit/${encodeURIComponent(activeRoomCode)}/${encodeURIComponent(clientId)}`;
+            try { navigator.sendBeacon(quitUrl, ''); } catch (e) {}
+        }
     }
     if (!document.hidden) {
         lT = performance.now();
@@ -3723,9 +3644,7 @@ function update(time = 0) {
         renderAdminRealtime(dt);
     }
 
-    if (gameMode !== 'online') {
-        advanceGameTick(dt);
-    }
+    advanceGameTick(dt);
 
     uiC += dt;
     if (uiC >= 0.08) {
