@@ -1361,11 +1361,18 @@ const canvas = document.getElementById('board');
 const ctx = canvas.getContext('2d');
 const nextCanvas = document.getElementById('next-canvas');
 const nextCtx = nextCanvas ? nextCanvas.getContext('2d') : null;
+const adminLaserCanvas = document.getElementById('admin-laser-canvas');
+const adminLaserCtx = adminLaserCanvas ? adminLaserCanvas.getContext('2d') : null;
 const COLS = 10, ROWS = 20;
 let BLOCK_SIZE = 16;
 const DANGER_ROW_THRESHOLD = 4;
 
 let gameMode = 'solo';
+let isOnlineRoomHost = false;
+let pendingPlayerCreateRoom = false;
+let adminLasers = [];
+let latestAdminPlayers = {};
+let focusedPlayerId = null;
 
 function hasPowerupsInCurrentMode() {
     return gameMode !== 'solo';
@@ -1402,7 +1409,9 @@ function resizeBoardForScreen() {
         sideInfo.style.height = `${Math.max(canvas.height, totalLeftH)}px`;
     }
 
-    resizeAdminLaserCanvas();
+    if (typeof resizeAdminLaserCanvas === 'function') {
+        resizeAdminLaserCanvas();
+    }
 }
 window.addEventListener('resize', resizeBoardForScreen);
 resizeBoardForScreen();
@@ -1477,8 +1486,6 @@ let currentRole = null;
 let activeRoomCode = '';
 let myUsername = '';
 let hasLeftArena = false;
-let isOnlineRoomHost = false;
-let pendingPlayerCreateRoom = false;
 
 function getDropIntervalMs() {
     if (gameMode === 'solo') {
@@ -3064,14 +3071,7 @@ function adminRemoveBot(botId = null) { ensureAudio(); sendWS({ type: 'admin_rem
 function adminStartMatch() { ensureAudio(); sendWS({ type: 'admin_start_match' }); }
 function adminResetRoom() { ensureAudio(); sendWS({ type: 'admin_reset_room' }); }
 
-let latestAdminPlayers = {};
-let focusedPlayerId = null;
-
 // --- ADMIN LASER & CARD HIT ANIMATION ---
-const adminLaserCanvas = document.getElementById('admin-laser-canvas');
-const adminLaserCtx = adminLaserCanvas ? adminLaserCanvas.getContext('2d') : null;
-let adminLasers = [];
-
 function resizeAdminLaserCanvas() {
     if (!adminLaserCanvas) return;
     const area = adminLaserCanvas.parentElement;
