@@ -650,23 +650,31 @@
         }
         .bot-spectator-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
-            gap: 6px;
+            grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+            gap: 8px;
         }
         .bot-mini-card {
             background: #0f172a;
             border: 1px solid #334155;
             border-radius: 8px;
-            padding: 5px;
+            padding: 6px;
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 3px;
+            gap: 4px;
             cursor: pointer;
         }
         .bot-mini-card.alive { border-color: #22c55e; }
         .bot-mini-card.dead { border-color: #ef4444; opacity: 0.72; }
         .bot-mini-card.focused { border-color: #38bdf8; box-shadow: 0 0 8px rgba(56, 189, 248, 0.4); }
+        .bot-mini-card canvas {
+            background: #020617;
+            border: 1px solid #334155;
+            border-radius: 4px;
+            width: 80px;
+            height: 160px;
+            display: block;
+        }
         .bot-zoom-panel {
             background: #0f172a;
             border: 1px solid #38bdf8;
@@ -677,6 +685,14 @@
             flex-direction: column;
             align-items: center;
             gap: 6px;
+        }
+        canvas#bot-zoom-canvas {
+            background: #020617;
+            border: 1px solid #475569;
+            border-radius: 6px;
+            width: 140px;
+            height: 280px;
+            display: block;
         }
 
         .mobile-controls {
@@ -1140,7 +1156,7 @@
 
         <div id="bot-spectator-panel" class="bot-spectator-box" style="display:none;">
             <div class="bot-spectator-header">
-                <span id="bot-spectator-title">🤖 Layar Pantau Peserta & Bot</span>
+                <span id="bot-spectator-title">🌐 Layar Pantau Peserta & Bot Lain</span>
                 <span id="bot-spectator-hint" style="font-size:10px; color:#94a3b8;">Klik layar untuk zoom</span>
             </div>
 
@@ -2107,7 +2123,7 @@ function stepLocalBots() {
     const now = performance.now();
     for (const bot of localBots) {
         if (!bot.alive) continue;
-        bot.charge = Math.min(100, bot.charge + 5.5);
+        bot.charge = Math.min(100, bot.charge + 1.0);
         if (bot.charge >= 100) {
             bot.charge = 0;
             if (Math.random() < 0.5) {
@@ -2293,7 +2309,7 @@ function getSpectatorCandidates() {
                 alive: Boolean(p.alive) && !Boolean(p.quitter),
                 score: Number(p.score || 0),
                 ko: Number(p.ko || 0),
-                grid: p.grid || createEmptyGrid(),
+                grid: Array.isArray(p.grid) && p.grid.length === ROWS ? p.grid : createEmptyGrid(),
                 piece: p.active_piece || null,
             }));
     }
@@ -2733,6 +2749,9 @@ function handleServerMessage(data) {
         }
         refreshItemUI();
         renderOpponents(data.players || {});
+        if (document.getElementById('bot-spectator-panel').style.display !== 'none') {
+            renderBotSpectatorGrid();
+        }
         return;
     }
 
@@ -2972,7 +2991,7 @@ function renderOpponents(playersObj) {
             latestOnlinePlayers[pid] = {
                 ...(latestOnlinePlayers[pid] || {}),
                 ...p,
-                grid: p.grid || (latestOnlinePlayers[pid] && latestOnlinePlayers[dataPidGridFallback(pid)]) || createEmptyGrid(),
+                grid: p.grid || (latestOnlinePlayers[pid] && latestOnlinePlayers[pid].grid) || createEmptyGrid(),
             };
         }
     }
@@ -3007,10 +3026,6 @@ function renderOpponents(playersObj) {
             </div>
         `;
     }).join('');
-}
-
-function dataPidGridFallback(pid) {
-    return pid;
 }
 
 function resizeAdminLaserCanvas() {
@@ -3607,7 +3622,24 @@ function updateEffects(dt) {
 function drawGridDirect(targetCanvas, targetGrid, activePieceObj, bs) {
     if (!targetCanvas) return;
     const tctx = targetCanvas.getContext('2d');
+    const cellW = targetCanvas.width / COLS;
+    const cellH = targetCanvas.height / ROWS;
     tctx.clearRect(0, 0, targetCanvas.width, targetCanvas.height);
+
+    tctx.strokeStyle = 'rgba(148, 163, 184, 0.08)';
+    tctx.lineWidth = 0.5;
+    for (let r = 0; r <= ROWS; r++) {
+        tctx.beginPath();
+        tctx.moveTo(0, r * cellH);
+        tctx.lineTo(targetCanvas.width, r * cellH);
+        tctx.stroke();
+    }
+    for (let c = 0; c <= COLS; c++) {
+        tctx.beginPath();
+        tctx.moveTo(c * cellW, 0);
+        tctx.lineTo(c * cellW, targetCanvas.height);
+        tctx.stroke();
+    }
 
     if (targetGrid) {
         for (let r = 0; r < ROWS; r++) {
@@ -3615,7 +3647,7 @@ function drawGridDirect(targetCanvas, targetGrid, activePieceObj, bs) {
                 const v = targetGrid[r] ? targetGrid[r][c] : 0;
                 if (v) {
                     tctx.fillStyle = COLORS[v] || '#94a3b8';
-                    tctx.fillRect(c * bs, r * bs, bs - 1, bs - 1);
+                    tctx.fillRect(c * cellW + 0.5, r * cellH + 0.5, Math.max(1, cellW - 1), Math.max(1, cellH - 1));
                 }
             }
         }
@@ -3626,11 +3658,11 @@ function drawGridDirect(targetCanvas, targetGrid, activePieceObj, bs) {
             for (let c = 0; c < activePieceObj.shape[r].length; c++) {
                 const v = activePieceObj.shape[r][c];
                 if (v) {
-                    const px = (activePieceObj.x + c) * bs;
-                    const py = (activePieceObj.y + r) * bs;
-                    if (py >= -bs && py < ROWS * bs && px >= -bs && px < COLS * bs) {
+                    const px = (activePieceObj.x + c) * cellW;
+                    const py = (activePieceObj.y + r) * cellH;
+                    if (py >= -cellH && py < targetCanvas.height && px >= -cellW && px < targetCanvas.width) {
                         tctx.fillStyle = COLORS[v] || '#38bdf8';
-                        tctx.fillRect(px, py, bs - 1, bs - 1);
+                        tctx.fillRect(px + 0.5, py + 0.5, Math.max(1, cellW - 1), Math.max(1, cellH - 1));
                     }
                 }
             }
@@ -3706,7 +3738,7 @@ function advanceGameTick(dt) {
     }
 
     if (gameMode === 'online') {
-        addItemCharge(3.5 * dt);
+        addItemCharge(1.0 * dt);
     }
 
     dropC += dt * 1000;
