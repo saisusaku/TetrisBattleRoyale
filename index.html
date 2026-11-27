@@ -874,7 +874,7 @@
             flex-direction: column;
             align-items: center;
             cursor: pointer;
-            transition: transform 0.14s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+            transition: box-shadow 0.2s ease, border-color 0.2s ease;
         }
         .screen-card.alive { border-color: #22c55e; }
         .screen-card.dead { border-color: #ef4444; opacity: 0.72; }
@@ -1311,8 +1311,8 @@ let isOnlineRoomHost = false;
 let pendingPlayerCreateRoom = false;
 let adminLasers = [];
 let latestAdminPlayers = {};
-let adminSmoothPos = {};
 let focusedPlayerId = null;
+let adminSyncTimer = null;
 
 function hasPowerupsInCurrentMode() {
     return gameMode !== 'solo';
@@ -1399,10 +1399,8 @@ function createEmptyGrid() {
 
 let grid = createEmptyGrid();
 let piece = null, score = 0, isPlaying = false, lastAttackerId = null, pendingGarbage = 0;
-let visX = 3, visY = 0;
 let dangerLevel = 0, dangerBlinkTimer = 0, dangerFlashOn = false;
 let dropC = 0, syncC = 0, uiC = 0, lT = 0;
-let lastRealTimeSyncMs = 0;
 
 let particles = [];
 let floatingTexts = [];
@@ -1426,6 +1424,46 @@ let currentRole = null;
 let activeRoomCode = '';
 let myUsername = '';
 let hasLeftArena = false;
+
+function stopAdminPoll() {
+    if (adminSyncTimer) {
+        clearInterval(adminSyncTimer);
+        adminSyncTimer = null;
+    }
+}
+
+function startAdminPoll() {
+    stopAdminPoll();
+    adminSyncTimer = setInterval(async () => {
+        if (currentRole !== 'admin' || !activeRoomCode) return;
+        try {
+            const res = await fetch(`${getServerUrl()}/api/rooms`, { cache: 'no-store' });
+            if (!res.ok) return;
+            const data = await res.json();
+            const roomsArr = Array.isArray(data.rooms) ? data.rooms : [];
+            const found = roomsArr.find(r => String(r.room_code || '').toUpperCase() === String(activeRoomCode).toUpperCase());
+            if (found && Array.isArray(found.scoreboard)) {
+                found.scoreboard.forEach(sc => {
+                    const pid = sc.id || sc.pid || sc.name;
+                    if (!pid) return;
+                    const prev = latestAdminPlayers[pid] || {};
+                    latestAdminPlayers[pid] = {
+                        ...prev,
+                        name: sc.name || prev.name || pid,
+                        score: sc.score ?? prev.score ?? 0,
+                        ko: sc.ko ?? prev.ko ?? 0,
+                        alive: sc.alive !== undefined ? sc.alive : (prev.alive ?? true),
+                        quitter: sc.quitter !== undefined ? sc.quitter : (prev.quitter ?? false),
+                        is_bot: sc.is_bot !== undefined ? sc.is_bot : (prev.is_bot ?? false),
+                        grid: sc.grid || prev.grid,
+                        active_piece: sc.active_piece !== undefined ? sc.active_piece : prev.active_piece
+                    };
+                });
+                renderAdminScoreboard(latestAdminPlayers);
+            }
+        } catch (_) {}
+    }, 1000);
+}
 
 function getDropIntervalMs() {
     if (gameMode === 'solo') {
@@ -1954,25 +1992,6 @@ function pickBotPiece(bot) {
     return { shape: bestChoice.shape, x: startX, y: 0, targetX: bestChoice.targetX };
 }
 
-function getLocalBotDisplayGrid(bot) {
-    const snap = bot.board.map(r => [...r]);
-    if (bot.alive && bot.curPiece) {
-        const { shape, x, y } = bot.curPiece;
-        for (let r = 0; r < shape.length; r++) {
-            for (let c = 0; c < shape[r].length; c++) {
-                if (shape[r][c]) {
-                    const nr = y + r;
-                    const nc = x + c;
-                    if (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS) {
-                        snap[nr][nc] = shape[r][c];
-                    }
-                }
-            }
-        }
-    }
-    return snap;
-}
-
 function eliminateLocalBot(bot, killerName = null) {
     if (!bot || !bot.alive) return;
     bot.alive = false;
@@ -1992,7 +2011,7 @@ function checkVsBotMatchEnd() {
     const aliveBots = localBots.filter(b => b.alive);
     if (!isPlaying) {
         document.getElementById('bot-spectator-panel').style.display = 'block';
-        renderBotSpectatorGrid(0.016);
+        renderBotSpectatorGrid();
         return;
     }
     if (aliveBots.length === 0 && isPlaying) {
@@ -2103,7 +2122,7 @@ function stepLocalBots() {
 
     renderLocalSideList();
     if (document.getElementById('bot-spectator-panel').style.display !== 'none') {
-        renderBotSpectatorGrid(0.22);
+        renderBotSpectatorGrid();
     }
 }
 
@@ -2132,7 +2151,7 @@ function startVsBotMode() {
     renderLocalSideList();
 
     stopLocalBotLoop();
-    botLoopTimer = setInterval(stepLocalBots, 220);
+    botLoopTimer = setInterval(stepLocalBots, 120);
 }
 
 function localAddBot() {
@@ -2143,20 +2162,18 @@ function localAddBot() {
     addLog('player-log', `🤖 ${escapeHtml(b.name)} ditambahkan.`);
     renderLocalSideList();
     if (document.getElementById('bot-spectator-panel').style.display !== 'none') {
-        renderBotSpectatorGrid(0.016);
+        renderBotSpectatorGrid();
     }
 }
 
 function localRemoveBot() {
     if (gameMode !== 'vsbot' || localBots.length === 0) return;
     const removed = localBots.pop();
-    delete adminSmoothPos[`bot_mini_${removed.id}`];
-    delete adminSmoothPos[`bot_zoom_${removed.id}`];
     if (focusedBotId === removed.id) clearBotZoom();
     addLog('player-log', `🤖 ${escapeHtml(removed.name)} dihapus.`);
     renderLocalSideList();
     if (document.getElementById('bot-spectator-panel').style.display !== 'none') {
-        renderBotSpectatorGrid(0.016);
+        renderBotSpectatorGrid();
     }
     checkVsBotMatchEnd();
 }
@@ -2206,7 +2223,7 @@ function renderLocalSideList() {
     }
 }
 
-function renderBotSpectatorGrid(dt = 0.016) {
+function renderBotSpectatorGrid() {
     const gridEl = document.getElementById('bot-spectator-grid');
     if (!gridEl || gameMode !== 'vsbot') return;
     if (gridEl.children.length !== localBots.length) {
@@ -2246,7 +2263,7 @@ function renderBotSpectatorGrid(dt = 0.016) {
         card.className = `bot-mini-card ${bot.alive ? 'alive' : 'dead'} ${focusedBotId === bot.id ? 'focused' : ''}`;
         card.querySelector('.b-title').innerText = `${bot.alive ? '🤖' : '💀'} ${bot.name}`;
         card.querySelector('.b-meta').innerText = `Skor: ${bot.score} | KO: ${bot.ko}`;
-        drawGridSmooth(card.querySelector('canvas'), bot.board, bot.alive ? bot.curPiece : null, 8, dt, `bot_mini_${bot.id}`);
+        drawGridDirect(card.querySelector('canvas'), bot.board, bot.alive ? bot.curPiece : null, 8);
     }
 
     if (focusedBotId) {
@@ -2257,26 +2274,26 @@ function renderBotSpectatorGrid(dt = 0.016) {
             document.getElementById('bot-zoom-status').innerText = fBot.alive ? '🟢 Aktif' : '💀 Tereliminasi';
             document.getElementById('bot-zoom-score').innerText = fBot.score;
             document.getElementById('bot-zoom-ko').innerText = fBot.ko;
-            drawGridSmooth(document.getElementById('bot-zoom-canvas'), fBot.board, fBot.alive ? fBot.curPiece : null, 16, dt, `bot_zoom_${fBot.id}`);
+            drawGridDirect(document.getElementById('bot-zoom-canvas'), fBot.board, fBot.alive ? fBot.curPiece : null, 16);
         }
     }
 }
 
 function focusBotInSpectator(botId) {
     focusedBotId = botId;
-    renderBotSpectatorGrid(0.016);
+    renderBotSpectatorGrid();
 }
 
 function openBotSpectatorAndZoom(botId) {
     document.getElementById('bot-spectator-panel').style.display = 'block';
     focusedBotId = botId;
-    renderBotSpectatorGrid(0.016);
+    renderBotSpectatorGrid();
 }
 
 function clearBotZoom() {
     focusedBotId = null;
     document.getElementById('bot-zoom-panel').style.display = 'none';
-    renderBotSpectatorGrid(0.016);
+    renderBotSpectatorGrid();
 }
 
 function sendQuitSignal(useBeacon = false) {
@@ -2299,6 +2316,7 @@ window.addEventListener('beforeunload', () => sendQuitSignal(true));
 
 function exitToLobby() {
     stopLocalBotLoop();
+    stopAdminPoll();
     if (currentRole === 'player') {
         sendQuitSignal(true);
     } else if (socket) {
@@ -2387,7 +2405,6 @@ function createAdminRoom() {
     pendingPlayerCreateRoom = false;
     focusedPlayerId = null;
     latestAdminPlayers = {};
-    adminSmoothPos = {};
     adminLasers = [];
     document.getElementById('admin-focus-panel').style.display = 'none';
     document.getElementById('admin-podium').style.display = 'none';
@@ -2508,6 +2525,7 @@ function handleServerMessage(data) {
         resizeAdminLaserCanvas();
         renderAdminGrid(data.players || {});
         renderAdminScoreboard(data.players || {});
+        startAdminPoll();
         return;
     }
 
@@ -2915,7 +2933,7 @@ function buildAdminCardElement(pid, p) {
     const cMini = document.createElement('canvas');
     cMini.width = 80;
     cMini.height = 160;
-    drawGrid(cMini, p.grid, 8);
+    drawGridDirect(cMini, p.grid, p.active_piece, 8);
 
     const meta = document.createElement('div');
     meta.className = 'screen-meta';
@@ -2969,7 +2987,7 @@ function updateSingleAdminCard(pid, p, isScoreDrop = false) {
     if (koEl) koEl.innerText = p.ko || 0;
 
     const cMini = card.querySelector('canvas');
-    if (cMini) drawGridSmooth(cMini, p.grid, p.active_piece, 8, 0.016, `adm_mini_${pid}`);
+    if (cMini) drawGridDirect(cMini, p.grid, p.active_piece, 8);
 
     if (isScoreDrop) {
         card.classList.remove('hit-shake');
@@ -2979,7 +2997,7 @@ function updateSingleAdminCard(pid, p, isScoreDrop = false) {
     }
 
     if (focusedPlayerId === pid) {
-        renderAdminFocusPanel(0.016);
+        renderAdminFocusPanel();
     }
 }
 
@@ -2995,8 +3013,6 @@ function renderAdminGrid(ps) {
         const cid = child.id.replace('admin-card-', '');
         if (!currentIds.has(cid)) {
             child.remove();
-            delete adminSmoothPos[`adm_mini_${cid}`];
-            delete adminSmoothPos[`adm_focus_${cid}`];
         }
     });
 
@@ -3010,7 +3026,7 @@ function renderAdminGrid(ps) {
 
     if (focusedPlayerId) {
         if (latestAdminPlayers[focusedPlayerId]) {
-            renderAdminFocusPanel(0.016);
+            renderAdminFocusPanel();
         } else {
             clearAdminFocus();
         }
@@ -3023,11 +3039,11 @@ function renderAdminRealtime(dt) {
     for (const [pid, p] of Object.entries(latestAdminPlayers)) {
         const card = document.getElementById(`admin-card-${pid}`);
         if (card) {
-            drawGridSmooth(card.querySelector('canvas'), p.grid, p.active_piece, 8, dt, `adm_mini_${pid}`);
+            drawGridDirect(card.querySelector('canvas'), p.grid, p.active_piece, 8);
         }
     }
     if (focusedPlayerId && latestAdminPlayers[focusedPlayerId]) {
-        renderAdminFocusPanel(dt);
+        renderAdminFocusPanel();
     }
 }
 
@@ -3070,7 +3086,7 @@ function focusAdminPlayer(pid) {
     Array.from(document.querySelectorAll('.screen-card')).forEach(card => {
         card.classList.toggle('focused', card.id === `admin-card-${pid}`);
     });
-    renderAdminFocusPanel(0.016);
+    renderAdminFocusPanel();
 }
 
 function clearAdminFocus() {
@@ -3081,7 +3097,7 @@ function clearAdminFocus() {
     });
 }
 
-function renderAdminFocusPanel(dt = 0.016) {
+function renderAdminFocusPanel() {
     if (!focusedPlayerId || !latestAdminPlayers[focusedPlayerId]) return;
     const p = latestAdminPlayers[focusedPlayerId];
     const isQuitter = Boolean(p.quitter);
@@ -3093,7 +3109,7 @@ function renderAdminFocusPanel(dt = 0.016) {
     document.getElementById('focus-player-score').innerText = p.score || 0;
     document.getElementById('focus-player-ko').innerText = p.ko || 0;
     document.getElementById('focus-quitter-banner').style.display = isQuitter ? 'block' : 'none';
-    drawGridSmooth(document.getElementById('admin-focus-canvas'), p.grid, p.active_piece, 20, dt, `adm_focus_${focusedPlayerId}`);
+    drawGridDirect(document.getElementById('admin-focus-canvas'), p.grid, p.active_piece, 20);
 }
 
 function newPiece() {
@@ -3103,8 +3119,6 @@ function newPiece() {
     const shape = SHAPES[id];
     const x = Math.floor(COLS / 2) - Math.floor(shape[0].length / 2);
     const y = 0;
-    visX = x;
-    visY = y;
     return {
         id,
         shape,
@@ -3241,7 +3255,7 @@ function checkTopOut() {
             ];
             renderPodium('player-podium', podiumData, aliveBots[0] ? aliveBots[0].name : myUsername);
             document.getElementById('bot-spectator-panel').style.display = 'block';
-            renderBotSpectatorGrid(0.016);
+            renderBotSpectatorGrid();
         } else if (gameMode === 'solo') {
             addLog('player-log', `💀 Game Over! Skor akhir: <b>${score}</b> (Level ${soloLevel}, ${totalLinesCleared} baris).`);
         }
@@ -3272,7 +3286,7 @@ function moveDown() {
     if (!isPlaying || !piece) return;
     if (!collide(piece.x, piece.y + 1)) {
         piece.y++;
-        syncBoardNow(false);
+        syncBoardNow(true);
         return;
     }
     merge();
@@ -3293,7 +3307,7 @@ function moveDown() {
             } else if (gameMode === 'vsbot') {
                 stopLocalBotLoop();
                 document.getElementById('bot-spectator-panel').style.display = 'block';
-                renderBotSpectatorGrid(0.016);
+                renderBotSpectatorGrid();
             }
         } else {
             syncBoardNow(true);
@@ -3308,7 +3322,6 @@ function hardDrop() {
         piece.y++;
         score += 2;
     }
-    visY = piece.y;
     document.getElementById('score').innerText = score;
     SFX.drop();
     moveDown();
@@ -3350,28 +3363,8 @@ document.addEventListener('keydown', e => {
     else if (e.key === '3') activateItem('breaker');
 });
 
-function buildCurrentDisplayGrid() {
-    let snap = grid.map(r => [...r]);
-    if (piece && isPlaying) {
-        for (let r = 0; r < piece.shape.length; r++) {
-            for (let c = 0; c < piece.shape[r].length; c++) {
-                if (piece.shape[r][c]) {
-                    let ny = piece.y + r, nx = piece.x + c;
-                    if (ny >= 0 && ny < ROWS && nx >= 0 && nx < COLS) {
-                        snap[ny][nx] = piece.shape[r][c];
-                    }
-                }
-            }
-        }
-    }
-    return snap;
-}
-
-function syncBoardNow(force = false) {
+function syncBoardNow(force = true) {
     if (currentRole !== 'player' || gameMode !== 'online') return;
-    const now = performance.now();
-    if (!force && (now - lastRealTimeSyncMs) < 30) return;
-    lastRealTimeSyncMs = now;
     sendWS({
         type: 'update_board',
         grid: grid,
@@ -3420,80 +3413,48 @@ function updateEffects(dt) {
     });
 }
 
-function drawGrid(targetCanvas, targetGrid, bs) {
+function drawGridDirect(targetCanvas, targetGrid, activePieceObj, bs) {
     if (!targetCanvas) return;
     const tctx = targetCanvas.getContext('2d');
-    if (!targetGrid) {
-        tctx.clearRect(0, 0, targetCanvas.width, targetCanvas.height);
-        return;
-    }
     tctx.clearRect(0, 0, targetCanvas.width, targetCanvas.height);
-    for (let r = 0; r < ROWS; r++) {
-        for (let c = 0; c < COLS; c++) {
-            let v = targetGrid[r] ? targetGrid[r][c] : 0;
-            if (v) {
-                tctx.fillStyle = COLORS[v] || '#94a3b8';
-                tctx.fillRect(c * bs, r * bs, bs - 1, bs - 1);
+
+    if (targetGrid) {
+        for (let r = 0; r < ROWS; r++) {
+            for (let c = 0; c < COLS; c++) {
+                const v = targetGrid[r] ? targetGrid[r][c] : 0;
+                if (v) {
+                    tctx.fillStyle = COLORS[v] || '#94a3b8';
+                    tctx.fillRect(c * bs, r * bs, bs - 1, bs - 1);
+                }
             }
         }
     }
-}
 
-function drawGridSmooth(targetCanvas, targetGrid, activePieceObj, bs, dt, smoothKey) {
-    if (!targetCanvas) return;
-    drawGrid(targetCanvas, targetGrid, bs);
-    if (!activePieceObj || !activePieceObj.shape) return;
-
-    const tctx = targetCanvas.getContext('2d');
-    if (!adminSmoothPos[smoothKey]) {
-        adminSmoothPos[smoothKey] = { x: activePieceObj.x, y: activePieceObj.y };
-    }
-    const sp = adminSmoothPos[smoothKey];
-    const lerp = Math.min(1, dt * 18);
-    sp.x += (activePieceObj.x - sp.x) * lerp;
-    sp.y += (activePieceObj.y - sp.y) * lerp;
-
-    for (let r = 0; r < activePieceObj.shape.length; r++) {
-        for (let c = 0; c < activePieceObj.shape[r].length; c++) {
-            const v = activePieceObj.shape[r][c];
-            if (v) {
-                const px = (sp.x + c) * bs;
-                const py = (sp.y + r) * bs;
-                if (py >= -bs && py < ROWS * bs && px >= -bs && px < COLS * bs) {
-                    tctx.fillStyle = COLORS[v] || '#38bdf8';
-                    tctx.fillRect(px, py, bs - 1, bs - 1);
+    if (activePieceObj && activePieceObj.shape) {
+        for (let r = 0; r < activePieceObj.shape.length; r++) {
+            for (let c = 0; c < activePieceObj.shape[r].length; c++) {
+                const v = activePieceObj.shape[r][c];
+                if (v) {
+                    const px = (activePieceObj.x + c) * bs;
+                    const py = (activePieceObj.y + r) * bs;
+                    if (py >= -bs && py < ROWS * bs && px >= -bs && px < COLS * bs) {
+                        tctx.fillStyle = COLORS[v] || '#38bdf8';
+                        tctx.fillRect(px, py, bs - 1, bs - 1);
+                    }
                 }
             }
         }
     }
 }
 
-function drawPlayerBoard(dt = 0.016) {
+function drawPlayerBoard() {
     ctx.save();
     if (shakeTimer > 0) {
         const mag = shakeTimer * 24;
         ctx.translate((Math.random() - 0.5) * mag, (Math.random() - 0.5) * mag);
     }
 
-    drawGrid(canvas, grid, BLOCK_SIZE);
-
-    if (piece && isPlaying) {
-        const lerp = Math.min(1, dt * 24);
-        visX += (piece.x - visX) * lerp;
-        visY += (piece.y - visY) * lerp;
-
-        for (let r = 0; r < piece.shape.length; r++) {
-            for (let c = 0; c < piece.shape[r].length; c++) {
-                const v = piece.shape[r][c];
-                if (v) {
-                    const px = (visX + c) * BLOCK_SIZE;
-                    const py = (visY + r) * BLOCK_SIZE;
-                    ctx.fillStyle = COLORS[v] || '#38bdf8';
-                    ctx.fillRect(px, py, BLOCK_SIZE - 1, BLOCK_SIZE - 1);
-                }
-            }
-        }
-    }
+    drawGridDirect(canvas, grid, piece && isPlaying ? piece : null, BLOCK_SIZE);
 
     for (const lf of lineFlashRows) {
         const alpha = Math.max(0, lf.life / lf.maxLife) * 0.75;
@@ -3565,9 +3526,9 @@ function update(time = 0) {
         }
 
         syncC += dt;
-        if (syncC > 0.04) {
+        if (syncC > 0.05) {
             syncC = 0;
-            syncBoardNow(false);
+            syncBoardNow(true);
         }
 
         dangerLevel = computeDangerLevel();
@@ -3612,9 +3573,9 @@ function update(time = 0) {
     }
 
     if (document.getElementById('player-view').style.display !== 'none') {
-        drawPlayerBoard(dt);
+        drawPlayerBoard();
         if (gameMode === 'vsbot' && document.getElementById('bot-spectator-panel').style.display !== 'none') {
-            renderBotSpectatorGrid(dt);
+            renderBotSpectatorGrid();
         }
     }
 
