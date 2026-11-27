@@ -683,9 +683,11 @@ async def eliminate_player(room_code: str, victim_id: str, killer_id: Optional[s
 
 
 async def bot_loop():
-    tick_sec = 0.28
+    tick_sec = 0.16
+    loop_idx = 0
     while True:
         await asyncio.sleep(tick_sec)
+        loop_idx += 1
         for room_code, room in list(rooms.items()):
             if not room.get("active"):
                 continue
@@ -792,7 +794,7 @@ async def bot_loop():
                     "grid": compute_bot_view_grid(p),
                 })
 
-            if any_bot_moved:
+            if any_bot_moved and loop_idx % 2 == 0:
                 await broadcast_to_room(room_code, {
                     "type": "lobby_update",
                     "players": get_room_players_summary(room_code, include_grid=False),
@@ -1202,7 +1204,6 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                         "ko": p["ko"],
                         "grid": p["grid"],
                     })
-                    await broadcast_room_state(current_room)
 
             elif event == "line_cleared":
                 if role != "player" or not current_room or current_room not in rooms:
