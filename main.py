@@ -92,19 +92,18 @@ def bot_collide(board, shape, px, py) -> bool:
 
 def compute_bot_view_grid(bot: dict):
     base = bot.get("board") or empty_grid()
-    snap = [row[:] for row in base]
+    return [row[:] for row in base]
+
+
+def compute_bot_active_piece(bot: dict):
     cur = bot.get("cur_piece")
     if cur and bot.get("alive"):
-        shape = cur["shape"]
-        px, py = cur["x"], cur["y"]
-        for r_idx, row in enumerate(shape):
-            for c_idx, val in enumerate(row):
-                if val:
-                    nr = py + r_idx
-                    nc = px + c_idx
-                    if 0 <= nr < ROWS and 0 <= nc < COLS:
-                        snap[nr][nc] = val
-    return snap
+        return {
+            "shape": [row[:] for row in cur["shape"]],
+            "x": int(cur["x"]),
+            "y": int(cur["y"]),
+        }
+    return None
 
 
 def bot_is_critical(board: List[List[int]]) -> bool:
@@ -193,7 +192,6 @@ def evaluate_board(board: List[List[int]], lines_cleared: int) -> float:
 
     bumpiness = sum(abs(col_heights[i] - col_heights[i + 1]) for i in range(COLS - 1))
     max_height = max(col_heights) if col_heights else 0
-
     line_bonus = {0: 0.0, 1: 4.5, 2: 11.0, 3: 22.0, 4: 40.0}.get(lines_cleared, lines_cleared * 8.0)
 
     return (
@@ -311,6 +309,7 @@ def get_room_players_summary(room_code: str, include_grid: bool = False):
         }
         if include_grid:
             item["grid"] = compute_bot_view_grid(p) if p.get("is_bot") else p["grid"]
+            item["active_piece"] = compute_bot_active_piece(p) if p.get("is_bot") else p.get("active_piece")
         result[pid] = item
     return result
 
@@ -657,7 +656,9 @@ async def perform_attack(room_code: str, attacker_id: str, lines: int, client_do
             "alive": target_player["alive"],
             "score": target_player["score"],
             "ko": target_player["ko"],
+            "armor_charges": target_player.get("armor_charges", 0),
             "grid": compute_bot_view_grid(target_player),
+            "active_piece": compute_bot_active_piece(target_player),
         })
 
     await broadcast_to_room(room_code, {
@@ -682,6 +683,7 @@ async def eliminate_player(room_code: str, victim_id: str, killer_id: Optional[s
 
     victim["alive"] = False
     victim["cur_piece"] = None
+    victim["active_piece"] = None
     victim_name = victim["name"]
 
     if killer_id and killer_id in room["players"] and killer_id != victim_id:
@@ -706,7 +708,7 @@ async def run_match_countdown(room_code: str):
     try:
         for num in [3, 2, 1]:
             room = rooms.get(room_code)
-            if not room or not room.get("countdown"):
+            if not room or room.get("countdown") is None:
                 return
             room["countdown"] = num
             await broadcast_to_room(room_code, {
@@ -714,7 +716,7 @@ async def run_match_countdown(room_code: str):
                 "count": num,
                 "label": str(num),
             })
-            await asyncio.sleep(0.9)
+            await asyncio.sleep(0.8)
 
         room = rooms.get(room_code)
         if not room:
@@ -736,6 +738,7 @@ async def run_match_countdown(room_code: str):
             p["board"] = empty_grid()
             p["grid"] = empty_grid()
             p["cur_piece"] = pick_smart_human_target(p) if p.get("is_bot") else None
+            p["active_piece"] = compute_bot_active_piece(p) if p.get("is_bot") else None
             p["spawn_cooldown"] = 0
             p["last_attacker_id"] = None
             p["last_target_id"] = None
@@ -763,7 +766,7 @@ async def run_match_countdown(room_code: str):
 
 
 async def bot_loop():
-    tick_sec = 0.14
+    tick_sec = 0.12
     loop_idx = 0
     while True:
         await asyncio.sleep(tick_sec)
@@ -795,10 +798,9 @@ async def bot_loop():
                     board = empty_grid()
                     p["board"] = board
 
-                crit_bonus = 1.5 if bot_is_critical(board) else 0.0
-                p["charge"] = float(p.get("charge", 0.0)) + ((1.0 + crit_bonus) * tick_sec)
+                crit_bonus = 2.5 if bot_is_critical(board) else 0.0
+                p["charge"] = min(100.0, float(p.get("charge", 0.0)) + ((2.2 + crit_bonus) * tick_sec))
                 if p["charge"] >= 100.0:
-                    p["charge"] = 100.0
                     await bot_use_powerup(room_code, pid, p)
 
                 if p.get("spawn_cooldown", 0) > 0:
@@ -848,13 +850,12 @@ async def bot_loop():
 
                             if cleared_lines > 0:
                                 p["score"] += cleared_lines * 100
-                                line_charge_map = {1: 10.0, 2: 22.0, 3: 35.0, 4: 50.0}
-                                gain = line_charge_map.get(cleared_lines, cleared_lines * 12.0)
+                                line_charge_map = {1: 18.0, 2: 32.0, 3: 50.0, 4: 100.0}
+                                gain = line_charge_map.get(cleared_lines, cleared_lines * 20.0)
                                 if bot_is_critical(p["board"]):
-                                    gain *= 1.4
-                                p["charge"] = float(p.get("charge", 0.0)) + gain
+                                    gain *= 1.35
+                                p["charge"] = min(100.0, float(p.get("charge", 0.0)) + gain)
                                 if p["charge"] >= 100.0:
-                                    p["charge"] = 100.0
                                     await bot_use_powerup(room_code, pid, p)
                                 await perform_attack(room_code, pid, cleared_lines)
 
@@ -870,7 +871,9 @@ async def bot_loop():
                     "score": p["score"],
                     "ko": p["ko"],
                     "armor_charges": p.get("armor_charges", 0),
+                    "double_active": is_double_active_now(p),
                     "grid": compute_bot_view_grid(p),
+                    "active_piece": compute_bot_active_piece(p),
                 })
 
             if bot_frames:
@@ -980,6 +983,7 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                                 "score": 0,
                                 "ko": 0,
                                 "grid": empty_grid(),
+                                "active_piece": None,
                                 "last_attacker_id": None,
                                 "last_target_id": None,
                                 "double_until": 0.0,
@@ -1032,6 +1036,9 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                 bot_name = f"Bot_{bot_counter}"
                 bot_counter += 1
 
+                initial_board = empty_grid()
+                initial_piece = pick_smart_human_target({"board": initial_board}) if room.get("active") else None
+
                 room["players"][bot_id] = {
                     "ws": None,
                     "is_bot": True,
@@ -1041,9 +1048,10 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                     "alive": True,
                     "score": 0,
                     "ko": 0,
-                    "board": empty_grid(),
-                    "grid": empty_grid(),
-                    "cur_piece": pick_smart_human_target({"board": empty_grid()}) if room.get("active") else None,
+                    "board": initial_board,
+                    "grid": initial_board,
+                    "cur_piece": initial_piece,
+                    "active_piece": compute_bot_active_piece({"alive": True, "cur_piece": initial_piece}),
                     "spawn_cooldown": 0,
                     "last_attacker_id": None,
                     "last_target_id": None,
@@ -1127,6 +1135,7 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                     p["board"] = empty_grid()
                     p["grid"] = empty_grid()
                     p["cur_piece"] = None
+                    p["active_piece"] = None
                     p["spawn_cooldown"] = 0
                     p["last_attacker_id"] = None
                     p["last_target_id"] = None
@@ -1186,6 +1195,7 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                         "score": 0,
                         "ko": 0,
                         "grid": empty_grid(),
+                        "active_piece": None,
                         "last_attacker_id": None,
                         "last_target_id": None,
                         "double_until": 0.0,
@@ -1268,7 +1278,8 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                 p = room["players"].get(client_id)
                 if p and p.get("alive") and not p.get("quitter", False):
                     p["score"] = int(data.get("score", 0))
-                    p["grid"] = data.get("grid", [])
+                    p["grid"] = data.get("grid", empty_grid())
+                    p["active_piece"] = data.get("active_piece")
 
                     await send_to_admins(current_room, {
                         "type": "admin_screen_update",
@@ -1277,7 +1288,10 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                         "alive": p["alive"],
                         "score": p["score"],
                         "ko": p["ko"],
+                        "armor_charges": p.get("armor_charges", 0),
+                        "double_active": is_double_active_now(p),
                         "grid": p["grid"],
+                        "active_piece": p["active_piece"],
                     })
 
             elif event == "line_cleared":
@@ -1294,7 +1308,7 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
             elif event == "player_eliminated":
                 if role != "player" or not current_room or current_room not in rooms:
                     continue
-                killer_id = data.get("last_attacker_id")
+                killer_id = data.get("last_attacker_id") or data.get("attacker_id")
                 await eliminate_player(current_room, client_id, killer_id)
 
     except WebSocketDisconnect:
