@@ -326,18 +326,18 @@
 
         .item-dock {
             display: flex;
-            gap: 5px;
+            gap: 4px;
             width: 100%;
             background: #1e293b;
-            padding: 5px 6px;
-            border-radius: 10px;
+            padding: 5px;
+            border-radius: 8px;
             border: 1px solid #334155;
             transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
         }
         .item-dock.ready-to-pick {
             border-color: #facc15;
-            box-shadow: 0 -2px 16px rgba(250, 204, 21, 0.45);
-            transform: translateY(-3px);
+            box-shadow: 0 0 14px rgba(250, 204, 21, 0.45);
+            transform: translateY(-2px);
         }
         .item-btn {
             flex: 1;
@@ -345,16 +345,16 @@
             background: #0f172a;
             color: #f8fafc;
             border: 1px solid #475569;
-            border-radius: 8px;
-            padding: 6px 4px;
-            font-size: 11px;
+            border-radius: 6px;
+            padding: 5px 3px;
+            font-size: 10px;
             font-weight: 700;
             cursor: pointer;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            gap: 2px;
+            gap: 1px;
             transition: transform 0.14s ease, box-shadow 0.14s ease, border-color 0.14s ease, background 0.14s ease;
         }
         .item-btn:disabled {
@@ -365,24 +365,24 @@
             opacity: 1;
             border-color: #fde047;
             background: linear-gradient(180deg, rgba(250, 204, 21, 0.28), rgba(249, 115, 22, 0.22));
-            box-shadow: 0 0 14px rgba(250, 204, 21, 0.8), 0 0 4px rgba(255, 255, 255, 0.7);
-            transform: translateY(-3px) scale(1.02);
+            box-shadow: 0 0 12px rgba(250, 204, 21, 0.8);
+            transform: translateY(-2px) scale(1.02);
             animation: pulseGlow 0.9s infinite alternate;
         }
         @keyframes pulseGlow {
-            from { box-shadow: 0 0 10px rgba(250, 204, 21, 0.65); }
-            to { box-shadow: 0 0 18px rgba(250, 204, 21, 1); }
+            from { box-shadow: 0 0 8px rgba(250, 204, 21, 0.65); }
+            to { box-shadow: 0 0 16px rgba(250, 204, 21, 1); }
         }
         .item-btn.active-buff {
             border-color: #38bdf8;
             background: rgba(56, 189, 248, 0.16);
         }
         .item-sub {
-            font-size: 9px;
+            font-size: 8px;
             color: #94a3b8;
             font-weight: 500;
             text-align: center;
-            line-height: 1.15;
+            line-height: 1.1;
         }
 
         .main-stage {
@@ -391,6 +391,13 @@
             align-items: stretch;
             gap: 6px;
             width: 100%;
+        }
+        .board-column {
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            gap: 5px;
+            flex-shrink: 0;
         }
         .board-wrap {
             position: relative;
@@ -528,7 +535,7 @@
             display: flex;
             flex-direction: column;
             gap: 4px;
-            max-height: 175px;
+            max-height: 150px;
             overflow-y: auto;
         }
         .opp-badge {
@@ -568,7 +575,7 @@
         .opp-badge.dead { border-color: #ef4444; background: rgba(127, 29, 29, 0.25); }
         .opp-badge.quitter { border-color: #eab308; background: rgba(113, 63, 18, 0.28); }
         .log-box {
-            height: 110px;
+            height: 92px;
             overflow-y: auto;
             font-size: 10px;
             background: #0f172a;
@@ -577,6 +584,25 @@
             border: 1px solid #334155;
             word-break: break-word;
         }
+
+        .mini-drop-btn {
+            background: #7f1d1d;
+            color: #fef2f2;
+            border: 1px solid #ef4444;
+            border-radius: 6px;
+            height: 28px;
+            width: 100%;
+            font-size: 11px;
+            font-weight: 800;
+            cursor: pointer;
+            touch-action: none;
+            box-shadow: 0 2px 0 #450a0a;
+        }
+        .mini-drop-btn:active {
+            background: #991b1b;
+            transform: translateY(1px);
+        }
+
         .warning {
             color: #f87171;
             font-weight: bold;
@@ -585,15 +611,68 @@
         }
         @keyframes blink { 50% { opacity: 0.25; } }
 
+        /* PODIUM & BANNER EMAS CHICKEN DINNER */
         .podium-box {
-            background: #1e293b;
-            border: 2px solid #f59e0b;
+            background: linear-gradient(180deg, #27200c, #1e293b 45%);
+            border: 2px solid #facc15;
             border-radius: 12px;
             padding: 12px;
             width: 100%;
-            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.7);
+            box-shadow: 0 0 24px rgba(250, 204, 21, 0.35), 0 12px 30px rgba(0, 0, 0, 0.75);
             position: relative;
             z-index: 50;
+            overflow: hidden;
+        }
+        .chicken-dinner-banner {
+            background: linear-gradient(90deg, #b45309, #facc15, #fef08a, #facc15, #b45309);
+            background-size: 200% 100%;
+            animation: goldShine 2.2s linear infinite;
+            color: #1e1b08;
+            font-weight: 900;
+            font-size: 14px;
+            letter-spacing: 1.5px;
+            text-align: center;
+            padding: 7px 10px;
+            border-radius: 8px;
+            border: 1px solid #fef9c3;
+            box-shadow: 0 0 16px rgba(250, 204, 21, 0.75);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+        }
+        @keyframes goldShine {
+            0% { background-position: 0% 50%; }
+            100% { background-position: 200% 50%; }
+        }
+
+        /* LAYER CONFETTI */
+        .confetti-layer {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            overflow: hidden;
+            z-index: 999;
+        }
+        .confetti-piece {
+            position: fixed;
+            top: -16px;
+            width: 8px;
+            height: 14px;
+            border-radius: 2px;
+            opacity: 0.95;
+            animation: confettiFall linear forwards;
+        }
+        @keyframes confettiFall {
+            0% {
+                transform: translate3d(0, -10px, 0) rotate(0deg);
+                opacity: 1;
+            }
+            85% {
+                opacity: 1;
+            }
+            100% {
+                transform: translate3d(var(--drift, 0px), 105vh, 0) rotate(var(--spin, 720deg));
+                opacity: 0;
+            }
         }
 
         .bot-spectator-box {
@@ -703,14 +782,6 @@
             border-color: #60a5fa;
             transform: translateY(2px);
         }
-        .btn-drop {
-            background: #7f1d1d;
-            border-color: #ef4444;
-            width: 156px;
-            height: 36px;
-            font-size: 12px;
-            border-radius: 9px;
-        }
         .right-cluster {
             display: flex;
             align-items: center;
@@ -767,6 +838,8 @@
     </style>
 </head>
 <body>
+    <div id="confetti-layer" class="confetti-layer" aria-hidden="true"></div>
+
     <div class="header-bar">
         <h2>🧱 TETRIS BATTLE ROYALE</h2>
         <button id="mute-btn" class="mute-btn" onclick="toggleMute()">🔊 Suara ON</button>
@@ -781,7 +854,6 @@
             <button id="tab-admin" class="tab-btn" onclick="switchTab('admin')">👑 Admin</button>
         </div>
 
-        <!-- MODE MAIN SENDIRI -->
         <div id="form-solo">
             <div class="mode-info-box">
                 <b>🎯 Mode Main Sendiri:</b> Naik level tiap <b>4 baris</b> cleared. Kecepatan jatuh makin cepat di tiap level, <b>tanpa power-up</b>.
@@ -790,7 +862,6 @@
             <button class="primary" onclick="startSoloMode()">▶ Mulai Main Sendiri</button>
         </div>
 
-        <!-- MODE LAWAN BOT -->
         <div id="form-vsbot" style="display:none;">
             <div class="mode-info-box">
                 <b>🤖 Mode Lawan Bot:</b> Langsung mulai bertarung melawan AI Bot dengan power-up. Jika kalah (KO), layar bot otomatis terbuka untuk dipantau!
@@ -807,7 +878,6 @@
             <button class="primary" onclick="startVsBotMode()">⚔️ Mulai Lawan Bot</button>
         </div>
 
-        <!-- MODE BATTLE ROYALE -->
         <div id="form-player" style="display:none;">
             <input type="text" id="player-name" placeholder="Nama Anda (Wajib diisi)..." maxlength="15" required>
             <input type="text" id="join-room-code" placeholder="Kode Room (misal: AB12C)" maxlength="8" style="text-transform:uppercase;">
@@ -824,7 +894,6 @@
             </div>
         </div>
 
-        <!-- MODE ADMIN -->
         <div id="form-admin" style="display:none;">
             <input type="text" id="custom-room-code" placeholder="Kode Room (Jika sama, room lama kereset)" maxlength="8" style="text-transform:uppercase;">
             <button class="primary" onclick="createAdminRoom()">Buat Room Admin</button>
@@ -850,30 +919,31 @@
             <div id="p-status" style="color:#22c55e; font-weight:bold;">🟢 Main</div>
         </div>
 
-        <!-- DOCK POWER-UP -->
-        <div id="item-dock" class="item-dock">
-            <button type="button" id="btn-item-armor" class="item-btn" onclick="activateItem('armor')" disabled>
-                <span>🛡️ Armor (<b id="armor-count">0</b>x)</span>
-                <span class="item-sub">Tahan 3 serangan</span>
-            </button>
-            <button type="button" id="btn-item-double" class="item-btn" onclick="activateItem('double')" disabled>
-                <span>⚡ Double <span id="double-timer-badge"></span></span>
-                <span class="item-sub">2x serangan (5 dtk)</span>
-            </button>
-            <button type="button" id="btn-item-breaker" class="item-btn" onclick="activateItem('breaker')" disabled>
-                <span>💥 Breaker (<span id="item-tokens">0</span>)</span>
-                <span class="item-sub">Hapus 2 row acak</span>
-            </button>
-        </div>
-
         <div id="incoming-alert" style="min-height:16px; text-align:center;"></div>
         <div id="player-podium" class="podium-box" style="display:none;"></div>
 
         <div class="main-stage">
-            <div class="board-wrap">
-                <canvas id="board" width="160" height="320"></canvas>
-                <div id="ko-banner" class="ko-banner-overlay">
-                    <div class="ko-banner-ribbon">ELIMINATED</div>
+            <div id="board-column" class="board-column">
+                <div class="board-wrap">
+                    <canvas id="board" width="160" height="320"></canvas>
+                    <div id="ko-banner" class="ko-banner-overlay">
+                        <div class="ko-banner-ribbon">ELIMINATED</div>
+                    </div>
+                </div>
+
+                <div id="item-dock" class="item-dock">
+                    <button type="button" id="btn-item-armor" class="item-btn" onclick="activateItem('armor')" disabled>
+                        <span>🛡️ Armor (<b id="armor-count">0</b>x)</span>
+                        <span class="item-sub">Tahan 3x</span>
+                    </button>
+                    <button type="button" id="btn-item-double" class="item-btn" onclick="activateItem('double')" disabled>
+                        <span>⚡ Double <span id="double-timer-badge"></span></span>
+                        <span class="item-sub">2x (5s)</span>
+                    </button>
+                    <button type="button" id="btn-item-breaker" class="item-btn" onclick="activateItem('breaker')" disabled>
+                        <span>💥 Breaker (<span id="item-tokens">0</span>)</span>
+                        <span class="item-sub">-2 row</span>
+                    </button>
                 </div>
             </div>
 
@@ -890,10 +960,10 @@
                 <div id="opponents" class="opponents-list"></div>
                 <div style="font-size:11px; font-weight:bold; margin-top:2px;">Log Arena</div>
                 <div id="player-log" class="log-box"></div>
+                <button type="button" id="log-drop-btn" class="mini-drop-btn" onpointerdown="event.preventDefault(); vibrate(25); hardDrop()">⤓ DROP</button>
             </div>
         </div>
 
-        <!-- PANEL PANTAU BOT -->
         <div id="bot-spectator-panel" class="bot-spectator-box" style="display:none;">
             <div class="bot-spectator-header">
                 <span>🤖 Layar Pantau Bot</span>
@@ -915,17 +985,14 @@
             <div id="bot-spectator-grid" class="bot-spectator-grid"></div>
         </div>
 
-        <!-- AKSI MODE LOKAL -->
         <div id="local-mode-actions" class="mode-action-row" style="display:none;">
             <button type="button" class="success" style="flex:1;" onclick="restartLocalMode()">↻ Main Lagi</button>
             <button type="button" class="bot-btn" id="btn-local-addbot" style="display:none;" onclick="localAddBot()">🤖 +Bot</button>
             <button type="button" class="danger" onclick="exitToLobby()">🏠 Menu Utama</button>
         </div>
 
-        <!-- KONTROL PONSEL -->
         <div class="mobile-controls">
             <div class="left-cluster">
-                <div class="ctrl-btn btn-drop" onpointerdown="event.preventDefault(); vibrate(25); hardDrop()">⤓ DROP</div>
                 <div class="dpad-row">
                     <div class="ctrl-btn" onpointerdown="event.preventDefault(); vibrate(); moveLeft()">◀</div>
                     <div class="ctrl-btn" onpointerdown="event.preventDefault(); vibrate(); moveDown()">▼</div>
@@ -1008,7 +1075,6 @@
     </div>
 
 <script>
-// --- SOUND ENGINE ---
 const AudioCtx = window.AudioContext || window.webkitAudioContext;
 let audioCtx = null;
 let isMuted = false;
@@ -1059,7 +1125,52 @@ function vibrate(ms = 15) {
     if (navigator.vibrate) navigator.vibrate(ms);
 }
 
-// --- TETRIS CORE CONSTANTS & STATE ---
+// --- CONFETTI CELEBRATION ---
+let confettiCleanupTimer = null;
+
+function launchConfetti(count = 75) {
+    const layer = document.getElementById('confetti-layer');
+    if (!layer) return;
+    layer.innerHTML = '';
+    clearTimeout(confettiCleanupTimer);
+
+    const palette = ['#facc15', '#fef08a', '#f59e0b', '#22c55e', '#38bdf8', '#f43f5e', '#a855f7'];
+    const vw = window.innerWidth || 360;
+
+    for (let i = 0; i < count; i++) {
+        const piece = document.createElement('div');
+        piece.className = 'confetti-piece';
+        const leftPx = Math.random() * vw;
+        const driftPx = (Math.random() - 0.5) * 180;
+        const spinDeg = (Math.random() > 0.5 ? 1 : -1) * (540 + Math.random() * 720);
+        const durSec = 2.1 + Math.random() * 1.8;
+        const delaySec = Math.random() * 0.55;
+        const w = 6 + Math.random() * 6;
+        const h = 10 + Math.random() * 8;
+
+        piece.style.left = `${leftPx}px`;
+        piece.style.width = `${w}px`;
+        piece.style.height = `${h}px`;
+        piece.style.backgroundColor = palette[i % palette.length];
+        piece.style.setProperty('--drift', `${driftPx}px`);
+        piece.style.setProperty('--spin', `${spinDeg}deg`);
+        piece.style.animationDuration = `${durSec}s`;
+        piece.style.animationDelay = `${delaySec}s`;
+
+        layer.appendChild(piece);
+    }
+
+    confettiCleanupTimer = setTimeout(() => {
+        layer.innerHTML = '';
+    }, 4500);
+}
+
+function clearConfetti() {
+    clearTimeout(confettiCleanupTimer);
+    const layer = document.getElementById('confetti-layer');
+    if (layer) layer.innerHTML = '';
+}
+
 const canvas = document.getElementById('board');
 const ctx = canvas.getContext('2d');
 const COLS = 10, ROWS = 20;
@@ -1072,6 +1183,10 @@ function resizeBoardForScreen() {
     BLOCK_SIZE = Math.max(12, Math.floor(maxBoardW / COLS));
     canvas.width = BLOCK_SIZE * COLS;
     canvas.height = BLOCK_SIZE * ROWS;
+
+    const boardCol = document.getElementById('board-column');
+    if (boardCol) boardCol.style.width = `${canvas.width}px`;
+
     const trackEl = document.getElementById('side-charge-track');
     if (trackEl) trackEl.style.minHeight = `${Math.max(190, canvas.height - 34)}px`;
 }
@@ -1105,8 +1220,6 @@ let lineFlashRows = [];
 let shakeTimer = 0;
 let attackFlashTimer = 0;
 
-// --- MODE & LEVEL STATE ---
-// mode: 'solo' | 'vsbot' | 'online' | 'admin'
 let gameMode = 'solo';
 let soloLevel = 1;
 let totalLinesCleared = 0;
@@ -1117,7 +1230,6 @@ let localBots = [];
 let botLoopTimer = null;
 let focusedBotId = null;
 
-// --- WEBSOCKET & SESSION STATE ---
 const clientId = Math.random().toString(36).substring(2, 10);
 let socket = null;
 let pingInterval = null;
@@ -1166,7 +1278,6 @@ function changeVsBotCount(delta) {
     document.getElementById('vsbot-count-label').innerText = vsBotDesiredCount;
 }
 
-// --- POWER-UP CHARGE SYSTEM ---
 const DOUBLE_DURATION_MS = 5000;
 let itemTokens = 0;
 let itemCharge = 0;
@@ -1428,11 +1539,20 @@ function updateAlert() {
     if (el) el.innerHTML = pendingGarbage > 0 ? `<span class="warning">⚠️ GARBAGE: +${pendingGarbage} BARIS</span>` : '';
 }
 
-function renderPodium(id, list) {
+function renderPodium(id, list, withChickenDinner = false) {
     const box = document.getElementById(id);
     if (!box || !list || list.length === 0) return;
     const medals = { 1: '🥇', 2: '🥈', 3: '🥉' };
-    let h = `<div style="font-weight:bold; font-size:14px; color:#facc15; margin-bottom:6px;">🏆 HASIL JUARA</div>`;
+    const topWinner = list.find(i => i.rank === 1) || list[0];
+
+    let h = '';
+    if (withChickenDinner) {
+        h += `<div class="chicken-dinner-banner">🍗👑 CHICKEN DINNER! ${escapeHtml(topWinner.name)} 👑🍗</div>`;
+        launchConfetti(85);
+    } else {
+        h += `<div style="font-weight:bold; font-size:14px; color:#facc15; margin-bottom:6px;">🏆 HASIL JUARA</div>`;
+    }
+
     list.forEach(i => {
         const m = medals[i.rank] || `#${i.rank}`;
         const b = i.is_bot ? ' 🤖' : '';
@@ -1446,6 +1566,7 @@ function renderPodium(id, list) {
 }
 
 function hidePodiums() {
+    clearConfetti();
     const pPod = document.getElementById('player-podium');
     const aPod = document.getElementById('admin-podium');
     if (pPod) pPod.style.display = 'none';
@@ -1923,7 +2044,6 @@ function loop(t = 0) {
     requestAnimationFrame(loop);
 }
 
-// --- LOCAL AI BOT ENGINE (MODE LAWAN BOT) ---
 function localBotCollide(board, shape, px, py) {
     for (let r = 0; r < shape.length; r++) {
         for (let c = 0; c < shape[r].length; c++) {
@@ -2163,7 +2283,7 @@ function checkVsBotMatchState() {
         dangerFlashOn = false;
         refreshItemUI();
         SFX.win();
-        document.getElementById('p-status').innerText = '🏆 MENANG!';
+        document.getElementById('p-status').innerText = '🍗 CHICKEN DINNER!';
         document.getElementById('p-status').style.color = '#facc15';
         renderPodium('player-podium', [{
             rank: 1,
@@ -2172,8 +2292,8 @@ function checkVsBotMatchState() {
             score,
             ko: playerKoCount,
             reason: 'Mengalahkan Semua Bot'
-        }]);
-        addLog('player-log', '🏆 Selamat! Anda mengalahkan semua bot!');
+        }], true);
+        addLog('player-log', '🍗 CHICKEN DINNER! Anda mengalahkan semua bot!');
     }
 }
 
@@ -2364,7 +2484,6 @@ function renderBotSpectatorPanel() {
     }
 }
 
-// --- START & EXIT MODES ---
 function resetBoardStateForMatch() {
     grid = createEmptyGrid();
     piece = null;
@@ -2474,7 +2593,6 @@ function exitToLobby() {
     startLobbyPolling();
 }
 
-// --- WEBSOCKET & QUIT LIFECYCLE ---
 function notifyPlayerQuit() {
     if (gameMode !== 'online' || currentRole !== 'player' || !activeRoomCode || hasLeftArena) return;
     hasLeftArena = true;
@@ -2601,7 +2719,6 @@ function adminRemoveBot(botId = null) { ensureAudio(); sendWS({ type: 'admin_rem
 function adminStartMatch() { ensureAudio(); sendWS({ type: 'admin_start_match' }); }
 function adminResetRoom() { ensureAudio(); sendWS({ type: 'admin_reset_room' }); }
 
-// --- ADMIN FOCUS ---
 let latestAdminPlayers = {};
 let focusedPlayerId = null;
 
@@ -2680,15 +2797,12 @@ function renderOpponents(ps) {
         d.className = 'opp-badge' + (quitter ? ' quitter' : (p.alive ? '' : ' dead'));
         const statusIcon = quitter ? '🟨' : (p.alive ? '🟢' : '💀');
         const youTag = pid === clientId ? ' (Anda)' : '';
-        const armorTag = (p.armor_charges > 0) ? ` 🛡️${p.armor_charges}` : '';
-        const quitterBanner = quitter ? `<div class="police-line-banner"><span>QUITTER</span></div>` : '';
-
+        const quitterTag = quitter ? ' [QUITTER]' : '';
         d.innerHTML = `
             <div class="opp-badge-row">
-                <span class="opp-name">${p.is_bot ? '🤖 ' : ''}${escapeHtml(p.name)}${escapeHtml(youTag)} ${statusIcon}${escapeHtml(armorTag)}</span>
+                <span class="opp-name">${p.is_bot ? '🤖 ' : ''}${escapeHtml(p.name)}${escapeHtml(youTag)} ${statusIcon}${escapeHtml(quitterTag)}</span>
                 <span class="opp-stats"><b>${p.score || 0}</b>p • KO:${p.ko || 0}</span>
             </div>
-            ${quitterBanner}
         `;
         c.appendChild(d);
     });
@@ -2710,239 +2824,217 @@ function renderAdminScoreboard(ps) {
 
     box.innerHTML = entries.map(([pid, p], idx) => {
         const quitter = isPlayerQuitter(p);
-        const stText = quitter ? '🟨 QUITTER' : (p.alive ? '🟢 MAIN' : '💀 KO');
-        const qBanner = quitter ? `<div class="police-line-banner"><span>QUITTER</span></div>` : '';
+        const stLabel = quitter ? '🟨 Quitter' : (p.alive ? '🟢 Aktif' : '💀 KO');
         return `
             <div class="admin-score-row ${quitter ? 'quitter' : ''}" onclick="selectAdminFocus('${pid}')" style="cursor:pointer;">
-                <div style="display:flex; justify-content:space-between; align-items:center; gap:4px;">
-                    <span style="font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">#${idx + 1} ${p.is_bot ? '🤖 ' : ''}${escapeHtml(p.name)}</span>
-                    <span style="font-size:10px; font-weight:bold;">${stText}</span>
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <b>#${idx + 1} ${p.is_bot ? '🤖 ' : ''}${escapeHtml(p.name)}</b>
+                    <span>${stLabel}</span>
                 </div>
-                <div style="display:flex; justify-content:space-between; color:#cbd5e1; font-size:10px;">
+                <div style="display:flex; justify-content:space-between; color:#cbd5e1;">
                     <span>Skor: <b>${p.score || 0}</b></span>
                     <span>KO: <b>${p.ko || 0}</b></span>
                 </div>
-                ${qBanner}
             </div>
         `;
     }).join('');
 }
 
-function renderMonitor(ps) {
+function renderAdminGrid(ps) {
     latestAdminPlayers = ps || {};
+    const g = document.getElementById('monitor-grid');
+    if (!g) return;
+    const keys = Object.keys(latestAdminPlayers);
+    document.getElementById('admin-player-count').innerText = keys.length;
+
     if (focusedPlayerId && !latestAdminPlayers[focusedPlayerId]) {
         focusedPlayerId = null;
     }
 
-    const c = document.getElementById('monitor-grid');
-    const es = Object.entries(latestAdminPlayers);
-    document.getElementById('admin-player-count').innerText = es.length;
-    c.innerHTML = '';
-
-    es.forEach(([pid, p]) => {
+    g.innerHTML = '';
+    keys.forEach(pid => {
+        const p = latestAdminPlayers[pid];
         const quitter = isPlayerQuitter(p);
-        const d = document.createElement('div');
-        d.dataset.pid = pid;
-        const isFocused = pid === focusedPlayerId;
-        const stateCls = quitter ? 'quitter' : (p.alive ? 'alive' : 'dead');
-        d.className = `screen-card ${stateCls}${isFocused ? ' focused' : ''}`;
-        d.onclick = () => selectAdminFocus(pid);
+        const card = document.createElement('div');
+        card.dataset.pid = pid;
+        card.className = 'screen-card ' + (quitter ? 'quitter' : (p.alive ? 'alive' : 'dead')) + (pid === focusedPlayerId ? ' focused' : '');
+        card.onclick = () => selectAdminFocus(pid);
 
+        const stText = quitter ? '🟨 Quitter' : (p.alive ? '🟢 Main' : '💀 KO');
+        const stColor = quitter ? '#facc15' : (p.alive ? '#22c55e' : '#ef4444');
         const delBtn = p.is_bot
-            ? `<button class="mini-del-btn" onclick="event.stopPropagation(); adminRemoveBot('${pid}')">🗑 Hapus Bot</button>`
+            ? `<button type="button" class="mini-del-btn" onclick="event.stopPropagation(); adminRemoveBot('${pid}')">✕ Hapus Bot</button>`
             : '';
-        const qBanner = quitter ? `<div class="police-line-banner"><span>QUITTER</span></div>` : '';
+        const qBanner = quitter
+            ? `<div class="police-line-banner"><span>QUITTER</span></div>`
+            : '';
 
-        d.innerHTML = `<div style="font-size:11px; font-weight:bold;">${p.is_bot ? '🤖 ' : ''}${escapeHtml(p.name)}</div>
-            <canvas id="mc-${pid}" width="80" height="160"></canvas>
-            <div class="screen-meta"><span>S:${p.score}</span><span>K:${p.ko}</span></div>
+        card.innerHTML = `
+            <div style="font-size:12px; font-weight:bold; width:100%; text-align:center; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${p.is_bot ? '🤖 ' : ''}${escapeHtml(p.name)}</div>
+            <div style="font-size:10px; color:${stColor}; font-weight:bold;">${stText}</div>
+            <canvas id="m-${pid}" width="100" height="200"></canvas>
+            <div class="screen-meta"><span>Skor: <b>${p.score || 0}</b></span><span>KO: <b>${p.ko || 0}</b></span></div>
             ${qBanner}
-            ${delBtn}`;
-        c.appendChild(d);
-        drawGrid(document.getElementById(`mc-${pid}`), p.grid, 8);
+            ${delBtn}
+        `;
+        g.appendChild(card);
+        drawGrid(document.getElementById(`m-${pid}`), p.grid, 10);
     });
 
     renderAdminScoreboard(latestAdminPlayers);
     renderAdminFocusPanel();
 }
 
-function handleServerEvent(d) {
-    if (d.type === 'join_error') {
-        alert(d.msg);
-        fetchLobbyRooms();
-    } else if (d.type === 'room_closed') {
+function handleServerEvent(data) {
+    if (data.type === 'error') {
+        alert(data.message);
+        return;
+    }
+    if (data.type === 'room_created') {
+        activeRoomCode = data.room_code;
+        document.getElementById('lobby-card').style.display = 'none';
+        document.getElementById('player-view').style.display = 'none';
+        document.getElementById('admin-view').style.display = 'block';
+        document.getElementById('admin-room-display').innerText = data.room_code;
+        hidePodiums();
+        return;
+    }
+    if (data.type === 'joined_room') {
+        activeRoomCode = data.room_code;
+        hasLeftArena = false;
+        document.getElementById('lobby-card').style.display = 'none';
+        document.getElementById('admin-view').style.display = 'none';
+        document.getElementById('player-view').style.display = 'flex';
+        document.getElementById('bot-spectator-panel').style.display = 'none';
+        applyModeVisibilityToPlayerView();
+        resetBoardStateForMatch();
+        resizeBoardForScreen();
+        refreshItemUI();
+        const stEl = document.getElementById('p-status');
+        stEl.innerText = data.state === 'playing' ? '🟢 Main' : '⏳ Menunggu';
+        stEl.style.color = data.state === 'playing' ? '#22c55e' : '#fbbf24';
+        if (data.state === 'playing') {
+            isPlaying = true;
+            spawnPiece();
+            syncBoard();
+        }
+        renderOpponents(data.players);
+        return;
+    }
+    if (data.type === 'room_state') {
+        const stMap = { waiting: '⏳ Menunggu', playing: '🟢 Berlangsung', finished: '🏆 Selesai' };
+        const stEl = document.getElementById('admin-match-status');
+        if (stEl) {
+            stEl.innerText = stMap[data.state] || data.state;
+            stEl.style.color = data.state === 'playing' ? '#4ade80' : (data.state === 'finished' ? '#facc15' : '#fbbf24');
+        }
+        renderAdminGrid(data.players);
+        if (currentRole === 'player' && !hasLeftArena) {
+            renderOpponents(data.players);
+        }
+        return;
+    }
+    if (data.type === 'match_started') {
+        if (currentRole === 'player' && hasLeftArena) return;
+        resetBoardStateForMatch();
+        resizeBoardForScreen();
+        isPlaying = true;
+        refreshItemUI();
+        const stEl = document.getElementById('p-status');
+        stEl.innerText = '🟢 Main';
+        stEl.style.color = '#22c55e';
+        spawnPiece();
+        syncBoard();
+        addLog('player-log', '🚀 Pertandingan dimulai!');
+        if (currentRole === 'admin') {
+            hidePodiums();
+            addLog('admin-log', '🚀 Pertandingan dimulai!');
+        }
+        return;
+    }
+    if (data.type === 'room_reset') {
+        if (currentRole === 'player' && hasLeftArena) return;
+        resetBoardStateForMatch();
+        isPlaying = false;
+        refreshItemUI();
+        const stEl = document.getElementById('p-status');
+        stEl.innerText = '⏳ Menunggu';
+        stEl.style.color = '#fbbf24';
+        addLog('player-log', '🔄 Room direset.');
+        if (currentRole === 'admin') {
+            hidePodiums();
+            addLog('admin-log', '🔄 Room direset.');
+        }
+        return;
+    }
+    if (data.type === 'garbage_received') {
+        if (currentRole !== 'player' || !isPlaying || hasLeftArena) return;
+        if (armorCharges > 0) {
+            armorCharges--;
+            SFX.block();
+            refreshItemUI();
+            addLog('player-log', `🛡️ Armor menahan serangan ${data.lines} baris dari ${escapeHtml(data.from_name)}! (Sisa ${armorCharges}x)`);
+            sendWS({ type: 'item_state_sync', armor_charges: armorCharges });
+            return;
+        }
+        pendingGarbage += data.lines;
+        lastAttackerId = data.from_id;
+        SFX.attack();
+        triggerAttackAnimation(data.lines, data.from_name || 'Lawan');
+        updateAlert();
+        addLog('player-log', `🚨 +${data.lines} baris dari ${escapeHtml(data.from_name)}!`);
+        return;
+    }
+    if (data.type === 'attack_log') {
+        const msg = `⚡ <b>${escapeHtml(data.from_name)}</b> kirim <b>${data.lines}</b> baris${data.double_active ? ' (2x)' : ''}`;
+        addLog('player-log', msg);
+        addLog('admin-log', msg);
+        return;
+    }
+    if (data.type === 'player_ko') {
+        const msg = `💀 <b>${escapeHtml(data.victim_name)}</b> KO${data.killer_name ? ` oleh <b>${escapeHtml(data.killer_name)}</b>` : ''}!`;
+        addLog('player-log', msg);
+        addLog('admin-log', msg);
+        return;
+    }
+    if (data.type === 'player_quit_notice') {
+        const msg = `🟨 <b>${escapeHtml(data.player_name)}</b> keluar (Quitter).`;
+        addLog('player-log', msg);
+        addLog('admin-log', msg);
+        return;
+    }
+    if (data.type === 'match_finished') {
+        if (currentRole === 'player' && hasLeftArena) return;
         isPlaying = false;
         dangerLevel = 0;
         dangerFlashOn = false;
-        setKoBanner(false);
-        hidePodiums();
-        alert(d.msg || 'Room telah di-reset oleh Admin.');
-        location.reload();
-    } else if (d.type === 'joined_success') {
-        gameMode = 'online';
-        stopLobbyPolling();
-        applyModeVisibilityToPlayerView();
-        setKoBanner(false);
-        document.getElementById('lobby-card').style.display = 'none';
-        document.getElementById('player-view').style.display = 'flex';
-        document.getElementById('bot-spectator-panel').style.display = 'none';
-        resizeBoardForScreen();
         refreshItemUI();
-        if (d.active && !d.alive) {
-            document.getElementById('p-status').innerText = '⏳ Menunggu...';
-        }
-    } else if (d.type === 'room_created') {
-        activeRoomCode = d.room_code;
-        focusedPlayerId = null;
-        latestAdminPlayers = {};
-        hidePodiums();
-        document.getElementById('lobby-card').style.display = 'none';
-        document.getElementById('admin-view').style.display = 'block';
-        document.getElementById('admin-room-display').innerText = d.room_code;
-        document.getElementById('admin-match-status').innerText = 'Menunggu';
-        document.getElementById('admin-match-status').style.color = '#fbbf24';
-        document.getElementById('admin-log').innerHTML = '';
-        renderMonitor(d.players);
-    } else if (d.type === 'match_started') {
-        hidePodiums();
-        setKoBanner(false);
-        SFX.clear(2);
-        if (currentRole === 'player' && !hasLeftArena) {
-            const me = d.players && d.players[clientId];
-            const amIAlive = me ? !!me.alive : true;
-            grid = createEmptyGrid();
-            score = 0; soloLevel = 1; totalLinesCleared = 0; pendingGarbage = 0;
-            lastAttackerId = null; dangerLevel = 0; dangerFlashOn = false;
-            itemTokens = 0; itemCharge = 0; armorCharges = 0; doubleExpiresAt = 0;
-            particles = []; floatingTexts = []; lineFlashRows = []; shakeTimer = 0; attackFlashTimer = 0;
-            isPlaying = amIAlive;
-            document.getElementById('score').innerText = '0';
-            document.getElementById('ko').innerText = '0';
-            updateLevelDisplay();
-            refreshItemUI();
-            if (amIAlive) {
-                document.getElementById('p-status').innerText = '🟢 Main';
-                document.getElementById('p-status').style.color = '#22c55e';
-                updateAlert();
-                spawnPiece();
-                syncBoard();
-                addLog('player-log', '🔥 MULAI!');
-            } else {
-                document.getElementById('p-status').innerText = '⏳ Menunggu...';
-                document.getElementById('p-status').style.color = '#38bdf8';
-            }
-            renderOpponents(d.players);
-        } else if (currentRole === 'admin') {
-            document.getElementById('admin-match-status').innerText = '🔥 Sedang Berlangsung';
-            document.getElementById('admin-match-status').style.color = '#22c55e';
-            renderMonitor(d.players);
-        }
-    } else if (d.type === 'room_reset') {
-        hidePodiums();
-        setKoBanner(false);
-        if (currentRole === 'player' && !hasLeftArena) {
-            isPlaying = false; dangerLevel = 0; dangerFlashOn = false;
-            itemTokens = 0; itemCharge = 0; armorCharges = 0; doubleExpiresAt = 0;
-            grid = createEmptyGrid();
-            score = 0; soloLevel = 1; totalLinesCleared = 0; pendingGarbage = 0;
-            document.getElementById('score').innerText = '0';
-            document.getElementById('ko').innerText = '0';
-            updateLevelDisplay();
-            refreshItemUI();
-            updateAlert();
-            document.getElementById('p-status').innerText = 'Menunggu...';
-            document.getElementById('p-status').style.color = '#38bdf8';
-            addLog('player-log', '↻ Reset oleh Admin.');
-            renderOpponents(d.players);
-        } else if (currentRole === 'admin') {
-            document.getElementById('admin-match-status').innerText = 'Menunggu Pemain';
-            document.getElementById('admin-match-status').style.color = '#fbbf24';
-            renderMonitor(d.players);
-        }
-    } else if (d.type === 'armor_blocked') {
-        if (currentRole === 'player') {
-            armorCharges = d.remaining_charges ?? 0;
-            SFX.block();
-            refreshItemUI();
-            addLog('player-log', `🛡️ Armor menahan ${d.blocked_lines} baris dari ${d.from_name}! (Sisa ${armorCharges}x)`);
-        }
-    } else if (d.type === 'receive_attack') {
-        if (currentRole === 'player' && isPlaying) {
-            pendingGarbage += d.lines;
-            lastAttackerId = d.from_id;
-            SFX.attack();
-            triggerAttackAnimation(d.lines, d.from_name);
-            updateAlert();
-            addLog('player-log', `🚨 Diserang ${d.from_name}!`);
-        }
-    } else if (d.type === 'attack_log') {
-        if (currentRole === 'player') addLog('player-log', d.msg);
-        else if (currentRole === 'admin') {
-            addLog('admin-log', d.msg);
-            if (d.target_id) {
-                const c = document.getElementById(`mc-${d.target_id}`);
-                if (c) {
-                    c.style.border = '2px solid #f59e0b';
-                    setTimeout(() => { c.style.border = '1px solid #475569'; }, 800);
-                }
-            }
-        }
-    } else if (d.type === 'system_msg') {
-        alert(d.msg);
-    } else if (d.type === 'lobby_update') {
-        if (currentRole === 'player') renderOpponents(d.players);
-        else if (currentRole === 'admin') renderAdminScoreboard(d.players);
-    } else if (d.type === 'admin_players_sync') {
-        if (currentRole === 'admin') renderMonitor(d.players);
-    } else if (d.type === 'admin_screen_update') {
-        if (currentRole === 'admin') {
-            if (latestAdminPlayers[d.pid]) {
-                latestAdminPlayers[d.pid] = {
-                    ...latestAdminPlayers[d.pid],
-                    name: d.name,
-                    alive: d.alive,
-                    score: d.score,
-                    ko: d.ko,
-                    grid: d.grid
-                };
-            }
-            const cv = document.getElementById(`mc-${d.pid}`);
-            if (cv) {
-                drawGrid(cv, d.grid, 8);
-                const pObj = latestAdminPlayers[d.pid] || {};
-                const quitter = isPlayerQuitter(pObj);
-                const stateCls = quitter ? 'quitter' : (d.alive ? 'alive' : 'dead');
-                cv.parentElement.className = `screen-card ${stateCls}${d.pid === focusedPlayerId ? ' focused' : ''}`;
-                const metas = cv.parentElement.querySelectorAll('.screen-meta span');
-                if (metas[0]) metas[0].innerText = `S:${d.score}`;
-                if (metas[1]) metas[1].innerText = `K:${d.ko}`;
-            }
-            renderAdminScoreboard(latestAdminPlayers);
-            if (d.pid === focusedPlayerId) {
-                renderAdminFocusPanel();
-            }
-        }
-    } else if (d.type === 'match_over') {
         SFX.win();
+
+        const podiumList = data.podium || [];
+        const topWinner = podiumList.find(i => i.rank === 1) || podiumList[0];
+        const isMeWinner = topWinner && topWinner.id === clientId;
+
         if (currentRole === 'player') {
-            isPlaying = false; dangerLevel = 0; dangerFlashOn = false;
-            refreshItemUI();
-            document.getElementById('p-status').innerText = '🏆 Selesai';
-            document.getElementById('p-status').style.color = '#facc15';
-            renderPodium('player-podium', d.podium);
-            if (d.players) renderOpponents(d.players);
-            addLog('player-log', `🏆 Juara 1: ${d.winner}`);
+            const stEl = document.getElementById('p-status');
+            if (isMeWinner) {
+                stEl.innerText = '🍗 CHICKEN DINNER!';
+                stEl.style.color = '#facc15';
+            } else {
+                stEl.innerText = '🏁 Selesai';
+                stEl.style.color = '#facc15';
+            }
+            renderPodium('player-podium', podiumList, !!isMeWinner);
         } else if (currentRole === 'admin') {
-            document.getElementById('admin-match-status').innerText = `🏆 Juara 1: ${d.winner}`;
+            document.getElementById('admin-match-status').innerText = '🏆 Selesai';
             document.getElementById('admin-match-status').style.color = '#facc15';
-            renderPodium('admin-podium', d.podium);
-            renderMonitor(d.players);
+            renderPodium('admin-podium', podiumList, podiumList.length > 0);
         }
     }
 }
 
 startLobbyPolling();
-loop();
+requestAnimationFrame(loop);
 </script>
 </body>
 </html>
