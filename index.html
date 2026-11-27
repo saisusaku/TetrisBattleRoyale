@@ -22,8 +22,8 @@
             flex-direction: column;
             align-items: center;
             margin: 0;
-            padding: 8px 10px 28px 10px;
-            min-height: 100vh;
+            padding: 6px 8px 10px 8px;
+            min-height: 100dvh;
             touch-action: manipulation;
         }
         .header-bar {
@@ -31,13 +31,14 @@
             align-items: center;
             justify-content: space-between;
             gap: 8px;
-            margin: 2px 0 8px 0;
+            margin: 0 0 6px 0;
             width: 100%;
-            max-width: 820px;
+            max-width: 780px;
+            flex-shrink: 0;
         }
         h2 {
             margin: 0;
-            font-size: 16px;
+            font-size: 15px;
         }
         .mute-btn {
             background: #1e293b;
@@ -108,7 +109,7 @@
             background: #16a34a;
             color: white;
             border: none;
-            padding: 6px 10px;
+            padding: 5px 9px;
             border-radius: 8px;
             cursor: pointer;
             font-weight: bold;
@@ -118,7 +119,7 @@
             background: #7c3aed;
             color: white;
             border: none;
-            padding: 6px 10px;
+            padding: 5px 9px;
             border-radius: 8px;
             cursor: pointer;
             font-weight: bold;
@@ -128,7 +129,7 @@
             background: #9f1239;
             color: white;
             border: none;
-            padding: 6px 10px;
+            padding: 5px 9px;
             border-radius: 8px;
             cursor: pointer;
             font-weight: bold;
@@ -138,7 +139,7 @@
             background: #dc2626;
             color: white;
             border: none;
-            padding: 6px 10px;
+            padding: 5px 9px;
             border-radius: 8px;
             cursor: pointer;
             font-weight: bold;
@@ -307,8 +308,8 @@
             flex-direction: column;
             align-items: stretch;
             width: 100%;
-            max-width: 820px;
-            gap: 8px;
+            max-width: 780px;
+            gap: 5px;
             position: relative;
         }
         .top-hud {
@@ -316,32 +317,32 @@
             justify-content: space-between;
             align-items: center;
             flex-wrap: wrap;
-            gap: 6px 12px;
+            gap: 4px 10px;
             width: 100%;
             background: #1e293b;
-            padding: 7px 12px;
-            border-radius: 10px;
-            font-size: 12px;
+            padding: 5px 10px;
+            border-radius: 9px;
+            font-size: 11px;
             border: 1px solid #334155;
         }
 
         .top-action-row {
             display: flex;
             flex-wrap: wrap;
-            gap: 6px;
+            gap: 5px;
             width: 100%;
             background: #1e293b;
-            padding: 6px 8px;
+            padding: 4px 6px;
             border-radius: 8px;
             border: 1px solid #334155;
         }
 
         .item-dock {
             display: flex;
-            gap: 5px;
+            gap: 4px;
             width: 100%;
             background: #1e293b;
-            padding: 6px;
+            padding: 4px;
             border-radius: 8px;
             border: 1px solid #334155;
             transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
@@ -358,8 +359,8 @@
             color: #f8fafc;
             border: 1px solid #475569;
             border-radius: 6px;
-            padding: 6px 4px;
-            font-size: 11px;
+            padding: 5px 3px;
+            font-size: 10px;
             font-weight: 700;
             cursor: pointer;
             display: flex;
@@ -390,25 +391,26 @@
             background: rgba(56, 189, 248, 0.16);
         }
         .item-sub {
-            font-size: 9px;
+            font-size: 8px;
             color: #94a3b8;
             font-weight: 500;
             text-align: center;
             line-height: 1.1;
         }
 
+        /* STAGE: PAPAN TETRIS LEBIH BESAR, LOG & RANK RAMPING DI SAMPING */
         .main-stage {
             display: flex;
-            justify-content: space-between;
+            justify-content: center;
             align-items: stretch;
-            gap: 10px;
+            gap: 8px;
             width: 100%;
         }
         .board-column {
             display: flex;
             flex-direction: column;
             align-items: stretch;
-            gap: 6px;
+            gap: 5px;
             flex-shrink: 0;
         }
         .board-wrap {
@@ -426,7 +428,7 @@
         }
 
         .side-charge-column {
-            width: 26px;
+            width: 24px;
             flex-shrink: 0;
             display: flex;
             flex-direction: column;
@@ -435,7 +437,7 @@
             padding-top: 2px;
         }
         .side-charge-pct {
-            font-size: 10px;
+            font-size: 9px;
             font-weight: 800;
             color: #38bdf8;
             line-height: 1;
@@ -443,9 +445,9 @@
         }
         .side-charge-track {
             position: relative;
-            width: 13px;
+            width: 12px;
             flex: 1;
-            min-height: 220px;
+            min-height: 160px;
             background: #0f172a;
             border: 1px solid #475569;
             border-radius: 999px;
@@ -536,30 +538,32 @@
             border-radius: 2px;
         }
 
+        /* KOLOM RANK & LOG DIBUAT LEBIH RAMPING AGAR TIDAK MENGALAHKAN LAYAR GAME */
         .side-info {
-            flex: 1;
-            min-width: 0;
+            flex: 1 1 130px;
+            max-width: 240px;
+            min-width: 112px;
             display: flex;
             flex-direction: column;
-            gap: 6px;
+            gap: 4px;
         }
         .opponents-list {
             display: flex;
             flex-direction: column;
-            gap: 4px;
-            max-height: 150px;
+            gap: 3px;
+            max-height: 120px;
             overflow-y: auto;
             flex-shrink: 0;
         }
         .opp-badge {
             background: #0f172a;
-            padding: 6px 8px;
+            padding: 4px 6px;
             border-radius: 6px;
-            font-size: 11px;
+            font-size: 10px;
             border: 1px solid #334155;
             display: flex;
             flex-direction: column;
-            gap: 2px;
+            gap: 1px;
         }
         .opp-badge.clickable-bot {
             cursor: pointer;
@@ -571,7 +575,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            gap: 4px;
+            gap: 3px;
         }
         .opp-name {
             font-weight: 700;
@@ -582,7 +586,7 @@
         }
         .opp-stats {
             color: #cbd5e1;
-            font-size: 10px;
+            font-size: 9px;
             white-space: nowrap;
         }
         .opp-badge.dead { border-color: #ef4444; background: rgba(127, 29, 29, 0.25); }
@@ -595,11 +599,11 @@
         }
         .log-box {
             flex: 1;
-            min-height: 92px;
+            min-height: 60px;
             overflow-y: auto;
-            font-size: 11px;
+            font-size: 10px;
             background: #0f172a;
-            padding: 6px;
+            padding: 5px;
             border-radius: 6px;
             border: 1px solid #334155;
             word-break: break-word;
@@ -731,47 +735,48 @@
             gap: 6px;
         }
 
-        /* KONTROL: DEFAULT HP & TABLET (DROP KECIL DI ATAS PUTAR BESAR) */
+        /* KONTROL: SELALU TERLIHAT UTUH DI BAWAH LAYAR */
         .mobile-controls {
             display: flex;
             justify-content: space-between;
             align-items: flex-end;
             width: 100%;
-            padding: 10px 14px;
+            padding: 6px 10px;
             margin-top: 2px;
-            background: rgba(30, 41, 59, 0.85);
+            background: rgba(30, 41, 59, 0.9);
             border: 1px solid #334155;
-            border-radius: 14px;
+            border-radius: 12px;
             user-select: none;
             -webkit-user-select: none;
             touch-action: none;
+            flex-shrink: 0;
         }
         .left-cluster {
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 6px;
+            gap: 4px;
         }
         .dpad-row {
             display: flex;
-            gap: 8px;
+            gap: 6px;
         }
         .ctrl-btn {
             background: #1e293b;
             color: #f8fafc;
             border: 2px solid #475569;
             border-radius: 10px;
-            font-size: 18px;
+            font-size: 17px;
             font-weight: bold;
-            width: 50px;
-            height: 48px;
+            width: 48px;
+            height: 44px;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
             cursor: pointer;
             touch-action: none;
-            box-shadow: 0 3px 0 #020617;
+            box-shadow: 0 2px 0 #020617;
         }
         .ctrl-btn:active {
             background: #2563eb;
@@ -783,17 +788,17 @@
             flex-direction: column;
             align-items: center;
             justify-content: flex-end;
-            gap: 6px;
+            gap: 4px;
         }
         .small-drop-btn {
             background: #7f1d1d;
             color: #fef2f2;
             border: 1px solid #ef4444;
-            border-radius: 7px;
-            height: 26px;
-            min-width: 64px;
+            border-radius: 6px;
+            height: 22px;
+            min-width: 60px;
             padding: 0 8px;
-            font-size: 10px;
+            font-size: 9px;
             font-weight: 800;
             display: flex;
             align-items: center;
@@ -809,28 +814,28 @@
         .btn-rotate-main {
             background: #065f46;
             border: 2px solid #10b981;
-            width: 84px;
-            height: 84px;
+            width: 74px;
+            height: 74px;
             border-radius: 50%;
-            font-size: 12px;
-            gap: 2px;
-            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25), 0 3px 0 #022c22;
+            font-size: 11px;
+            gap: 1px;
+            box-shadow: 0 3px 10px rgba(16, 185, 129, 0.25), 0 2px 0 #022c22;
         }
-        .btn-rotate-main .rot-icon { font-size: 22px; line-height: 1; }
+        .btn-rotate-main .rot-icon { font-size: 20px; line-height: 1; }
 
-        /* DESKTOP (>= 769px): ARAH LEBIH BESAR & DROP DI SAMPING PUTAR */
+        /* DESKTOP / TABLET LEBAR (>= 769px): ARAH BESAR & DROP DI SAMPING PUTAR */
         @media (min-width: 769px) {
             .mobile-controls {
                 align-items: center;
-                padding: 12px 18px;
+                padding: 8px 16px;
             }
             .dpad-row {
                 gap: 10px;
             }
             .ctrl-btn {
-                width: 66px;
-                height: 58px;
-                font-size: 22px;
+                width: 64px;
+                height: 54px;
+                font-size: 21px;
             }
             .right-cluster {
                 flex-direction: row;
@@ -839,18 +844,18 @@
                 gap: 12px;
             }
             .small-drop-btn {
-                height: 36px;
-                min-width: 74px;
+                height: 34px;
+                min-width: 72px;
                 padding: 0 12px;
                 font-size: 11px;
-                border-radius: 9px;
+                border-radius: 8px;
             }
             .btn-rotate-main {
-                width: 92px;
-                height: 92px;
-                font-size: 13px;
+                width: 82px;
+                height: 82px;
+                font-size: 12px;
             }
-            .btn-rotate-main .rot-icon { font-size: 24px; }
+            .btn-rotate-main .rot-icon { font-size: 22px; }
         }
 
         .admin-layout { width: 100%; max-width: 1420px; }
@@ -981,7 +986,7 @@
             <button type="button" class="danger" onclick="exitToLobby()">🏠 Menu Utama</button>
         </div>
 
-        <div id="incoming-alert" style="min-height:16px; text-align:center;"></div>
+        <div id="incoming-alert" style="min-height:14px; text-align:center;"></div>
         <div id="player-podium" class="podium-box" style="display:none;"></div>
 
         <div class="main-stage">
@@ -1018,11 +1023,11 @@
                 <div id="charge-mode-label" class="side-charge-tag">CHARGE</div>
             </div>
 
-            <div class="side-info">
+            <div id="side-info-col" class="side-info">
                 <div id="side-list-title" style="font-size:11px; font-weight:bold;">Skor Peserta</div>
                 <div id="opponents" class="opponents-list"></div>
                 <div class="log-section">
-                    <div style="font-size:11px; font-weight:bold; margin-top:2px; margin-bottom:3px;">Log Arena</div>
+                    <div style="font-size:11px; font-weight:bold; margin-top:2px; margin-bottom:2px;">Log Arena</div>
                     <div id="player-log" class="log-box"></div>
                 </div>
             </div>
@@ -1050,7 +1055,7 @@
         </div>
 
         <!-- KONTROL LAYAR: RESPONSIF HP, TABLET, DAN DESKTOP -->
-        <div class="mobile-controls">
+        <div id="mobile-controls-bar" class="mobile-controls">
             <div class="left-cluster">
                 <div class="dpad-row">
                     <div class="ctrl-btn" onpointerdown="event.preventDefault(); vibrate(); moveLeft()">◀</div>
@@ -1237,14 +1242,30 @@ const COLS = 10, ROWS = 20;
 let BLOCK_SIZE = 16;
 const DANGER_ROW_THRESHOLD = 4;
 
+let gameMode = 'solo';
+
+function hasPowerupsInCurrentMode() {
+    return gameMode !== 'solo';
+}
+
 function resizeBoardForScreen() {
     const w = window.innerWidth || 360;
-    const maxBoardW = w >= 769
-        ? Math.max(200, Math.min(280, Math.floor(w * 0.28)))
-        : (w >= 540
-            ? Math.max(170, Math.min(240, w - 280))
-            : Math.max(120, Math.min(200, w - 190)));
-    BLOCK_SIZE = Math.max(12, Math.floor(maxBoardW / COLS));
+    const h = window.innerHeight || 640;
+
+    // 1) Batas berdasarkan LEBAR layar: papan dibuat lebih besar dari kolom rank & log
+    const sideReserveW = w >= 769 ? 255 : (w >= 540 ? 210 : 152);
+    const maxWByWidth = Math.max(140, Math.min(340, w - sideReserveW));
+
+    // 2) Batas berdasarkan TINGGI layar agar tombol di bawah selalu muat utuh
+    const dockExtraH = hasPowerupsInCurrentMode() ? 48 : 0;
+    const topAndControlsReserveH = w >= 769
+        ? (225 + dockExtraH)
+        : (235 + dockExtraH);
+    const availableBoardH = Math.max(220, h - topAndControlsReserveH);
+    const maxWByHeight = Math.floor(availableBoardH / 2);
+
+    const targetW = Math.min(maxWByWidth, maxWByHeight);
+    BLOCK_SIZE = Math.max(11, Math.floor(targetW / COLS));
     canvas.width = BLOCK_SIZE * COLS;
     canvas.height = BLOCK_SIZE * ROWS;
 
@@ -1252,10 +1273,13 @@ function resizeBoardForScreen() {
     if (boardCol) boardCol.style.width = `${canvas.width}px`;
 
     const trackEl = document.getElementById('side-charge-track');
-    if (trackEl) trackEl.style.minHeight = `${Math.max(190, canvas.height - 34)}px`;
+    if (trackEl) trackEl.style.minHeight = `${Math.max(140, canvas.height - 34)}px`;
 
-    const sideInfo = document.querySelector('.side-info');
-    if (sideInfo) sideInfo.style.height = `${canvas.height}px`;
+    const sideInfo = document.getElementById('side-info-col');
+    if (sideInfo) {
+        const totalLeftH = boardCol ? boardCol.offsetHeight : canvas.height;
+        sideInfo.style.height = `${Math.max(canvas.height, totalLeftH)}px`;
+    }
 }
 window.addEventListener('resize', resizeBoardForScreen);
 resizeBoardForScreen();
@@ -1287,7 +1311,6 @@ let lineFlashRows = [];
 let shakeTimer = 0;
 let attackFlashTimer = 0;
 
-let gameMode = 'solo';
 let soloLevel = 1;
 let totalLinesCleared = 0;
 let playerKoCount = 0;
@@ -1315,10 +1338,6 @@ function getDropIntervalMs() {
 function updateLevelDisplay() {
     document.getElementById('p-level').innerText = soloLevel;
     document.getElementById('p-lines').innerText = totalLinesCleared;
-}
-
-function hasPowerupsInCurrentMode() {
-    return gameMode !== 'solo';
 }
 
 function applyModeVisibilityToPlayerView() {
