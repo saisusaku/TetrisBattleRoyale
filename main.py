@@ -15,7 +15,7 @@ BARCODE_PATH = os.path.join(BASE_DIR, "KepoTetris.jpeg")
 ROWS, COLS = 20, 10
 DOUBLE_DURATION_SEC = 10.0
 GRAVITY_INTERVAL_SEC = 0.56
-AWAY_QUIT_TIMEOUT_SEC = 30.0
+AWAY_QUIT_TIMEOUT_SEC = 45.0
 
 SHAPES = [
     [[1, 1, 1, 1]],
@@ -1066,7 +1066,7 @@ async def game_loop():
                     await mark_player_quit(
                         room_code,
                         pid,
-                        f"🟨 {p['name']} meninggalkan game >30 detik (QUITTER).",
+                        f"🟨 {p['name']} meninggalkan game >45 detik (QUITTER).",
                     )
                     continue
 
@@ -1075,7 +1075,7 @@ async def game_loop():
                     await mark_player_quit(
                         room_code,
                         pid,
-                        f"🟨 {p['name']} tidak merespons >30 detik (QUITTER).",
+                        f"🟨 {p['name']} tidak merespons >45 detik (QUITTER).",
                     )
                     continue
 
@@ -1102,7 +1102,6 @@ async def game_loop():
                         "grid": compute_player_view_grid(p),
                     })
 
-            await check_winner(room_code)
             if not room.get("active"):
                 continue
 
@@ -1250,10 +1249,15 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
             if current_room and current_room in rooms and client_id in rooms[current_room]["players"]:
                 p_seen = rooms[current_room]["players"][client_id]
                 p_seen["last_seen"] = time.time()
-                if event not in ("player_away",):
+                if event not in ("player_away", "ping"):
                     p_seen["away_since"] = None
 
             if event == "ping":
+                if current_room and current_room in rooms and client_id in rooms[current_room]["players"]:
+                    p_ping = rooms[current_room]["players"][client_id]
+                    p_ping["last_seen"] = time.time()
+                    if not data.get("is_away"):
+                        p_ping["away_since"] = None
                 await websocket.send_text(json.dumps({"type": "pong"}))
                 continue
 
@@ -1262,12 +1266,12 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                     p = rooms[current_room]["players"].get(client_id)
                     if p and p.get("alive") and not p.get("quitter", False):
                         is_away = bool(data.get("away", True))
+                        p["last_seen"] = time.time()
                         if is_away:
                             if p.get("away_since") is None:
                                 p["away_since"] = time.time()
                         else:
                             p["away_since"] = None
-                            p["last_seen"] = time.time()
                             await send_player_sync(current_room, client_id, p)
                 continue
 
